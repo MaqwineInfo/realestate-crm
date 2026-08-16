@@ -8,6 +8,8 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/db/seed.js",
+    "db:dump": "node scripts/db-snapshot.js dump",
+    "db:restore": "node scripts/db-snapshot.js restore",
     "test:watch": "node --test --watch",
     "smoke": "node scripts/smoke-screens.js && node scripts/smoke-wiring.js"
   },

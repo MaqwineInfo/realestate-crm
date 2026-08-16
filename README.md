@@ -32,6 +32,22 @@ Demo logins (password `Password1`):
 | priya@skyline.test | Sales User |
 | vikram@skyline.test | Sales User |
 
+## Copy a database
+
+`npm run seed` creates a fresh demo organization. To instead clone a database you already
+have — same ids, same references — snapshot it and load it somewhere else:
+
+```bash
+npm run db:dump                                   # MONGO_URI -> data/snapshot.json
+npm run db:restore                                # snapshot -> MONGO_URI (drops it first)
+npm run db:restore -- mongodb://127.0.0.1:27017/other_db   # ...or into any other database
+```
+
+The snapshot is EJSON, so ObjectIds and dates survive the round trip. Restore drops the
+target database, inserts every collection, then rebuilds the unique indexes. It refuses to
+run when `NODE_ENV=production`. `data/snapshot.json` contains real data including password
+hashes — keep it out of git unless the data is demo data.
+
 ## Tests
 
 ```bash
