@@ -1,0 +1,97 @@
+<%- include('../../partials/app-head') %>
+<% const f = funnel; const pct = function (n, d) { return d > 0 ? Math.round((n / d) * 100) : 0; }; %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Management</h1>
+    <div class="sub">
+      <%= h.date(range.start) %> – <%= h.date(range.end) %> · attributed on
+      <%= attributionModel.replace('_',' ').toLowerCase() %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/dashboard?view=team">Team view</a>
+    <% if (can('report.view')) { %><a class="btn" href="/app/reports/sales">Reports</a><% } %>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Business funnel</h2><span class="muted small">Leads → connected → visits → blocks → bookings → revenue (§8.5)</span></div>
+  <div class="card-body">
+    <div class="grid cols-4">
+      <a class="tile t-new" href="/app/reports/leads">
+        <div class="num"><%= f.leads %></div><div class="lbl">Leads</div>
+      </a>
+      <a class="tile t-due" href="/app/reports/leads">
+        <div class="num"><%= f.connected %></div><div class="lbl">Connected · <%= pct(f.connected, f.leads) %>%</div>
+      </a>
+      <a class="tile t-visit" href="/app/reports/projects">
+        <div class="num"><%= f.visits %></div><div class="lbl">Site visits · <%= pct(f.visits, f.leads) %>%</div>
+      </a>
+      <a class="tile t-reinq" href="/app/reports/projects">
+        <div class="num"><%= f.blocks %></div><div class="lbl">Blocks · <%= pct(f.blocks, f.visits) %>% of visits</div>
+      </a>
+    </div>
+    <div class="grid cols-2 mt-2">
+      <a class="tile t-due" href="/app/reports/sales">
+        <div class="num"><%= f.bookings %></div><div class="lbl">Bookings · <%= pct(f.bookings, f.leads) %>% of leads</div>
+      </a>
+      <a class="tile t-new" href="/app/reports/projects">
+        <div class="num"><%= h.moneyShort(f.revenueMinor) %></div><div class="lbl">Booking revenue</div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Marketing</h2><a class="small" href="/app/campaigns/performance">Detail</a></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Spend</dt><dd><%= h.moneyShort(marketing.spendMinor) %></dd>
+        <dt>Leads</dt><dd><%= marketing.leads %></dd>
+        <dt>Cost per lead</dt><dd><%= marketing.cplMinor != null ? h.money(marketing.cplMinor) : '—' %></dd>
+        <dt>Visits</dt><dd><%= marketing.visits %></dd>
+        <dt>Cost per visit</dt><dd><%= marketing.costPerVisitMinor != null ? h.money(marketing.costPerVisitMinor) : '—' %></dd>
+        <dt>Bookings</dt><dd><%= marketing.bookings %></dd>
+        <dt>Cost per booking</dt><dd><%= marketing.costPerBookingMinor != null ? h.moneyShort(marketing.costPerBookingMinor) : '—' %></dd>
+        <dt>Attributed revenue</dt><dd><%= h.moneyShort(marketing.revenueMinor) %></dd>
+        <dt>ROAS</dt><dd><%= marketing.roas != null ? marketing.roas + '×' : '—' %></dd>
+      </dl>
+      <p class="small muted mb-0">Revenue ÷ spend is ROAS, not ROI — no margin model exists in V1 (§93).</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Investor pipeline</h2><a class="small" href="/app/opportunities/resale">Detail</a></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Resale in 30 days</dt><dd><%= opportunities.resaleNext30 %></dd>
+        <dt>Resale in 90 days</dt><dd><%= opportunities.resaleNext90 %></dd>
+        <dt>Rental in 30 days</dt><dd><%= opportunities.rentalNext30 %></dd>
+        <dt>Expected resale value</dt><dd><%= h.moneyShort(opportunities.expectedResaleValueMinor) %></dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Project performance</h2><a class="small" href="/app/reports/projects">Full report</a></div>
+  <table class="responsive">
+    <thead><tr><th>Project</th><th class="num">Leads</th><th class="num">Visits</th><th class="num">Bookings</th><th class="num">Revenue</th><th class="num">Available</th></tr></thead>
+    <tbody>
+      <% projects.forEach(function (r) { %>
+        <tr>
+          <td data-label="Project"><a href="/app/projects/<%= r.project._id %>"><%= r.project.name %></a></td>
+          <td data-label="Leads" class="num"><%= r.leads %></td>
+          <td data-label="Visits" class="num"><%= r.visits %></td>
+          <td data-label="Bookings" class="num"><%= r.bookings %></td>
+          <td data-label="Revenue" class="num"><%= h.moneyShort(r.revenueMinor) %></td>
+          <td data-label="Available" class="num"><%= r.available %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../../partials/app-foot') %>

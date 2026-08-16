@@ -1,0 +1,34 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow"><h1>Inventory</h1><div class="sub">Pick a project to see its live unit inventory.</div></div>
+</div>
+
+<% if (!projects.length) { %>
+  <div class="card">
+    <%- include('../../partials/empty', {
+      heading: 'No projects yet',
+      message: 'Add towers/blocks and units to begin inventory management.',
+      ctaHref: can('project.create') ? '/app/projects/new' : null,
+      ctaLabel: 'Create project'
+    }) %>
+  </div>
+<% } else { %>
+  <div class="grid cols-3">
+    <% projects.forEach(function (p) { %>
+      <a class="card" href="/app/inventory/<%= p._id %>" style="text-decoration:none;color:inherit">
+        <div class="card-body">
+          <div class="t-name"><%= p.name %></div>
+          <div class="t-sub mb-1"><%= p.city || '' %></div>
+          <div class="inline">
+            <span class="badge b-green"><%= p.stats.available %> available</span>
+            <span class="badge b-amber"><%= p.stats.blocked %> blocked</span>
+            <span class="badge b-blue"><%= p.stats.booked %> booked</span>
+          </div>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+
+<%- include('../../partials/app-foot') %>

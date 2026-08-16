@@ -1,0 +1,142 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= contact.displayName %></h1>
+    <div class="sub">
+      <a href="tel:<%= contact.normalizedMobile %>"><%= h.mobile(contact.primaryMobile) %></a>
+      <% if (contact.email) { %> · <%= contact.email %><% } %>
+      <% if (contact.city) { %> · <%= contact.city %><% } %>
+      · <%= leads.length %> inquir<%= leads.length === 1 ? 'y' : 'ies' %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/<%= (contact.normalizedMobile || '').replace('+','') %>">WhatsApp</a>
+    <% if (can('contact.edit')) { %>
+      <button class="btn" data-drawer="drawer-consent">Communication</button>
+      <button class="btn btn-primary" data-drawer="drawer-edit">Edit</button>
+    <% } %>
+  </div>
+</div>
+
+<% if (duplicates.length) { %>
+  <div class="flash flash-warn">
+    This email is also on
+    <% duplicates.forEach(function (d, i) { %><a href="/app/contacts/<%= d._id %>"><%= d.displayName %></a><%= i < duplicates.length - 1 ? ', ' : '' %><% }) %>.
+    Different mobile numbers are never merged automatically — review before acting.
+  </div>
+<% } %>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Inquiries</h2></div>
+    <% if (!leads.length) { %>
+      <div class="card-body"><p class="muted mb-0">No inquiries recorded for this contact yet.</p></div>
+    <% } else { %>
+      <table class="responsive">
+        <thead><tr><th>Project</th><th>Stage</th><th>Owner</th><th>Latest</th></tr></thead>
+        <tbody>
+          <% leads.forEach(function (l) { %>
+            <tr>
+              <td data-label="Project"><a href="/app/leads/<%= l._id %>"><%= l.projectId ? l.projectId.name : 'Generic inquiry' %></a></td>
+              <td data-label="Stage"><span class="badge b-<%= l.stageId && l.stageId.colorToken || 'slate' %>"><%= l.stageId ? l.stageId.name : '—' %></span></td>
+              <td data-label="Owner"><%= l.ownerUserId ? l.ownerUserId.name : 'Unassigned' %></td>
+              <td data-label="Latest"><%= h.date(l.latestInquiryAt) %><div class="t-sub"><%= l.latestSourceId ? l.latestSourceId.name : '' %></div></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Details</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Primary mobile</dt><dd><%= h.mobile(contact.primaryMobile) %></dd>
+          <dt>Alternate</dt><dd><%= contact.altMobile ? h.mobile(contact.altMobile) : '—' %></dd>
+          <dt>Email</dt><dd><%= contact.email || '—' %></dd>
+          <dt>City</dt><dd><%= contact.city || '—' %></dd>
+          <dt>State</dt><dd><%= contact.state || '—' %></dd>
+          <dt>Owner</dt><dd><%= contact.ownerUserId ? contact.ownerUserId.name : '—' %></dd>
+          <dt>Created</dt><dd><%= h.date(contact.createdAt) %></dd>
+        </dl>
+        <div class="mt-1">
+          <% (contact.tagIds || []).forEach(function (t) { %><span class="badge b-slate"><%= t.name %></span> <% }) %>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Communication preferences</h2></div>
+      <div class="card-body">
+        <div class="inline">
+          <span class="badge <%= contact.consent && contact.consent.dnd ? 'b-red' : 'b-green' %>">DND: <%= contact.consent && contact.consent.dnd ? 'On' : 'Off' %></span>
+          <span class="badge <%= contact.consent && contact.consent.whatsappOptOut ? 'b-red' : 'b-slate' %>">WhatsApp</span>
+          <span class="badge <%= contact.consent && contact.consent.smsOptOut ? 'b-red' : 'b-slate' %>">SMS</span>
+          <span class="badge <%= contact.consent && contact.consent.emailOptOut ? 'b-red' : 'b-slate' %>">Email</span>
+        </div>
+        <p class="small muted mt-1 mb-0">Campaign sends skip opted-out channels and report the excluded count.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if (can('contact.edit')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-edit', heading: 'Edit contact', action: '/api/contacts/' + contact._id }) %>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-first">First name</label>
+        <input type="text" id="e-first" name="firstName" required maxlength="80" value="<%= contact.firstName %>">
+      </div>
+      <div class="field">
+        <label for="e-last">Last name</label>
+        <input type="text" id="e-last" name="lastName" maxlength="80" value="<%= contact.lastName || '' %>">
+      </div>
+    </div>
+    <div class="field">
+      <label for="e-mobile">Primary mobile</label>
+      <input type="tel" id="e-mobile" name="primaryMobile" required value="<%= contact.primaryMobile %>">
+    </div>
+    <div class="field">
+      <label for="e-alt">Alternate mobile</label>
+      <input type="tel" id="e-alt" name="altMobile" value="<%= contact.altMobile || '' %>">
+    </div>
+    <div class="field">
+      <label for="e-email">Email</label>
+      <input type="email" id="e-email" name="email" value="<%= contact.email || '' %>">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-city">City</label>
+        <input type="text" id="e-city" name="city" value="<%= contact.city || '' %>">
+      </div>
+      <div class="field">
+        <label for="e-state">State</label>
+        <input type="text" id="e-state" name="state" value="<%= contact.state || '' %>">
+      </div>
+    </div>
+    <div class="field">
+      <label for="e-tags">Tags</label>
+      <select id="e-tags" name="tagIds" multiple size="5">
+        <% tags.forEach(function (t) { %>
+          <option value="<%= t._id %>" <%= (contact.tagIds || []).some(function (x) { return String(x._id || x) === String(t._id); }) ? 'selected' : '' %>><%= t.name %></option>
+        <% }) %>
+      </select>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save contact' }) %>
+
+  <%- include('../../partials/drawer-open', { id: 'drawer-consent', heading: 'Communication preferences', action: '/api/contacts/' + contact._id + '/consent' }) %>
+    <label class="check"><input type="checkbox" name="dnd" value="1" <%= contact.consent && contact.consent.dnd ? 'checked' : '' %>> Do not contact (DND)</label>
+    <label class="check"><input type="checkbox" name="whatsappOptOut" value="1" <%= contact.consent && contact.consent.whatsappOptOut ? 'checked' : '' %>> Opted out of WhatsApp campaigns</label>
+    <label class="check"><input type="checkbox" name="smsOptOut" value="1" <%= contact.consent && contact.consent.smsOptOut ? 'checked' : '' %>> Opted out of SMS campaigns</label>
+    <label class="check"><input type="checkbox" name="emailOptOut" value="1" <%= contact.consent && contact.consent.emailOptOut ? 'checked' : '' %>> Opted out of email campaigns</label>
+    <div class="field mt-2">
+      <label for="c-reason">Reason <span class="opt">optional</span></label>
+      <input type="text" id="c-reason" name="reason" maxlength="200" value="<%= contact.consent && contact.consent.reason || '' %>">
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save preferences' }) %>
+<% } %>
+
+<%- include('../../partials/app-foot') %>

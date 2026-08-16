@@ -1,0 +1,42 @@
+<%- include('../../partials/app-head') %>
+<%- include('_nav') %>
+<%- include('_filters') %>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Spend to booking</h2>
+    <span class="badge b-slate"><%= data.attributionModel.replace('_',' ').toLowerCase() %> attribution</span>
+  </div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No campaign data yet', message: 'Connect an ad platform or add a manual campaign.', ctaHref: '/app/campaigns/performance', ctaLabel: 'Campaign performance' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th>Campaign</th><th class="num">Spend</th><th class="num">Leads</th><th class="num">CPL</th>
+          <th class="num">Connected</th><th class="num">Visits</th><th class="num">Blocks</th>
+          <th class="num">Bookings</th><th class="num">Cost/booking</th><th class="num">Revenue</th><th class="num">ROAS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Campaign"><span class="t-name"><%= r.name %></span><div class="t-sub"><%= r.platform %></div></td>
+            <td data-label="Spend" class="num"><%= h.moneyShort(r.spendMinor || 0) %></td>
+            <td data-label="Leads" class="num"><%= r.leads %></td>
+            <td data-label="CPL" class="num"><%= r.cplMinor != null ? h.money(r.cplMinor) : '—' %></td>
+            <td data-label="Connected" class="num"><%= r.connected %></td>
+            <td data-label="Visits" class="num"><%= r.visits %></td>
+            <td data-label="Blocks" class="num"><%= r.blocks %></td>
+            <td data-label="Bookings" class="num"><strong><%= r.bookings %></strong></td>
+            <td data-label="Cost/booking" class="num"><%= r.costPerBookingMinor != null ? h.moneyShort(r.costPerBookingMinor) : '—' %></td>
+            <td data-label="Revenue" class="num"><%= h.moneyShort(r.revenueMinor) %></td>
+            <td data-label="ROAS" class="num"><%= r.roas != null ? r.roas + '×' : '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

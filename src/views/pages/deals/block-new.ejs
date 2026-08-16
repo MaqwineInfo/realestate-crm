@@ -1,0 +1,174 @@
+<%- include('../../partials/app-head') %>
+<% const base = '/app/leads/' + lead._id + '/blocks/new'; %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Block unit</h1>
+    <div class="sub">
+      <%= lead.contactId.displayName %> · <%= h.mobile(lead.contactId.primaryMobile) %>
+      <% if (lead.projectId) { %> · <%= lead.projectId.name %><% } %>
+    </div>
+  </div>
+  <a class="btn btn-ghost" href="/app/leads/<%= lead._id %>">Back to lead</a>
+</div>
+
+<nav class="steps" aria-label="Block steps">
+  <a class="step <%= step === 'unit' ? 'on' : '' %>" href="<%= base %>"><span class="n"><%= unit ? '✓' : '1' %></span> Select unit</a>
+  <a class="step <%= step === 'commercial' ? 'on' : '' %>" href="<%= unit ? base + '?unitId=' + unit._id : base %>"><span class="n">2</span> Commercial &amp; expiry</a>
+</nav>
+
+<%# ------------------------------ §46 unit picker --------------------------- %>
+<% if (step === 'unit') { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Shortlisted for this customer</h2></div>
+    <div class="card-body">
+      <% if (!shortlisted.length) { %>
+        <p class="muted mb-0">Nothing shortlisted — choose from available inventory below.</p>
+      <% } else { %>
+        <div class="unit-grid">
+          <% shortlisted.forEach(function (s) { if (!s.unitId) return; %>
+            <a class="unit-card" href="<%= base %>?unitId=<%= s.unitId._id %>">
+              <span class="u-num"><%= s.unitId.unitNumber %></span>
+              <span class="u-meta"><%= s.unitId.towerId ? s.unitId.towerId.name : '' %><%= s.unitId.unitTypeId ? ' · ' + s.unitId.unitTypeId.name : '' %></span>
+              <% if (can('inventory.view_prices') && s.priceMinor != null) { %><span class="u-price"><%= h.moneyShort(s.priceMinor) %></span><% } %>
+              <span class="badge <%= s.unitId.status === 'AVAILABLE' ? 'b-green' : 'b-amber' %>"><%= s.unitId.status %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Available inventory</h2></div>
+    <div class="card-body">
+      <form class="filters mb-2" method="get" action="<%= base %>">
+        <div class="field">
+          <label for="b-tower">Tower</label>
+          <select id="b-tower" name="towerId">
+            <option value="">All</option>
+            <% facets.towers.forEach(function (t) { %>
+              <option value="<%= t._id %>" <%= String(query.towerId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="b-type">Configuration</label>
+          <select id="b-type" name="unitTypeId">
+            <option value="">All</option>
+            <% facets.unitTypes.forEach(function (ut) { %>
+              <option value="<%= ut._id %>" <%= String(query.unitTypeId) === String(ut._id) ? 'selected' : '' %>><%= ut.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="b-facing">Facing</label>
+          <input type="text" id="b-facing" name="facing" value="<%= query.facing || '' %>">
+        </div>
+        <button class="btn" type="submit">Filter</button>
+      </form>
+
+      <% if (!available.length) { %>
+        <p class="muted mb-0">No available unit matches. Only available and held units can be blocked (§53).</p>
+      <% } else { %>
+        <div class="unit-grid">
+          <% available.forEach(function (u) { %>
+            <a class="unit-card" href="<%= base %>?unitId=<%= u._id %>">
+              <span class="u-num"><%= u.unitNumber %></span>
+              <span class="u-meta">
+                <%= u.towerId ? u.towerId.name : '' %><%= u.floorNumber != null ? ' · Floor ' + u.floorNumber : '' %>
+                <%= u.unitTypeId ? ' · ' + u.unitTypeId.name : '' %><%= u.facing ? ' · ' + u.facing : '' %>
+              </span>
+              <% if (can('inventory.view_prices') && u.priceMinor != null) { %><span class="u-price"><%= h.moneyShort(u.priceMinor) %></span><% } %>
+              <span class="badge b-green"><%= u.status %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%# --------------------------- §47/§48 commercial step ---------------------- %>
+<% if (step === 'commercial' && unit) { %>
+  <div class="workspace">
+    <div class="card">
+      <div class="card-head">
+        <h2 class="grow">Unit <%= unit.unitNumber %></h2>
+        <a class="btn btn-sm" href="<%= base %>">Change unit</a>
+      </div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Tower</dt><dd><%= unit.towerId ? unit.towerId.name : '—' %></dd>
+          <dt>Floor</dt><dd><%= unit.floorNumber != null ? unit.floorNumber : '—' %></dd>
+          <dt>Configuration</dt><dd><%= unit.unitTypeId ? unit.unitTypeId.name : '—' %></dd>
+          <dt>Area</dt><dd><%= unit.saleableArea || '—' %> <%= unit.areaUnit || 'sqft' %></dd>
+          <dt>Facing</dt><dd><%= unit.facing || '—' %></dd>
+          <dt>Status</dt><dd><span class="badge <%= unit.status === 'AVAILABLE' ? 'b-green' : 'b-amber' %>"><%= unit.status %></span></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Block details</h2></div>
+      <div class="card-body">
+        <form method="post" action="/api/leads/<%= lead._id %>/blocks">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="unitId" value="<%= unit._id %>">
+
+          <div class="field">
+            <label for="bk-sheet">Quotation</label>
+            <select id="bk-sheet" name="costSheetId">
+              <option value="">No quotation linked</option>
+              <% sheets.forEach(function (s) { %>
+                <option value="<%= s._id %>" <%= suggestedSheet && String(suggestedSheet._id) === String(s._id) ? 'selected' : '' %>>
+                  v<%= s.version %> · <%= s.status.replace('_',' ').toLowerCase() %><% if (can('inventory.view_prices')) { %> · <%= h.moneyShort(s.finalConsiderationMinor) %><% } %>
+                </option>
+              <% }) %>
+            </select>
+            <% if (suggestedSheet) { %>
+              <div class="hint">Defaulted to the latest <%= suggestedSheet.status.replace('_',' ').toLowerCase() %> quotation for this unit.</div>
+            <% } else if (!sheets.length) { %>
+              <div class="hint">No quotation for this unit yet — you can still block, then quote.</div>
+            <% } %>
+          </div>
+
+          <div class="field">
+            <label for="bk-token">Token amount <span class="opt">optional</span></label>
+            <input type="text" id="bk-token" name="tokenAmount" inputmode="decimal" placeholder="e.g. 100000">
+          </div>
+
+          <%# §48: the deadline is shown before it starts, not discovered later. %>
+          <div class="read-only-summary">
+            <strong>Block valid until</strong><br>
+            <%= h.dateTime(expiryAt) %><br>
+            <span class="small muted">
+              From this project's block rule. The unit returns to inventory automatically at that time.
+            </span>
+          </div>
+
+          <% if (canOverrideExpiry) { %>
+            <div class="field mt-2">
+              <label for="bk-hours">Override duration (hours) <span class="opt">requires permission</span></label>
+              <input type="number" id="bk-hours" name="expiryHours" min="1" max="720">
+            </div>
+          <% } %>
+
+          <div class="field">
+            <label for="bk-notes">Note <span class="opt">optional</span></label>
+            <textarea id="bk-notes" name="notes" rows="2" maxlength="500"></textarea>
+          </div>
+
+          <p class="small muted">
+            You are blocking <strong><%= unit.unitNumber %></strong> for
+            <strong><%= lead.contactId.displayName %></strong> until <%= h.dateTime(expiryAt) %>.
+            The lead stays active and still needs a next action.
+          </p>
+          <button class="btn btn-primary btn-block" type="submit">Confirm block</button>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../../partials/app-foot') %>

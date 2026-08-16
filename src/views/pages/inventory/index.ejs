@@ -1,0 +1,178 @@
+<%- include('../../partials/app-head') %>
+<%
+  const statusClass = {
+    AVAILABLE: 'b-green', HOLD: 'b-amber', BLOCKED: 'b-amber',
+    BOOKED: 'b-blue', REGISTERED: 'b-violet', NOT_FOR_SALE: 'b-slate',
+  };
+  const canSeePrices = can('inventory.view_prices');
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= project.name %> — inventory</h1>
+    <div class="sub">
+      <%= stats.available %> available · <%= stats.blocked %> blocked · <%= stats.booked %> booked · <%= stats.total %> total
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn <%= view === 'list' ? 'btn-primary' : '' %>" href="/app/inventory/<%= project._id %>?view=list">List</a>
+    <a class="btn <%= view === 'grid' ? 'btn-primary' : '' %>" href="/app/inventory/<%= project._id %>?view=grid">Floor grid</a>
+    <% if (can('inventory.edit')) { %><button class="btn" data-drawer="drawer-unit">Add unit</button><% } %>
+    <a class="btn" href="/app/projects/<%= project._id %>">Project setup</a>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-body">
+    <form class="filters" method="get" action="/app/inventory/<%= project._id %>">
+      <input type="hidden" name="view" value="<%= view %>">
+      <div class="field">
+        <label for="q">Unit number</label>
+        <input type="search" id="q" name="q" value="<%= query.q || '' %>">
+      </div>
+      <div class="field">
+        <label for="towerId">Tower</label>
+        <select id="towerId" name="towerId">
+          <option value="">All</option>
+          <% towers.forEach(function (t) { %>
+            <option value="<%= t._id %>" <%= String(query.towerId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="unitTypeId">Type</label>
+        <select id="unitTypeId" name="unitTypeId">
+          <option value="">All</option>
+          <% unitTypes.forEach(function (ut) { %>
+            <option value="<%= ut._id %>" <%= String(query.unitTypeId) === String(ut._id) ? 'selected' : '' %>><%= ut.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">All</option>
+          <% ['AVAILABLE','HOLD','BLOCKED','BOOKED','REGISTERED','NOT_FOR_SALE'].forEach(function (s) { %>
+            <option value="<%= s %>" <%= query.status === s ? 'selected' : '' %>><%= s.replace('_',' ') %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="facing">Facing</label>
+        <input type="text" id="facing" name="facing" value="<%= query.facing || '' %>">
+      </div>
+      <div class="field">
+        <label for="areaMin">Area min</label>
+        <input type="number" id="areaMin" name="areaMin" value="<%= query.areaMin || '' %>">
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" type="submit">Apply</button>
+        <a class="btn btn-ghost" href="/app/inventory/<%= project._id %>?view=<%= view %>">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<% if (view === 'grid') { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Floor grid</h2><span class="muted small">Newest floor first</span></div>
+    <div class="card-body">
+      <% if (!grid.length) { %>
+        <p class="muted mb-0">No units yet. Generate them from the project setup screen.</p>
+      <% } %>
+      <% grid.forEach(function (row) { %>
+        <div class="inline mb-1" style="align-items:flex-start">
+          <div style="width:70px;font-weight:600;padding-top:6px">Floor <%= row.floorNumber %></div>
+          <div class="inline" style="flex:1">
+            <% row.units.forEach(function (u) { %>
+              <span class="badge <%= statusClass[u.status] %>" title="<%= u.unitTypeId ? u.unitTypeId.name : '' %> · <%= u.status %>">
+                <%= u.unitNumber %>
+              </span>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+<% } else { %>
+  <div class="card">
+    <% if (!items.length) { %>
+      <%- include('../../partials/empty', {
+        heading: 'No units match',
+        message: 'Adjust the filters, or generate units from the project setup screen.',
+        ctaHref: '/app/projects/' + project._id, ctaLabel: 'Project setup'
+      }) %>
+    <% } else { %>
+      <table class="responsive">
+        <thead>
+          <tr>
+            <th>Unit</th><th>Type</th><th>Floor</th><th>Area</th><th>Facing</th>
+            <% if (canSeePrices) { %><th class="num">Price</th><% } %>
+            <th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach(function (u) { %>
+            <tr>
+              <td data-label="Unit"><span class="t-name"><%= u.unitNumber %></span><div class="t-sub"><%= u.towerId ? u.towerId.name : '' %></div></td>
+              <td data-label="Type"><%= u.unitTypeId ? u.unitTypeId.name : '—' %></td>
+              <td data-label="Floor"><%= u.floorNumber != null ? u.floorNumber : '—' %></td>
+              <td data-label="Area"><%= u.saleableArea || u.builtUpArea || u.carpetArea || '—' %></td>
+              <td data-label="Facing"><%= u.facing || '—' %></td>
+              <% if (canSeePrices) { %>
+                <td data-label="Price" class="num"><%= u.priceMinor != null ? h.moneyShort(u.priceMinor) : '—' %></td>
+              <% } %>
+              <td data-label="Status"><span class="badge <%= statusClass[u.status] %>"><%= u.status.replace('_',' ') %></span></td>
+              <td class="row-actions">
+                <% if (can('inventory.edit') && ['AVAILABLE','HOLD','NOT_FOR_SALE'].includes(u.status)) { %>
+                  <form method="post" action="/api/units/<%= u._id %>/status">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="status" value="<%= u.status === 'AVAILABLE' ? 'HOLD' : 'AVAILABLE' %>">
+                    <button class="btn btn-sm" type="submit"><%= u.status === 'AVAILABLE' ? 'Hold' : 'Release' %></button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <%- include('../../partials/pagination') %>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (can('inventory.edit')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-unit', heading: 'Add unit', action: '/api/projects/' + project._id + '/units' }) %>
+    <div class="field">
+      <label for="u-number">Unit number</label>
+      <input type="text" id="u-number" name="unitNumber" required maxlength="20">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="u-tower">Tower</label>
+        <select id="u-tower" name="towerId">
+          <option value="">None</option>
+          <% towers.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="u-type">Unit type</label>
+        <select id="u-type" name="unitTypeId">
+          <option value="">None</option>
+          <% unitTypes.forEach(function (ut) { %><option value="<%= ut._id %>"><%= ut.name %></option><% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="field-row three">
+      <div class="field"><label for="u-floor">Floor number</label><input type="number" id="u-floor" name="floorNumber"></div>
+      <div class="field"><label for="u-area">Saleable area</label><input type="number" id="u-area" name="saleableArea"></div>
+      <div class="field"><label for="u-facing">Facing</label><input type="text" id="u-facing" name="facing"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="u-rate">Base rate</label><input type="text" id="u-rate" name="baseRateMinor" inputmode="decimal"></div>
+      <div class="field"><label for="u-parking">Parking slots</label><input type="number" id="u-parking" name="parkingSlots" min="0" value="0"></div>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Add unit' }) %>
+<% } %>
+
+<%- include('../../partials/app-foot') %>

@@ -1,0 +1,77 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Integration health</h1>
+    <div class="sub">Lead-capture failures are the highest-priority thing on this screen (§97).</div>
+  </div>
+  <a class="btn" href="/app/setup/integrations">Integrations</a>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Providers</h2></div>
+    <table>
+      <thead><tr><th>Provider</th><th>Status</th><th>Last success</th><th>Failures</th></tr></thead>
+      <tbody>
+        <% integrations.forEach(function (i) { %>
+          <tr>
+            <td><%= i.name || i.provider %><div class="t-sub"><%= i.category.replace(/_/g, ' ') %></div></td>
+            <td>
+              <% if (!i.active) { %><span class="badge b-slate">Disabled</span>
+              <% } else if (i.status === 'CONNECTED') { %><span class="badge b-green">Connected</span>
+              <% } else { %><span class="badge b-red">Attention required</span><% } %>
+            </td>
+            <td><%= i.lastSuccessAt ? h.rel(i.lastSuccessAt) : '—' %></td>
+            <td><%= i.failureCount || 0 %><% if (i.lastError) { %><div class="t-sub"><%= i.lastError.slice(0, 80) %></div><% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Background jobs</h2></div>
+    <div class="card-body">
+      <% const jobNames = Object.keys(jobs); %>
+      <% if (!jobNames.length) { %>
+        <p class="muted mb-0">No job has run yet in this process. The scheduler ticks every minute.</p>
+      <% } else { %>
+        <dl class="dl">
+          <% jobNames.forEach(function (name) { %>
+            <dt><%= name %></dt>
+            <dd>
+              <span class="badge <%= jobs[name].ok ? 'b-green' : 'b-red' %>"><%= jobs[name].ok ? 'OK' : 'Failed' %></span>
+              <%= h.rel(jobs[name].at) %> · <%= jobs[name].ms %>ms
+              <% if (jobs[name].error) { %><div class="t-sub"><%= jobs[name].error %></div><% } %>
+            </dd>
+          <% }) %>
+        </dl>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Failed lead deliveries</h2></div>
+  <% if (!recentFailures.length) { %>
+    <%- include('../../partials/empty', { heading: 'No failed deliveries', message: 'Every inbound lead webhook has been processed successfully.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Received</th><th>Provider</th><th>Error</th><th>Attempts</th></tr></thead>
+      <tbody>
+        <% recentFailures.forEach(function (e) { %>
+          <tr>
+            <td data-label="Received"><%= h.dateTime(e.receivedAt) %></td>
+            <td data-label="Provider"><%= e.provider %></td>
+            <td data-label="Error" class="muted small"><%= e.error %></td>
+            <td data-label="Attempts"><%= e.attempts %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

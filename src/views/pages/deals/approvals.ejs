@@ -1,0 +1,50 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Discount approvals</h1>
+    <div class="sub">You can approve or reject, but never edit the amount that was requested (§31.3).</div>
+  </div>
+</div>
+
+<div class="card">
+  <% if (!pending.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing waiting on you', message: 'Discount requests above the configured threshold appear here.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Customer</th><th>Requested by</th><th class="num">Discount</th><th class="num">Final price</th><th>Waiting</th><th></th></tr></thead>
+      <tbody>
+        <% pending.forEach(function (a) { %>
+          <tr>
+            <td data-label="Customer">
+              <% if (a.leadId && a.leadId.contactId) { %>
+                <a class="t-name" href="/app/leads/<%= a.leadId._id %>"><%= a.leadId.contactId.displayName %></a>
+              <% } else { %>—<% } %>
+            </td>
+            <td data-label="Requested by"><%= a.requestedBy ? a.requestedBy.name : '—' %></td>
+            <td data-label="Discount" class="num">
+              <%= h.money(a.requestedDiscountMinor) %>
+              <div class="t-sub"><%= a.requestedDiscountPercentage.toFixed(2) %>%</div>
+            </td>
+            <td data-label="Final price" class="num"><%= h.money(a.requestedFinalMinor) %></td>
+            <td data-label="Waiting"><%= h.rel(a.requestedAt) %></td>
+            <td class="row-actions">
+              <form method="post" action="/api/approvals/<%= a._id %>">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="decision" value="APPROVE">
+                <button class="btn btn-sm btn-primary" type="submit">Approve</button>
+              </form>
+              <form method="post" action="/api/approvals/<%= a._id %>">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="decision" value="REJECT">
+                <button class="btn btn-sm" type="submit">Reject</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

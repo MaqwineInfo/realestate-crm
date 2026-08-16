@@ -1,0 +1,41 @@
+<%- include('../../partials/app-head') %>
+<%- include('_nav') %>
+<%- include('_filters') %>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Project performance and inventory</h2></div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No projects yet', message: 'Create a project to see its funnel.', ctaHref: '/app/projects/new', ctaLabel: 'New project' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th>Project</th><th class="num">Leads</th><th class="num">Connected</th><th class="num">Visits</th>
+          <th class="num">Blocks</th><th class="num">Bookings</th><th class="num">Revenue</th><th class="num">Avg booking</th>
+          <th class="num">Available</th><th class="num">Blocked</th><th class="num">Booked</th><th class="num">Lead→booking %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Project"><a class="t-name" href="/app/projects/<%= r.project._id %>"><%= r.project.name %></a>
+              <div class="t-sub"><%= r.project.city || '' %></div></td>
+            <td data-label="Leads" class="num"><%= r.leads %></td>
+            <td data-label="Connected" class="num"><%= r.connected %></td>
+            <td data-label="Visits" class="num"><%= r.visits %></td>
+            <td data-label="Blocks" class="num"><%= r.blocks %></td>
+            <td data-label="Bookings" class="num"><strong><%= r.bookings %></strong></td>
+            <td data-label="Revenue" class="num"><%= h.moneyShort(r.revenueMinor) %></td>
+            <td data-label="Avg booking" class="num"><%= r.avgBookingValueMinor ? h.moneyShort(r.avgBookingValueMinor) : '—' %></td>
+            <td data-label="Available" class="num"><span class="badge b-green"><%= r.available %></span></td>
+            <td data-label="Blocked" class="num"><span class="badge b-amber"><%= r.blockedUnits %></span></td>
+            <td data-label="Booked" class="num"><span class="badge b-blue"><%= r.bookedUnits %></span></td>
+            <td data-label="Lead→booking %" class="num"><%= r.leadToBookingPct != null ? r.leadToBookingPct + '%' : '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

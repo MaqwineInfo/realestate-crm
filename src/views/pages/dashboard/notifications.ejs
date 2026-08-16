@@ -1,0 +1,32 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow"><h1>Notifications</h1><div class="sub"><%= unreadCount %> unread</div></div>
+  <% if (unreadCount) { %>
+    <form method="post" action="/api/notifications/read">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="btn" type="submit">Mark all read</button>
+    </form>
+  <% } %>
+</div>
+
+<div class="card">
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing to catch up on', message: 'New leads, SLA warnings, mentions and expiring blocks will appear here.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <div class="card-body stack">
+      <% items.forEach(function (n) { %>
+        <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div class="inline">
+            <a class="t-name" href="<%= n.link || '#' %>"><%= n.title %></a>
+            <% if (!n.readAt) { %><span class="badge b-blue">New</span><% } %>
+            <% if (n.severity === 'CRITICAL') { %><span class="badge b-red">Urgent</span><% } %>
+          </div>
+          <div class="t-sub"><%= n.body || '' %> · <%= h.dateTime(n.at) %></div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

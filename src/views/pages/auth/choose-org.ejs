@@ -1,0 +1,23 @@
+<%- include('../../partials/head') %>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>Choose organization</h1>
+    <p class="sub">This email is used in more than one organization.</p>
+    <%- include('../../partials/flash') %>
+
+    <form method="post" action="/login/organization">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="stack mb-2">
+        <% options.forEach(function (opt, i) { %>
+          <label class="check">
+            <input type="radio" name="userId" value="<%= opt.userId %>" <%= i === 0 ? 'checked' : '' %>>
+            <%= opt.tenantName %>
+          </label>
+        <% }) %>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">Continue</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

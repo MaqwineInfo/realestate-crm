@@ -1,0 +1,64 @@
+<%- include('../../partials/app-head') %>
+<%- include('_nav') %>
+<%- include('_filters') %>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Leads</h2>
+    <span class="muted small"><%= data.total %> lead(s) first inquired between <%= h.date(data.range.start) %> and <%= h.date(data.range.end) %></span>
+  </div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing in this range', message: 'Widen the date range or clear the filters.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th>Contact</th><th>Project</th><th>Owner</th><th>Stage</th><th>Temp</th>
+          <th>Next action</th><th>Source</th>
+          <th>First inquiry</th><th class="num">Response</th><th>SLA</th>
+          <th class="num">Visits</th><th>Block</th><th class="num">Booking</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Contact">
+              <a class="t-name" href="/app/leads/<%= r._id %>"><%= r.contactId ? r.contactId.displayName : '—' %></a>
+              <div class="t-sub"><%= r.contactId ? h.mobile(r.contactId.primaryMobile) : '' %></div>
+            </td>
+            <td data-label="Project"><%= r.projectId ? r.projectId.name : '—' %></td>
+            <td data-label="Owner"><%= r.ownerUserId ? r.ownerUserId.name : 'Unassigned' %></td>
+            <td data-label="Stage"><%= r.stageId ? r.stageId.name : '—' %><% if (r.subStageId) { %><div class="t-sub"><%= r.subStageId.name %></div><% } %></td>
+            <td data-label="Temp">
+              <%# §14.5: a closed lead shows its outcome, not a temperature. %>
+              <% if (r.status !== 'ACTIVE') { %><span class="muted small"><%= r.bookedAt ? 'Booked' : 'Lost' %></span>
+              <% } else { %>
+                <span class="badge <%= { HOT: 'b-red', WARM: 'b-amber', COLD: 'b-slate' }[r.temperature] || 'b-slate' %>"><%= r.temperature || 'WARM' %></span>
+                <% if (r.temperatureMode === 'MANUAL') { %><div class="t-sub">manual</div><% } %>
+              <% } %>
+            </td>
+            <td data-label="Next action">
+              <% if (r.nextActionAt) { %>
+                <%= r.nextActionTypeId ? r.nextActionTypeId.name : 'Follow-up' %>
+                <div class="t-sub"><%= h.date(r.nextActionAt) %></div>
+              <% } else { %><span class="muted small">—</span><% } %>
+            </td>
+            <td data-label="Source"><%= r.latestSourceId ? r.latestSourceId.name : '—' %></td>
+            <td data-label="First inquiry"><%= h.date(r.firstInquiryAt) %></td>
+            <td data-label="Response" class="num"><%= r.firstResponseSeconds != null ? Math.round(r.firstResponseSeconds / 60) + ' min' : '—' %></td>
+            <td data-label="SLA">
+              <span class="badge <%= r.slaBreached ? 'b-red' : (r.firstGenuineActionAt ? 'b-green' : 'b-slate') %>">
+                <%= r.slaStatus.replace('_',' ') %>
+              </span>
+            </td>
+            <td data-label="Visits" class="num"><%= r.completedVisitCount || 0 %></td>
+            <td data-label="Block"><%= r.blockStatus || '—' %></td>
+            <td data-label="Booking" class="num"><%= r.bookingValueMinor ? h.moneyShort(r.bookingValueMinor) : '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

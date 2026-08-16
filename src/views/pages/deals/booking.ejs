@@ -1,0 +1,81 @@
+<%- include('../../partials/app-head') %>
+
+<%# V1.1 §54: the sale is the biggest moment in the product — say so plainly. %>
+<div class="booking-done">
+  <div class="bd-mark" aria-hidden="true">✓</div>
+  <div>
+    <h1>Booking completed</h1>
+    <div class="bd-lines">
+      <strong><%= booking.contactId.displayName %></strong>
+      · <%= booking.projectId.name %>
+      · Unit <%= booking.unitId.unitNumber %>
+      · <%= h.money(booking.finalPriceMinor) %>
+      · <%= h.date(booking.bookingDate) %>
+    </div>
+    <div class="small muted mt-1">
+      The unit is booked, the block is converted, the lead is closed, its pending follow-ups are
+      cancelled and the marketing attribution is frozen onto this record.
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/leads/<%= booking.leadId %>">Open lead</a>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Commercials</h2></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Final price</dt><dd><%= h.money(booking.finalPriceMinor) %></dd>
+        <dt>Booking amount</dt><dd><%= h.money(booking.bookingAmountMinor) %></dd>
+        <dt>Discount</dt><dd><%= h.money(booking.discountMinor || 0) %></dd>
+        <dt>Payment plan</dt><dd><%= booking.paymentPlanId ? booking.paymentPlanId.name : '—' %></dd>
+        <dt>Buyer purpose</dt><dd><%= booking.buyerPurpose.replace('_',' ').toLowerCase() %></dd>
+        <dt>Salesperson</dt><dd><%= booking.salespersonId ? booking.salespersonId.name : '—' %></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Attribution</h2></div>
+    <div class="card-body">
+      <p class="small muted">Frozen at the moment of sale so campaign reporting cannot drift (§119).</p>
+      <dl class="dl">
+        <dt>Original source</dt><dd><%= booking.originalSourceId || '—' %></dd>
+        <dt>Final source</dt><dd><%= booking.sourceId || '—' %></dd>
+        <dt>Booked on</dt><dd><%= h.dateTime(booking.createdAt) %></dd>
+      </dl>
+    </div>
+  </div>
+
+  <% if (booking.buyerPurpose === 'INVESTMENT' && booking.investment) { %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Investor exit</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Expected exit</dt><dd><%= booking.investment.expectedExitDate ? h.date(booking.investment.expectedExitDate) : '—' %></dd>
+          <dt>Expected price</dt><dd><%= booking.investment.expectedExitPriceMinor ? h.money(booking.investment.expectedExitPriceMinor) : '—' %></dd>
+          <dt>Expected ROI</dt><dd><%= booking.investment.expectedRoiPercentage || '—' %>%</dd>
+        </dl>
+        <a class="btn btn-sm mt-1" href="/app/opportunities/resale">Resale queue</a>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (booking.buyerPurpose === 'RENTAL_INCOME' && booking.rental) { %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Rental plan</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Available from</dt><dd><%= booking.rental.expectedRentalStartDate ? h.date(booking.rental.expectedRentalStartDate) : '—' %></dd>
+          <dt>Expected rent</dt><dd><%= booking.rental.expectedRentMinor ? h.money(booking.rental.expectedRentMinor) : '—' %></dd>
+          <dt>Furnishing</dt><dd><%= booking.rental.furnishing || '—' %></dd>
+        </dl>
+        <a class="btn btn-sm mt-1" href="/app/opportunities/rental">Rental queue</a>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

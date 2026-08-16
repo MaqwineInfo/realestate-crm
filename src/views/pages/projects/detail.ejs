@@ -1,0 +1,635 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <div class="inline">
+      <h1><%= project.name %></h1>
+      <span class="badge <%= project.status === 'ACTIVE' ? 'b-green' : 'b-slate' %>"><%= project.status %></span>
+      <% if (project.miniSite && project.miniSite.published) { %><span class="badge b-blue">Mini site live</span><% } %>
+    </div>
+    <div class="sub">
+      <%= project.city || '' %><%= project.developerName ? ' · ' + project.developerName : '' %>
+      <%= project.reraNumber ? ' · RERA ' + project.reraNumber : '' %> · <%= leadCount %> lead<%= leadCount === 1 ? '' : 's' %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/inventory/<%= project._id %>">Inventory</a>
+    <% if (can('project.edit')) { %><a class="btn" href="/app/projects/<%= project._id %>/edit">Edit</a><% } %>
+    <% if (can('project.manage_minisite')) { %><button class="btn" data-drawer="drawer-minisite">Mini site</button><% } %>
+    <% if (can('project.view')) { %><button class="btn btn-primary" data-drawer="drawer-qr">Walk-in QR</button><% } %>
+  </div>
+</div>
+
+<%#
+  V1.1 §26/§37: the same seven steps that build a project are the tabs that
+  maintain it, so nobody has to learn two different layouts.
+%>
+<nav class="steps" aria-label="Project setup">
+  <% [
+       ['basics', 'Basics'], ['location', 'Location'], ['sales', 'Sales &amp; configuration'],
+       ['media', 'Media &amp; documents'], ['inventory', 'Towers &amp; units'],
+       ['pricing', 'Pricing &amp; payment plans'], ['review', 'Mini site &amp; review'],
+     ].forEach(function (s, i) {
+       const done = readiness.checks.find(function (c) { return c.key === s[0]; }); %>
+    <a class="step <%= step === s[0] ? 'on' : '' %>"
+       href="<%= ['basics','location','sales'].includes(s[0]) ? '/app/projects/' + project._id + '/edit?step=' + s[0] : '/app/projects/' + project._id + '?step=' + s[0] %>">
+      <span class="n"><%= done && done.ok ? '✓' : i + 1 %></span> <%- s[1] %>
+    </a>
+  <% }) %>
+</nav>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body"><div class="tile"><div class="num"><%= unitStats.available %></div><div class="lbl">Available</div></div></div></div>
+  <div class="card"><div class="card-body"><div class="tile"><div class="num"><%= unitStats.blocked %></div><div class="lbl">Blocked</div></div></div></div>
+  <div class="card"><div class="card-body"><div class="tile"><div class="num"><%= unitStats.booked %></div><div class="lbl">Booked</div></div></div></div>
+  <div class="card"><div class="card-body"><div class="tile"><div class="num"><%= unitStats.total %></div><div class="lbl">Total units</div></div></div></div>
+</div>
+
+<% if (step === 'inventory') { %>
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">Towers &amp; blocks</h2>
+      <% if (can('inventory.edit')) { %><button class="btn btn-sm" data-drawer="drawer-tower">Add tower</button><% } %>
+    </div>
+    <% if (!towers.length) { %>
+      <div class="card-body"><p class="muted mb-0">Add towers/blocks and units to begin inventory management.</p></div>
+    <% } else { %>
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Floors</th><th>Units</th></tr></thead>
+        <tbody>
+          <% towers.forEach(function (t) { %>
+            <tr>
+              <td><span class="t-name"><%= t.name %></span><%= t.code ? ' (' + t.code + ')' : '' %></td>
+              <td class="muted"><%= t.type %></td>
+              <td><%= floors.filter(function (f) { return String(f.towerId) === String(t._id); }).length %></td>
+              <td><a href="/app/inventory/<%= project._id %>?towerId=<%= t._id %>">View</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">Unit types</h2>
+      <% if (can('inventory.edit')) { %><button class="btn btn-sm" data-drawer="drawer-unittype">Add type</button><% } %>
+    </div>
+    <% if (!unitTypes.length) { %>
+      <div class="card-body"><p class="muted mb-0">Add the configurations you sell — 2 BHK, shop, plot.</p></div>
+    <% } else { %>
+      <table>
+        <thead><tr><th>Name</th><th>Area</th><th>Base rate</th></tr></thead>
+        <tbody>
+          <% unitTypes.forEach(function (ut) { %>
+            <tr>
+              <td><span class="t-name"><%= ut.name %></span><div class="t-sub"><%= ut.propertyType %></div></td>
+              <td><%= ut.superBuiltUpArea || ut.builtUpArea || ut.carpetArea || '—' %> <%= ut.areaUnit %></td>
+              <td><%= ut.defaultBaseRateMinor ? h.money(ut.defaultBaseRateMinor) + '/' + ut.areaUnit : '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>
+
+<% if (towers.length && unitTypes.length && can('inventory.edit')) { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Generate units</h2></div>
+    <div class="card-body">
+      <%# §32.2: generate is a two-step action — preview, then confirm. %>
+      <% if (generatePreview) { %>
+        <div class="read-only-summary mb-2">
+          <strong><%= generatePreview.willCreate %> unit(s)</strong> will be created in
+          <%= generatePreview.tower.name %> as <%= generatePreview.unitType.name %>.
+          <% if (generatePreview.skipping) { %>
+            <%= generatePreview.skipping %> already exist and will be skipped.
+          <% } %>
+        </div>
+        <div class="unit-preview">
+          <% generatePreview.rows.forEach(function (row) { %>
+            <div class="pv-row">
+              <span class="pv-floor">Floor <%= row.floorNumber %></span>
+              <% row.units.forEach(function (u) { %>
+                <span class="pv-unit <%= u.skipped ? 'is-skipped' : '' %>"><%= u.unitNumber %></span>
+              <% }) %>
+            </div>
+          <% }) %>
+        </div>
+        <form method="post" action="/api/projects/<%= project._id %>/units/generate" class="mt-2">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="towerId" value="<%= generatePreview.input.towerId %>">
+          <input type="hidden" name="unitTypeId" value="<%= generatePreview.input.unitTypeId %>">
+          <input type="hidden" name="unitsPerFloor" value="<%= generatePreview.input.unitsPerFloor %>">
+          <input type="hidden" name="numberPattern" value="<%= generatePreview.input.numberPattern %>">
+          <input type="hidden" name="startIndex" value="<%= generatePreview.input.startIndex %>">
+          <input type="hidden" name="confirm" value="1">
+          <div class="btn-group">
+            <button class="btn btn-primary" type="submit">Create <%= generatePreview.willCreate %> unit(s)</button>
+            <a class="btn btn-ghost" href="/app/projects/<%= project._id %>?step=inventory">Change the pattern</a>
+          </div>
+        </form>
+      <% } else { %>
+        <form class="filters" method="post" action="/api/projects/<%= project._id %>/units/generate">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="g-tower">Tower</label>
+            <select id="g-tower" name="towerId" required>
+              <% towers.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="g-type">Unit type</label>
+            <select id="g-type" name="unitTypeId" required>
+              <% unitTypes.forEach(function (ut) { %><option value="<%= ut._id %>"><%= ut.name %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="g-per">Units per floor</label>
+            <input type="number" id="g-per" name="unitsPerFloor" min="1" max="50" value="4" required>
+          </div>
+          <div class="field">
+            <label for="g-pattern">Number pattern</label>
+            <input type="text" id="g-pattern" name="numberPattern" value="{floor}{index:02}">
+          </div>
+          <button class="btn btn-primary" type="submit">Preview</button>
+        </form>
+        <div class="hint mt-1">
+          You will see every unit number before anything is created. Existing numbers are skipped,
+          so this is safe to run again after adding a floor.
+        </div>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+<% } %>
+
+<% if (step === 'pricing') { %>
+<div class="card" id="pricing">
+  <div class="card-head">
+    <h2 class="grow">Pricing components</h2>
+    <% if (can('pricing.override') || can('project.edit')) { %><button class="btn btn-sm" data-drawer="drawer-pricing">Add component</button><% } %>
+  </div>
+  <% if (!components.length) { %>
+    <%- include('../../partials/empty', { heading: 'No pricing configured', message: 'Add at least a base price so cost sheets can be generated.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Component</th><th>Type</th><th>Rate</th><th>Applies to</th><th>Visible</th></tr></thead>
+      <tbody>
+        <% components.forEach(function (c) { %>
+          <tr>
+            <td data-label="Component"><span class="t-name"><%= c.name %></span><div class="t-sub"><%= c.kind %></div></td>
+            <td data-label="Type"><%= c.calcType.replace('_',' ').toLowerCase() %></td>
+            <td data-label="Rate">
+              <% if (c.calcType === 'PERCENTAGE') { %><%= c.percentage %>%
+              <% } else { %><%= h.money(c.rateMinor || 0) %><%= c.calcType === 'PER_AREA' ? ' / ' + (c.areaBasis || '').toLowerCase() : '' %><% } %>
+            </td>
+            <td data-label="Applies to" class="muted small">
+              <%= c.applicableUnitTypeIds && c.applicableUnitTypeIds.length ? c.applicableUnitTypeIds.length + ' unit type(s)' : 'All units' %>
+            </td>
+            <td data-label="Visible"><span class="badge <%= c.customerVisible ? 'b-green' : 'b-slate' %>"><%= c.customerVisible ? 'Customer' : 'Internal' %></span></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%# V1.1 §35: the schedule is now customer-facing, so it has to be real. %>
+<div class="card" id="plans">
+  <div class="card-head">
+    <h2 class="grow">Payment plans</h2>
+    <% if (can('project.edit')) { %><button class="btn btn-sm" data-drawer="drawer-plan">Add plan</button><% } %>
+  </div>
+  <% if (!plans.length) { %>
+    <div class="card-body"><p class="muted mb-0">A booking needs a payment plan, so add at least one.</p></div>
+  <% } else { %>
+    <div class="card-body">
+      <% plans.forEach(function (pl) { %>
+        <div class="plan-block">
+          <div class="inline mb-1">
+            <strong><%= pl.name %></strong>
+            <span class="muted small"><%= pl.type.replace('_',' ').toLowerCase() %></span>
+            <span class="badge <%= pl.active ? 'b-green' : 'b-slate' %>"><%= pl.active ? 'Active' : 'Draft' %></span>
+            <% if (!pl.configured) { %>
+              <%# §101: a legacy plan stays usable, but never pretends to have a schedule. %>
+              <span class="badge b-amber">Schedule not configured<%= pl.milestones.length ? ' · ' + pl.total.toFixed(2) + '%' : '' %></span>
+            <% } %>
+            <span class="grow"></span>
+            <% if (can('project.edit')) { %>
+              <button class="btn btn-sm" data-drawer="drawer-plan-<%= pl._id %>">Edit</button>
+              <form method="post" action="/api/projects/<%= project._id %>/payment-plans/<%= pl._id %>/toggle">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm" type="submit"><%= pl.active ? 'Deactivate' : 'Activate' %></button>
+              </form>
+            <% } %>
+          </div>
+          <% if (pl.milestones.length) { %>
+            <table class="mini">
+              <tbody>
+                <% pl.milestones.forEach(function (m) { %>
+                  <tr>
+                    <td class="num" style="width:70px"><%= m.percentage %>%</td>
+                    <td><%= m.label %></td>
+                    <td class="muted small"><%= (m.dueRule || '').replace(/_/g,' ').toLowerCase() %><%= m.dueOffsetDays ? ' +' + m.dueOffsetDays + 'd' : '' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } else { %>
+            <p class="small muted mb-0">No milestones yet. Quotations will show the plan name without a schedule.</p>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+<% } %>
+
+<%# ------------------------- V1.1 §31: media & documents -------------------- %>
+<% if (step === 'media') { %>
+  <div class="grid cols-2">
+    <% [['IMAGE', 'Images', media, imageCategories], ['DOCUMENT', 'Documents', documents, documentCategories]].forEach(function (group) { %>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="grow"><%= group[1] %></h2>
+          <% if (can('project.manage_media')) { %>
+            <button class="btn btn-sm" data-drawer="drawer-upload-<%= group[0] %>">Upload</button>
+          <% } %>
+        </div>
+        <% if (!group[2].length) { %>
+          <div class="card-body">
+            <p class="muted mb-0">
+              <%= group[0] === 'IMAGE'
+                ? 'A cover image is reused on the project card, the mini site and the quotation header.'
+                : 'Brochures and RERA documents can be marked customer-shareable or kept internal.' %>
+            </p>
+          </div>
+        <% } else { %>
+          <table class="responsive">
+            <thead><tr><th>File</th><th>Category</th><th>Visibility</th><th></th></tr></thead>
+            <tbody>
+              <% group[2].forEach(function (a) { %>
+                <tr>
+                  <td data-label="File">
+                    <a class="t-name" href="<%= a.url %>" target="_blank" rel="noopener"><%= a.title || a.fileName %></a>
+                    <div class="t-sub"><%= Math.max(1, Math.round((a.fileSize || 0) / 1024)) %> KB</div>
+                  </td>
+                  <td data-label="Category"><span class="badge b-slate"><%= a.category.replace(/_/g,' ').toLowerCase() %></span></td>
+                  <td data-label="Visibility">
+                    <%# §87: internal vs customer-visible is the field that matters. %>
+                    <span class="badge <%= a.customerVisible ? 'b-green' : 'b-slate' %>"><%= a.customerVisible ? 'Customer' : 'Internal' %></span>
+                    <% if (a.aiUsable) { %><span class="badge b-violet">AI</span><% } %>
+                  </td>
+                  <td class="row-actions">
+                    <% if (can('project.manage_media')) { %>
+                      <button class="btn btn-sm" data-drawer="drawer-asset-<%= a._id %>">Edit</button>
+                      <form method="post" action="/api/projects/<%= project._id %>/assets/<%= a._id %>/archive"
+                            data-confirm="Archive this file? Anything already shared keeps working.">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-sm" type="submit">Archive</button>
+                      </form>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<%# --------------------------- V1.1 §36: review ----------------------------- %>
+<% if (step === 'review') { %>
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Readiness</h2></div>
+      <div class="card-body">
+        <ul class="readiness">
+          <% readiness.checks.forEach(function (c) { %>
+            <li class="<%= c.ok ? 'ok' : (c.blocking ? 'blocking' : 'warn') %>">
+              <span class="mark"><%= c.ok ? '✓' : (c.blocking ? '✕' : '!') %></span>
+              <%= c.label %>
+              <% if (!c.ok && !c.blocking) { %><span class="muted small">recommended</span><% } %>
+            </li>
+          <% }) %>
+        </ul>
+        <% if (!readiness.ready) { %>
+          <p class="small mb-0" style="color:var(--danger)">
+            Fix the ✕ items before activating — a live project without them produces a broken quotation.
+          </p>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Status &amp; mini site</h2></div>
+      <div class="card-body">
+        <% if (can('project.edit') || can('project.publish')) { %>
+          <form method="post" action="/api/projects/<%= project._id %>/status" class="filters mb-2">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="field">
+              <label for="pstatus">Project status</label>
+              <select id="pstatus" name="status">
+                <% ['DRAFT','ACTIVE','ON_HOLD','SOLD_OUT','ARCHIVED'].forEach(function (s) { %>
+                  <option value="<%= s %>" <%= project.status === s ? 'selected' : '' %>><%= s.replace('_',' ') %></option>
+                <% }) %>
+              </select>
+            </div>
+            <button class="btn btn-primary" type="submit">Save status</button>
+          </form>
+        <% } %>
+        <div class="read-only-summary">
+          Mini site: <code><%= appUrl %>/p/<%= project.slug %></code>
+          <div class="small muted mt-1">
+            <%= project.miniSite.published ? 'Published.' : 'Not published.' %>
+            Only an active project can publish.
+          </div>
+        </div>
+        <div class="btn-group mt-2">
+          <% if (can('project.manage_minisite')) { %><button class="btn" data-drawer="drawer-minisite">Mini site settings</button><% } %>
+          <button class="btn" data-drawer="drawer-qr">Walk-in QR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<%# --------------------------------- drawers -------------------------------- %>
+
+<% if (can('project.manage_media')) { %>
+  <% [['IMAGE', 'image', imageCategories], ['DOCUMENT', 'document', documentCategories]].forEach(function (g) { %>
+    <div class="drawer-backdrop" id="drawer-upload-<%= g[0] %>" hidden>
+      <div class="drawer" role="dialog" aria-modal="true" aria-label="Upload <%= g[1] %>">
+        <form method="post" action="/api/projects/<%= project._id %>/assets" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="assetType" value="<%= g[0] %>">
+          <div class="drawer-head">
+            <h2 class="grow">Upload <%= g[1] %></h2>
+            <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+          </div>
+          <div class="drawer-body">
+            <div class="field">
+              <label for="up-file-<%= g[0] %>">File</label>
+              <input type="file" id="up-file-<%= g[0] %>" name="file" required
+                     accept="<%= g[0] === 'IMAGE' ? 'image/jpeg,image/png,image/webp' : '.pdf,.doc,.docx,.xls,.xlsx' %>">
+              <div class="hint"><%= g[0] === 'IMAGE' ? 'JPG, PNG or WEBP.' : 'PDF, Word or Excel.' %> Checked on the server too.</div>
+            </div>
+            <div class="field">
+              <label for="up-cat-<%= g[0] %>">Category</label>
+              <select id="up-cat-<%= g[0] %>" name="category" required>
+                <% g[2].forEach(function (c) { %><option value="<%= c %>"><%= c.replace(/_/g,' ').toLowerCase() %></option><% }) %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="up-title-<%= g[0] %>">Title <span class="opt">optional</span></label>
+              <input type="text" id="up-title-<%= g[0] %>" name="title" maxlength="150">
+            </div>
+            <label class="check"><input type="checkbox" name="customerVisible" value="1"> Customer can see this</label>
+            <% if (g[0] === 'DOCUMENT') { %>
+              <label class="check"><input type="checkbox" name="aiUsable" value="1"> The assistant may read this document</label>
+            <% } %>
+            <div class="field">
+              <label for="up-note-<%= g[0] %>">Internal note <span class="opt">optional</span></label>
+              <input type="text" id="up-note-<%= g[0] %>" name="internalNote" maxlength="500">
+            </div>
+          </div>
+          <div class="drawer-foot">
+            <button type="button" class="btn" data-drawer-close>Cancel</button>
+            <button type="submit" class="btn btn-primary">Upload</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <% }) %>
+
+  <% media.concat(documents).forEach(function (a) { %>
+    <%- include('../../partials/drawer-open', { id: 'drawer-asset-' + a._id, heading: 'Edit ' + (a.title || a.fileName), action: '/api/projects/' + project._id + '/assets/' + a._id }) %>
+      <div class="field">
+        <label for="as-cat-<%= a._id %>">Category</label>
+        <select id="as-cat-<%= a._id %>" name="category">
+          <% (a.assetType === 'IMAGE' ? imageCategories : documentCategories).forEach(function (c) { %>
+            <option value="<%= c %>" <%= a.category === c ? 'selected' : '' %>><%= c.replace(/_/g,' ').toLowerCase() %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="as-title-<%= a._id %>">Title</label>
+        <input type="text" id="as-title-<%= a._id %>" name="title" maxlength="150" value="<%= a.title || '' %>">
+      </div>
+      <label class="check"><input type="checkbox" name="customerVisible" value="1" <%= a.customerVisible ? 'checked' : '' %>> Customer can see this</label>
+      <% if (a.assetType === 'DOCUMENT') { %>
+        <label class="check"><input type="checkbox" name="aiUsable" value="1" <%= a.aiUsable ? 'checked' : '' %>> The assistant may read this document</label>
+      <% } %>
+    <%- include('../../partials/drawer-close', { cta: 'Save file' }) %>
+  <% }) %>
+<% } %>
+
+<% if (can('inventory.edit')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-tower', heading: 'Add tower or block', action: '/api/projects/' + project._id + '/towers' }) %>
+    <div class="field">
+      <label for="t-name">Name</label>
+      <input type="text" id="t-name" name="name" required maxlength="60" placeholder="Tower A">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="t-code">Code</label>
+        <input type="text" id="t-code" name="code" maxlength="20" placeholder="A">
+      </div>
+      <div class="field">
+        <label for="t-type">Type</label>
+        <select id="t-type" name="type">
+          <% ['TOWER','BLOCK','WING','PHASE','CLUSTER'].forEach(function (x) { %><option value="<%= x %>"><%= x %></option><% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="t-floors">Number of floors</label>
+      <input type="number" id="t-floors" name="floorCount" min="0" max="200" value="10">
+      <div class="hint">Floors are created automatically so you can generate units straight away.</div>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Add tower' }) %>
+
+  <%- include('../../partials/drawer-open', { id: 'drawer-unittype', heading: 'Add unit type', action: '/api/projects/' + project._id + '/unit-types' }) %>
+    <div class="field">
+      <label for="ut-name">Name</label>
+      <input type="text" id="ut-name" name="name" required maxlength="60" placeholder="3 BHK">
+    </div>
+    <div class="field">
+      <label for="ut-property">Property type</label>
+      <select id="ut-property" name="propertyType">
+        <% ['APARTMENT','VILLA','PLOT','SHOP','OFFICE','PENTHOUSE','OTHER'].forEach(function (x) { %><option value="<%= x %>"><%= x %></option><% }) %>
+      </select>
+    </div>
+    <div class="field-row three">
+      <div class="field"><label for="ut-carpet">Carpet area</label><input type="number" id="ut-carpet" name="carpetArea"></div>
+      <div class="field"><label for="ut-builtup">Built-up</label><input type="number" id="ut-builtup" name="builtUpArea"></div>
+      <div class="field"><label for="ut-super">Saleable</label><input type="number" id="ut-super" name="superBuiltUpArea"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="ut-bed">Bedrooms</label><input type="number" id="ut-bed" name="bedrooms" min="0"></div>
+      <div class="field"><label for="ut-rate">Base rate per area unit</label><input type="text" id="ut-rate" name="defaultBaseRateMinor" inputmode="decimal" placeholder="5500"></div>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Add unit type' }) %>
+<% } %>
+
+<% if (can('pricing.override') || can('project.edit')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-pricing', heading: 'Add pricing component', action: '/api/projects/' + project._id + '/pricing' }) %>
+    <div class="field">
+      <label for="pc-name">Name</label>
+      <input type="text" id="pc-name" name="name" required maxlength="80" placeholder="Base price">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="pc-kind">Kind</label>
+        <select id="pc-kind" name="kind" required>
+          <% ['BASE','FLOOR_RISE','PLC','VIEW','PARKING','MAINTENANCE','CORPUS','CLUB','INFRASTRUCTURE','TAX','STAMP_DUTY','REGISTRATION','OTHER'].forEach(function (x) { %>
+            <option value="<%= x %>"><%= x.replace('_',' ') %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="pc-calc">Calculated as</label>
+        <select id="pc-calc" name="calcType" required>
+          <option value="PER_AREA">Per area unit</option>
+          <option value="FIXED">Fixed amount</option>
+          <option value="PERCENTAGE">Percentage</option>
+          <option value="PER_UNIT_COUNT">Per parking slot</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="pc-rate">Rate / amount</label>
+        <input type="text" id="pc-rate" name="rateMinor" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label for="pc-pct">Percentage</label>
+        <input type="number" id="pc-pct" name="percentage" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label for="pc-basis">Area basis</label>
+      <select id="pc-basis" name="areaBasis">
+        <option value="SALEABLE">Saleable</option><option value="BUILT_UP">Built-up</option><option value="CARPET">Carpet</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="pc-order">Display order</label>
+      <input type="number" id="pc-order" name="displayOrder" min="0" value="0">
+    </div>
+    <label class="check"><input type="checkbox" name="mandatory" value="1" checked> Mandatory</label>
+    <label class="check"><input type="checkbox" name="customerVisible" value="1" checked> Show to customer</label>
+    <label class="check"><input type="checkbox" name="editableBySales" value="1"> Sales users may edit this line</label>
+  <%- include('../../partials/drawer-close', { cta: 'Add component' }) %>
+<% } %>
+
+<%#
+  V1.1 §35: a payment plan is a schedule, not a label. Milestone rows post as
+  parallel arrays and the server refuses to activate anything that does not add
+  up to exactly 100%.
+%>
+<% if (can('project.edit')) { %>
+  <% [null].concat(plans).forEach(function (plan) {
+       const id = plan ? 'drawer-plan-' + plan._id : 'drawer-plan';
+       const heading = plan ? 'Edit ' + plan.name : 'Add payment plan';
+       const action = '/api/projects/' + project._id + '/payment-plans' + (plan ? '/' + plan._id : ''); %>
+      <%- include('../../partials/drawer-open', { id: id, heading: heading, action: action }) %>
+        <div class="field">
+          <label for="<%= id %>-name">Name</label>
+          <input type="text" id="<%= id %>-name" name="name" required maxlength="80"
+                 value="<%= plan ? plan.name : '' %>" placeholder="Construction linked">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="<%= id %>-type">Type</label>
+            <select id="<%= id %>-type" name="type">
+              <% [['CONSTRUCTION_LINKED','Construction linked'],['DOWN_PAYMENT','Down payment'],['FLEXI','Flexi'],['CUSTOM','Custom']].forEach(function (o) { %>
+                <option value="<%= o[0] %>" <%= plan && plan.type === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="<%= id %>-order">Display order</label>
+            <input type="number" id="<%= id %>-order" name="displayOrder" min="0" value="<%= plan ? plan.displayOrder : 0 %>">
+          </div>
+        </div>
+        <div class="field">
+          <label for="<%= id %>-desc">Description <span class="opt">optional</span></label>
+          <textarea id="<%= id %>-desc" name="description" rows="2" maxlength="1000"><%= plan ? (plan.description || '') : '' %></textarea>
+        </div>
+
+        <fieldset>
+          <legend>Schedule — must total 100% to activate</legend>
+          <div data-plan-rows>
+            <% const rows = (plan && plan.milestones.length) ? plan.milestones : [
+                 { percentage: '', label: '', dueRule: 'ON_BOOKING' },
+                 { percentage: '', label: '', dueRule: 'CONSTRUCTION' },
+               ]; %>
+            <% rows.forEach(function (m) { %>
+              <div class="plan-row">
+                <input type="number" name="msPercentage" step="0.01" min="0" max="100" placeholder="%"
+                       value="<%= m.percentage %>" aria-label="Percentage" data-plan-pct>
+                <input type="text" name="msLabel" maxlength="120" placeholder="Milestone (e.g. On booking)"
+                       value="<%= m.label || '' %>" aria-label="Milestone">
+                <select name="msDueRule" aria-label="Due rule">
+                  <% [['ON_BOOKING','On booking'],['DAYS_AFTER_BOOKING','Days after booking'],['CONSTRUCTION','Construction'],['ON_POSSESSION','On possession'],['CUSTOM','Custom']].forEach(function (o) { %>
+                    <option value="<%= o[0] %>" <%= m.dueRule === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+                  <% }) %>
+                </select>
+                <input type="number" name="msDueOffsetDays" min="0" placeholder="days" style="width:70px"
+                       value="<%= m.dueOffsetDays == null ? '' : m.dueOffsetDays %>" aria-label="Offset days">
+                <input type="hidden" name="msNote" value="<%= (m.customerNote || m.note) || '' %>">
+                <button type="button" class="btn btn-ghost btn-sm" data-plan-remove aria-label="Remove">✕</button>
+              </div>
+            <% }) %>
+          </div>
+          <div class="inline mt-1">
+            <button type="button" class="btn btn-sm" data-plan-add>+ Add milestone</button>
+            <span class="small muted">Total: <strong data-plan-total>0</strong>%</span>
+          </div>
+        </fieldset>
+
+        <p class="small muted mb-0">
+          Activate or deactivate from the plan card — editing a live plan never takes it offline.<br>
+          Used for the quotation schedule and the booking record. It does not create receivables
+          or reminders (§34.2, §35.4).
+        </p>
+      <%- include('../../partials/drawer-close', { cta: 'Save plan' }) %>
+  <% }) %>
+<% } %>
+
+<% if (can('project.manage_minisite')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-minisite', heading: 'Mini site', action: '/api/projects/' + project._id + '/mini-site' }) %>
+    <div class="read-only-summary">
+      Public URL: <code><%= appUrl %>/p/<%= project.slug %></code>
+    </div>
+    <label class="check"><input type="checkbox" name="published" value="1" <%= project.miniSite.published ? 'checked' : '' %>> Publish the mini site</label>
+    <label class="check"><input type="checkbox" name="showStartingPrice" value="1" <%= project.miniSite.showStartingPrice ? 'checked' : '' %>> Show starting price</label>
+    <label class="check"><input type="checkbox" name="showConfigurationAvailability" value="1" <%= project.miniSite.showConfigurationAvailability ? 'checked' : '' %>> Show availability by configuration</label>
+    <label class="check"><input type="checkbox" name="showAvailability" value="1" <%= project.miniSite.showAvailability ? 'checked' : '' %>> Show unit-level availability</label>
+    <div class="field mt-2">
+      <label for="ms-cta">CTA headline</label>
+      <input type="text" id="ms-cta" name="ctaHeadline" value="<%= project.miniSite.ctaHeadline || '' %>" maxlength="120">
+    </div>
+    <p class="small muted mb-0">Exact unit-wise price and availability stay CRM-only unless you enable them (§64.2).</p>
+  <%- include('../../partials/drawer-close', { cta: 'Save mini site' }) %>
+<% } %>
+
+<div class="drawer-backdrop" id="drawer-qr" hidden>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Walk-in QR">
+    <div class="drawer-head"><h2 class="grow">Walk-in QR</h2><button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button></div>
+    <div class="drawer-body">
+      <p>Print or display this link at the site. A walk-in customer scans it, enters name and mobile, and the CRM creates the contact, the lead and the visit — no OTP (§25).</p>
+      <div class="read-only-summary"><code><%= appUrl %>/visit/<%= project.qrToken %></code></div>
+      <p class="small muted">The token identifies the project, so nobody can post a visit for a project they were not standing in front of.</p>
+      <a class="btn btn-primary" target="_blank" rel="noopener" href="/visit/<%= project.qrToken %>">Open the form</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

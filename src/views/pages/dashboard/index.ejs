@@ -1,0 +1,272 @@
+<%- include('../../partials/app-head') %>
+<%
+  const activeLabel = (tiles.find(function (t) { return t.key === activeTile; }) || {}).label;
+  const viewQuery = isTeamView ? '&view=team' : '';
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= isTeamView ? 'Team dashboard' : 'Hello, ' + currentUser.name.split(' ')[0] %></h1>
+    <div class="sub">
+      <%= isTeamView
+        ? 'Exceptions first — the work that will not fix itself.'
+        : 'Work top to bottom. Everything here needs an action from you today.' %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <% if (canSeeTeam) { %>
+      <a class="btn <%= isTeamView ? '' : 'btn-primary' %>" href="/app/dashboard">My work</a>
+      <a class="btn <%= isTeamView ? 'btn-primary' : '' %>" href="/app/dashboard?view=team">Team</a>
+    <% } %>
+    <% if (can('lead.create')) { %><a class="btn btn-primary" href="/app/leads/new">New lead</a><% } %>
+  </div>
+</div>
+
+<%#
+  V1.1 §5: the phone is ringing and the customer is on it. One box answers
+  "do we know them, who owns them, where are they" before the call is over.
+  Without JavaScript it submits to the full search page — nothing is lost.
+%>
+<form class="dash-search" method="get" action="/app/search" role="search" data-quick-search>
+  <input type="search" name="q" autocomplete="off" aria-label="Search customers"
+         placeholder="Search mobile, customer, lead ID, email, project or unit…">
+  <button class="btn" type="submit">Search</button>
+  <div class="qs-results" data-qs-results hidden aria-live="polite"></div>
+</form>
+
+<div class="tiles">
+  <% tiles.forEach(function (t) { %>
+    <a class="tile <%= t.tone %> <%= activeTile === t.key ? 'active' : '' %>" href="/app/dashboard?tile=<%= t.key %><%= viewQuery %>">
+      <div class="num"><%= t.count %></div>
+      <div class="lbl"><%= t.label %></div>
+    </a>
+  <% }) %>
+</div>
+
+<% if (isTeamView && snapshot) { %>
+  <div class="grid cols-4 mb-2">
+    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.receivedToday %></div><div class="lbl muted small">Leads received today</div></div></div>
+    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.connectedToday %></div><div class="lbl muted small">Responded today</div></div></div>
+    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.breachedToday %></div><div class="lbl muted small">SLA breaches today</div></div></div>
+    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.atRiskLeads.length %></div><div class="lbl muted small">Close to breaching</div></div></div>
+  </div>
+<% } %>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow"><%= activeLabel %></h2>
+    <span class="muted small"><%= queue.items.length %> shown</span>
+  </div>
+
+  <% if (!queue.items.length) { %>
+    <% if (activeTile === 'new' || activeTile === 'unattended') { %>
+      <%- include('../../partials/empty', { heading: "No new leads waiting", message: "You're clear. Every lead has been attended.", ctaHref: null, ctaLabel: '' }) %>
+    <% } else if (activeTile === 'missed') { %>
+      <%- include('../../partials/empty', { heading: 'Nothing missed', message: 'Every follow-up due so far has been completed on time.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else if (activeTile === 'sla') { %>
+      <%- include('../../partials/empty', { heading: 'No SLA breaches', message: 'Every lead so far has been answered inside the response target.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else if (activeTile === 'reinquiry') { %>
+      <%- include('../../partials/empty', { heading: 'No re-inquiries', message: 'When an existing customer inquires again, they appear here first.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else if (activeTile === 'unassigned') { %>
+      <%- include('../../partials/empty', { heading: 'Nothing unassigned', message: 'Every captured lead found an owner.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <%- include('../../partials/empty', { heading: 'No follow-ups due today', message: 'Schedule your next actions from any lead workspace.', ctaHref: '/app/leads', ctaLabel: 'Go to leads' }) %>
+    <% } %>
+
+  <% } else if (queue.kind === 'LEADS') { %>
+    <table class="responsive" data-queue="leads">
+      <thead>
+        <tr>
+          <th>Customer</th><th>Project</th><th>Stage</th><th>Waiting</th>
+          <% if (isTeamView) { %><th>Owner</th><% } %>
+          <th>Source</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% queue.items.forEach(function (lead) {
+             const contact = lead.contactId || {};
+             const canWork = String(lead.ownerUserId && (lead.ownerUserId._id || lead.ownerUserId)) === String(currentUser._id); %>
+          <tr>
+            <td data-label="Customer">
+              <a class="t-name" href="/app/leads/<%= lead._id %>"><%= contact.displayName || 'Unknown' %></a>
+              <div class="t-sub"><%= h.mobile(contact.primaryMobile) %></div>
+              <div class="badge-row"><%- include('../../partials/lead-badges', { lead: lead, dense: true }) %></div>
+            </td>
+            <td data-label="Project"><%= lead.projectId ? lead.projectId.name : '—' %></td>
+            <td data-label="Stage"><span class="badge b-<%= lead.stageId && lead.stageId.colorToken || 'slate' %>"><%= lead.stageId ? lead.stageId.name : '—' %></span></td>
+            <td data-label="Waiting">
+              <%= h.rel(lead.latestInquiryAt) %>
+              <% if (lead.reinquiryPendingAt) { %><div><span class="badge b-amber"><%= lead.inquiryCount %> inquiries</span></div><% } %>
+            </td>
+            <% if (isTeamView) { %>
+              <td data-label="Owner"><%= lead.ownerUserId ? lead.ownerUserId.name : 'Unassigned' %></td>
+            <% } %>
+            <td data-label="Source"><%= lead.latestSourceId ? lead.latestSourceId.name : '—' %></td>
+            <td class="row-actions">
+              <a class="btn btn-sm" href="tel:<%= contact.normalizedMobile %>">Call</a>
+              <% if (canWork && can('followup.create')) { %>
+                <button class="btn btn-sm btn-primary"
+                        data-quick="first-action"
+                        data-action="/api/leads/<%= lead._id %>/log-action"
+                        data-stage-id="<%= lead.stageId && lead.stageId._id %>"
+                        data-summary="<%= contact.displayName %> · <%= h.mobile(contact.primaryMobile) %><%= lead.projectId ? ' · ' + lead.projectId.name : '' %>">
+                  Log outcome
+                </button>
+              <% } else { %>
+                <a class="btn btn-sm btn-primary" href="/app/leads/<%= lead._id %>">Open</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+  <% } else if (queue.kind === 'VISITS') { %>
+    <table class="responsive" data-queue="visits">
+      <thead>
+        <tr>
+          <th>Customer</th><th>Project</th><th>Time</th><th>Visiting with</th>
+          <% if (isTeamView) { %><th>Sales user</th><% } %>
+          <th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% queue.items.forEach(function (visit) {
+             const contact = visit.contactId || {};
+             const canWork = String(visit.salesUserId && (visit.salesUserId._id || visit.salesUserId)) === String(currentUser._id); %>
+          <tr>
+            <td data-label="Customer">
+              <a class="t-name" href="/app/leads/<%= visit.leadId && (visit.leadId._id || visit.leadId) %>"><%= contact.displayName || 'Unknown' %></a>
+              <div class="t-sub"><%= h.mobile(contact.primaryMobile) %></div>
+            </td>
+            <td data-label="Project"><%= visit.projectId ? visit.projectId.name : '—' %></td>
+            <td data-label="Time"><%= h.time(visit.scheduledAt) %><div class="t-sub"><%= h.date(visit.scheduledAt) %></div></td>
+            <td data-label="Visiting with">
+              <%= visit.visitingWith === 'CHANNEL_PARTNER' ? (visit.channelPartnerName || 'Channel partner') : 'Direct' %>
+              <% if (visit.viaQr) { %><div><span class="badge b-violet">QR walk-in</span></div><% } %>
+            </td>
+            <% if (isTeamView) { %>
+              <td data-label="Sales user"><%= visit.salesUserId ? visit.salesUserId.name : '—' %></td>
+            <% } %>
+            <td data-label="Status"><span class="badge b-violet"><%= visit.status.replace('_',' ') %></span></td>
+            <td class="row-actions">
+              <a class="btn btn-sm" href="tel:<%= contact.normalizedMobile %>">Call</a>
+              <% if (canWork && can('visit.complete')) { %>
+                <button class="btn btn-sm btn-primary" data-drawer="drawer-visit-<%= visit._id %>">Complete visit</button>
+              <% } else { %>
+                <a class="btn btn-sm btn-primary" href="/app/leads/<%= visit.leadId && (visit.leadId._id || visit.leadId) %>">Open</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+  <% } else { %>
+    <table class="responsive" data-queue="followups">
+      <thead>
+        <tr>
+          <th>Customer</th><th>Action</th><th>Due</th><th>Stage</th>
+          <% if (isTeamView) { %><th>Assigned</th><% } %>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% queue.items.forEach(function (fu) {
+             const lead = fu.leadId || {};
+             const contact = lead.contactId || {};
+             const canWork = String(fu.assignedUserId && (fu.assignedUserId._id || fu.assignedUserId)) === String(currentUser._id); %>
+          <tr>
+            <td data-label="Customer">
+              <a class="t-name" href="/app/leads/<%= lead._id %>"><%= contact.displayName || 'Unknown' %></a>
+              <div class="t-sub"><%= h.mobile(contact.primaryMobile) %><%= lead.projectId ? ' · ' + lead.projectId.name : '' %></div>
+            </td>
+            <td data-label="Action"><%= fu.actionTypeId ? fu.actionTypeId.name : 'Follow-up' %><% if (fu.note) { %><div class="t-sub"><%= fu.note %></div><% } %></td>
+            <td data-label="Due">
+              <span class="<%= h.isOverdue(fu.dueAt) ? 'badge b-red' : '' %>"><%= h.time(fu.dueAt) %></span>
+              <div class="t-sub"><%= h.date(fu.dueAt) %></div>
+            </td>
+            <td data-label="Stage"><span class="badge b-<%= lead.stageId && lead.stageId.colorToken || 'slate' %>"><%= lead.stageId ? lead.stageId.name : '—' %></span></td>
+            <% if (isTeamView) { %>
+              <td data-label="Assigned"><%= fu.assignedUserId ? fu.assignedUserId.name : '—' %></td>
+            <% } %>
+            <td class="row-actions">
+              <a class="btn btn-sm" href="tel:<%= contact.normalizedMobile %>">Call</a>
+              <% if (canWork && can('followup.complete')) { %>
+                <button class="btn btn-sm btn-primary"
+                        data-quick="complete"
+                        data-action="/api/followups/<%= fu._id %>/complete"
+                        data-stage-id="<%= lead.stageId && lead.stageId._id %>"
+                        data-summary="<%= fu.actionTypeId ? fu.actionTypeId.name : 'Follow-up' %> · <%= contact.displayName %> · due <%= h.dateTime(fu.dueAt) %>">
+                  Complete
+                </button>
+              <% } else { %>
+                <a class="btn btn-sm btn-primary" href="/app/leads/<%= lead._id %>">Open</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<% if (isTeamView && snapshot && snapshot.missedByUser.length) { %>
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Users with missed follow-ups</h2></div>
+      <table>
+        <thead><tr><th>User</th><th class="num">Missed</th></tr></thead>
+        <tbody>
+          <% snapshot.missedByUser.forEach(function (row) { %>
+            <tr><td><%= row.name %></td><td class="num"><span class="badge b-red"><%= row.count %></span></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Close to breaching SLA</h2></div>
+      <% if (!snapshot.atRiskLeads.length) { %>
+        <div class="card-body"><p class="muted mb-0">Nothing at risk right now.</p></div>
+      <% } else { %>
+        <table>
+          <thead><tr><th>Customer</th><th>Owner</th><th>Waiting</th></tr></thead>
+          <tbody>
+            <% snapshot.atRiskLeads.forEach(function (lead) { %>
+              <tr>
+                <td><a href="/app/leads/<%= lead._id %>"><%= lead.contactId ? lead.contactId.displayName : 'Unknown' %></a></td>
+                <td><%= lead.ownerUserId ? lead.ownerUserId.name : 'Unassigned' %></td>
+                <td><%= h.rel(lead.assignedAt) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<% if (notifications.length) { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Recent notifications</h2><a class="small" href="/app/notifications">View all</a></div>
+    <div class="card-body stack">
+      <% notifications.slice(0, 5).forEach(function (n) { %>
+        <div>
+          <a class="t-name" href="<%= n.link || '#' %>"><%= n.title %></a>
+          <div class="t-sub"><%= n.body || '' %> · <%= h.rel(n.at) %></div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
+
+<% if (queue.kind === 'VISITS' && can('visit.complete')) { %>
+  <% queue.items.forEach(function (visit) { %>
+    <% if (String(visit.salesUserId && (visit.salesUserId._id || visit.salesUserId)) === String(currentUser._id)) { %>
+      <%- include('../../partials/visit-complete-drawer', { visit, returnTo }) %>
+    <% } %>
+  <% }) %>
+<% } %>
+
+<%- include('../../partials/quick-action-drawer') %>
+<%- include('../../partials/app-foot') %>

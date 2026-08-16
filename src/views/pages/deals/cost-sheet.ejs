@@ -1,0 +1,123 @@
+<%- include('../../partials/app-head') %>
+<%
+  const statusTone = {
+    DRAFT: 'b-slate', APPROVAL_PENDING: 'b-amber', APPROVED: 'b-green',
+    REJECTED: 'b-red', SHARED: 'b-blue', SUPERSEDED: 'b-slate', EXPIRED: 'b-slate',
+  };
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <div class="inline">
+      <%# V1.1 §38: "Quotation" to the user, CostSheet in the database. %>
+      <h1>Quotation<%= sheet.version > 1 ? ' v' + sheet.version : '' %></h1>
+      <% if (sheet.quotationNumber) { %><span class="badge b-slate"><%= sheet.quotationNumber %></span><% } %>
+      <span class="badge <%= statusTone[sheet.status] %>"><%= sheet.status.replace('_',' ') %></span>
+    </div>
+    <div class="sub">
+      <%= sheet.contactId.displayName %> · Unit <%= sheet.unitId.unitNumber %> · <%= sheet.projectId.name %>
+      · created by <%= sheet.createdBy ? sheet.createdBy.name : 'system' %> <%= h.rel(sheet.createdAt) %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/leads/<%= sheet.leadId %>">Back to lead</a>
+    <% if (can('costsheet.create') && !['SUPERSEDED','REJECTED'].includes(sheet.status)) { %>
+      <form method="post" action="/api/cost-sheets/<%= sheet._id %>/share">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="btn" type="submit">Share with customer</button>
+      </form>
+    <% } %>
+    <%# §45: a valid quotation's natural next step is holding the unit. %>
+    <% if (can('unit.block') && ['APPROVED','SHARED','DRAFT'].includes(sheet.status)) { %>
+      <a class="btn btn-primary"
+         href="/app/leads/<%= sheet.leadId %>/blocks/new?unitId=<%= sheet.unitId._id %>">Block this unit</a>
+    <% } %>
+  </div>
+</div>
+
+<% if (sheet.status === 'APPROVAL_PENDING') { %>
+  <div class="flash flash-warn">This discount is waiting for approval. It cannot be shared or booked until it is approved (§31).</div>
+<% } %>
+<% if (sheet.shareToken && sheet.status === 'SHARED') { %>
+  <div class="flash flash-info">Customer link: <code><%= appUrl %>/share/cost-sheet/<%= sheet.shareToken %></code></div>
+<% } %>
+
+<div class="workspace">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Breakdown</h2></div>
+    <table>
+      <thead><tr><th>Component</th><th>Basis</th><th class="num">Amount</th></tr></thead>
+      <tbody>
+        <% sheet.lines.forEach(function (line) { %>
+          <tr>
+            <td><%= line.name %><% if (!line.customerVisible) { %> <span class="badge b-slate">internal</span><% } %></td>
+            <td class="muted small">
+              <% if (line.calcType === 'PER_AREA') { %><%= line.quantity %> × <%= h.money(line.rateMinor || 0) %>
+              <% } else if (line.calcType === 'PERCENTAGE') { %><%= line.percentage %>%<% } else { %>—<% } %>
+            </td>
+            <td class="num"><%= h.money(line.amountMinor) %></td>
+          </tr>
+        <% }) %>
+        <tr><td colspan="2" class="right"><strong>Gross</strong></td><td class="num"><strong><%= h.money(sheet.grossAmountMinor) %></strong></td></tr>
+        <% if (sheet.discountMinor) { %>
+          <tr><td colspan="2" class="right">Discount (<%= sheet.discountPercentage.toFixed(2) %>%)</td><td class="num">− <%= h.money(sheet.discountMinor) %></td></tr>
+        <% } %>
+        <% if (sheet.taxAndChargesMinor) { %>
+          <tr><td colspan="2" class="right">Tax</td><td class="num"><%= h.money(sheet.taxAndChargesMinor) %></td></tr>
+        <% } %>
+        <tr><td colspan="2" class="right"><strong>Final consideration</strong></td><td class="num"><strong><%= h.money(sheet.finalConsiderationMinor) %></strong></td></tr>
+      </tbody>
+    </table>
+
+    <%# §41/§44: the schedule as it was frozen onto this quotation. %>
+    <% if (schedule && schedule.length) { %>
+      <div class="card-head" style="border-top:1px solid var(--border)">
+        <h2 class="grow">Payment schedule</h2>
+        <span class="muted small"><%= sheet.paymentPlanName %></span>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Milestone</th><th class="num">%</th><th class="num">Amount</th></tr></thead>
+        <tbody>
+          <% schedule.forEach(function (row) { %>
+            <tr>
+              <td class="muted"><%= row.sequence %></td>
+              <td><%= row.label %></td>
+              <td class="num"><%= row.percentage %>%</td>
+              <td class="num"><%= h.money(row.amountMinor) %></td>
+            </tr>
+          <% }) %>
+          <tr>
+            <td colspan="3" class="right"><strong>Total</strong></td>
+            <td class="num"><strong><%= h.money(schedule.reduce(function (s, r) { return s + r.amountMinor; }, 0)) %></strong></td>
+          </tr>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Details</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Unit</dt><dd><%= sheet.unitId.unitNumber %></dd>
+          <dt>Area</dt><dd><%= sheet.unitId.saleableArea || '—' %> <%= sheet.unitId.areaUnit %></dd>
+          <dt>Payment plan</dt><dd><%= sheet.paymentPlanName || (sheet.paymentPlanId ? sheet.paymentPlanId.name : 'Not selected') %></dd>
+          <dt>Valid until</dt><dd><%= sheet.validUntil ? h.date(sheet.validUntil) : '—' %></dd>
+          <% if (sheet.approvedAt) { %><dt>Approved</dt><dd><%= h.dateTime(sheet.approvedAt) %></dd><% } %>
+        </dl>
+        <% if (sheet.notes) { %><p class="small muted mt-1 mb-0"><%= sheet.notes %></p><% } %>
+      </div>
+    </div>
+
+    <% if (can('unit.book') && ['APPROVED','SHARED','DRAFT'].includes(sheet.status) && !(sheet.approvalRequired && !sheet.approvedAt)) { %>
+      <div class="card">
+        <div class="card-body">
+          <a class="btn btn-primary btn-block" href="/app/leads/<%= sheet.leadId %>/bookings/new?unitId=<%= sheet.unitId._id %>">Book this unit</a>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

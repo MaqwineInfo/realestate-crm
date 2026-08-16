@@ -1,0 +1,27 @@
+<div class="card mb-2">
+  <div class="card-body" style="padding:10px 12px">
+    <div class="inline">
+      <% const links = [
+        ['/app/setup/organization', 'Organization', 'setup.organization'],
+        ['/app/setup/users', 'Users', 'setup.users'],
+        ['/app/setup/roles', 'Roles', 'setup.roles'],
+        ['/app/setup/stages', 'Stages', 'setup.stages'],
+        ['/app/setup/lead-allocation', 'Lead allocation', 'setup.distribution'],
+        ['/app/setup/sla', 'SLA', 'setup.sla'],
+        ['/app/setup/templates', 'Templates', 'setup.templates'],
+        ['/app/setup/nurture', 'Nurture', 'setup.nurture'],
+        ['/app/setup/integrations', 'Integrations', 'setup.integrations'],
+        ['/app/setup/action-types', 'Action types', 'setup.action_types'],
+        ['/app/setup/visit-outcomes', 'Visit outcomes', 'setup.visit_outcomes'],
+        ['/app/setup/sources', 'Sources', 'setup.sources'],
+        ['/app/setup/tags', 'Tags', 'setup.tags'],
+        ['/app/setup/audit', 'Audit', 'setup.roles'],
+      ]; %>
+      <% links.forEach(function (l) { %>
+        <% if (can(l[2])) { %>
+          <a class="btn btn-sm <%= path === l[0] ? 'btn-primary' : 'btn-ghost' %>" href="<%= l[0] %>"><%= l[1] %></a>
+        <% } %>
+      <% }) %>
+    </div>
+  </div>
+</div>

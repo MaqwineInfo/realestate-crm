@@ -1,0 +1,62 @@
+<%- include('../../partials/head') %>
+<div class="public-wrap">
+  <div class="public-hero">
+    <h1><%= sheet.projectId.name %></h1>
+    <p class="muted">Cost sheet for <%= sheet.contactId.displayName %> · Unit <%= sheet.unitId.unitNumber %></p>
+    <p class="muted small">Prepared <%= new Date(sheet.createdAt).toDateString() %><%= sheet.validUntil ? ' · valid until ' + new Date(sheet.validUntil).toDateString() : '' %></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Cost breakdown</h2></div>
+    <table>
+      <thead><tr><th>Component</th><th class="num">Amount</th></tr></thead>
+      <tbody>
+        <% sheet.lines.filter(function (l) { return l.customerVisible; }).forEach(function (line) { %>
+          <tr><td><%= line.name %></td><td class="num"><%= h.money(line.amountMinor) %></td></tr>
+        <% }) %>
+        <tr><td class="right"><strong>Gross</strong></td><td class="num"><strong><%= h.money(sheet.grossAmountMinor) %></strong></td></tr>
+        <% if (sheet.discountMinor) { %>
+          <tr><td class="right">Discount</td><td class="num">− <%= h.money(sheet.discountMinor) %></td></tr>
+        <% } %>
+        <% if (sheet.taxAndChargesMinor) { %>
+          <tr><td class="right">Tax</td><td class="num"><%= h.money(sheet.taxAndChargesMinor) %></td></tr>
+        <% } %>
+        <tr><td class="right"><strong>Total</strong></td><td class="num"><strong><%= h.money(sheet.finalConsiderationMinor) %></strong></td></tr>
+      </tbody>
+    </table>
+    <%#
+      V1.1 §43: the customer's copy shows the schedule with real amounts, taken
+      from the snapshot frozen onto this quotation — never from the project's
+      current plan, which may have changed since.
+    %>
+    <% if (sheet.paymentPlanName || sheet.paymentPlanId) { %>
+      <div class="card-body">
+        <h3>Payment plan — <%= sheet.paymentPlanName || sheet.paymentPlanId.name %></h3>
+        <% if (schedule && schedule.length) { %>
+          <table>
+            <tbody>
+              <% schedule.forEach(function (row) { %>
+                <tr>
+                  <td><%= row.label %></td>
+                  <td class="num"><%= row.percentage %>%</td>
+                  <td class="num"><%= h.money(row.amountMinor) %></td>
+                </tr>
+              <% }) %>
+              <tr>
+                <td class="right"><strong>Total</strong></td>
+                <td></td>
+                <td class="num"><strong><%= h.money(schedule.reduce(function (s, r) { return s + r.amountMinor; }, 0)) %></strong></td>
+              </tr>
+            </tbody>
+          </table>
+        <% } else if (sheet.paymentPlanId && sheet.paymentPlanId.description) { %>
+          <p class="muted small mb-0"><%= sheet.paymentPlanId.description %></p>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+
+  <p class="small muted mt-2">This cost sheet is indicative and subject to the terms of sale.</p>
+</div>
+</body>
+</html>

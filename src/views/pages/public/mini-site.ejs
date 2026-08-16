@@ -1,0 +1,103 @@
+<%- include('../../partials/head') %>
+<div class="public-wrap">
+  <div class="public-hero">
+    <h1><%= project.name %></h1>
+    <p class="muted">
+      <%= project.city || '' %><%= project.landmark ? ' · ' + project.landmark : '' %>
+      <% if (project.reraNumber) { %> · RERA <%= project.reraNumber %><% } %>
+    </p>
+    <% if (project.miniSite.showStartingPrice && project.startingPriceMinor) { %>
+      <p><strong>Starting at <%= h.moneyShort(project.startingPriceMinor) %></strong></p>
+    <% } %>
+    <% if (project.keyUsps && project.keyUsps.length) { %>
+      <div class="inline">
+        <% project.keyUsps.forEach(function (u) { %><span class="badge b-blue"><%= u %></span><% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (sent) { %>
+    <div class="flash flash-success">Thank you — our sales team will call you shortly.</div>
+  <% } %>
+
+  <% if (project.overview) { %>
+    <div class="card mb-2"><div class="card-head"><h2 class="grow">Overview</h2></div>
+      <div class="card-body"><p class="mb-0"><%= project.overview %></p></div></div>
+  <% } %>
+
+  <% if (unitTypes.length) { %>
+    <div class="card mb-2">
+      <div class="card-head"><h2 class="grow">Configurations</h2></div>
+      <table>
+        <thead><tr><th>Type</th><th>Area</th><% if (availability) { %><th>Availability</th><% } %></tr></thead>
+        <tbody>
+          <% unitTypes.forEach(function (ut) { %>
+            <tr>
+              <td class="t-name"><%= ut.name %></td>
+              <td><%= ut.superBuiltUpArea || ut.builtUpArea || ut.carpetArea || '—' %> <%= ut.areaUnit %></td>
+              <% if (availability) { %>
+                <td>
+                  <% if (availability[String(ut._id)]) { %>
+                    <span class="badge b-green"><%= project.miniSite.showAvailability ? availability[String(ut._id)] + ' available' : 'Available' %></span>
+                  <% } else { %><span class="badge b-slate">Sold out</span><% } %>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+
+  <% if (project.amenities && project.amenities.length) { %>
+    <div class="card mb-2">
+      <div class="card-head"><h2 class="grow">Amenities</h2></div>
+      <div class="card-body inline">
+        <% project.amenities.forEach(function (a) { %><span class="badge b-slate"><%= a %></span><% }) %>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (plans.length) { %>
+    <div class="card mb-2">
+      <div class="card-head"><h2 class="grow">Payment plans</h2></div>
+      <div class="card-body stack">
+        <% plans.forEach(function (pl) { %>
+          <div><span class="t-name"><%= pl.name %></span><div class="t-sub"><%= pl.description || '' %></div></div>
+        <% }) %>
+      </div>
+    </div>
+  <% } %>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow"><%= project.miniSite.ctaHeadline || 'Request a callback' %></h2></div>
+    <div class="card-body">
+      <form method="post" action="/p/<%= project.slug %>/inquire">
+        <div class="field-row">
+          <div class="field">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required maxlength="80">
+          </div>
+          <div class="field">
+            <label for="mobile">Mobile</label>
+            <input type="tel" id="mobile" name="mobile" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Email <span class="opt">optional</span></label>
+          <input type="email" id="email" name="email">
+        </div>
+        <div class="field">
+          <label for="message">What are you looking for? <span class="opt">optional</span></label>
+          <textarea id="message" name="message" rows="2" maxlength="500"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Request a callback</button>
+      </form>
+      <% if (project.salesContactName) { %>
+        <p class="small muted mt-2 mb-0">Or call <%= project.salesContactName %><%= project.salesContactMobile ? ' on ' + project.salesContactMobile : '' %>.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+</body>
+</html>

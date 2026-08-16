@@ -1,0 +1,52 @@
+<div class="card mb-2">
+  <div class="card-body">
+    <form class="filters" method="get" action="/app/reports/<%= kind %>">
+      <div class="field"><label for="from">From</label><input type="date" id="from" name="from" value="<%= query.from || '' %>"></div>
+      <div class="field"><label for="to">To</label><input type="date" id="to" name="to" value="<%= query.to || '' %>"></div>
+      <div class="field">
+        <label for="projectId">Project</label>
+        <select id="projectId" name="projectId">
+          <option value="">All</option>
+          <% projects.forEach(function (p) { %><option value="<%= p._id %>" <%= String(query.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ownerUserId">User</label>
+        <select id="ownerUserId" name="ownerUserId">
+          <option value="">All</option>
+          <% users.forEach(function (u) { %><option value="<%= u._id %>" <%= String(query.ownerUserId) === String(u._id) ? 'selected' : '' %>><%= u.name %></option><% }) %>
+        </select>
+      </div>
+      <% if (kind === 'leads') { %>
+        <div class="field">
+          <label for="stageId">Stage</label>
+          <select id="stageId" name="stageId">
+            <option value="">All</option>
+            <% stages.forEach(function (s) { %><option value="<%= s._id %>" <%= String(query.stageId) === String(s._id) ? 'selected' : '' %>><%= s.name %></option><% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sourceId">Source</label>
+          <select id="sourceId" name="sourceId">
+            <option value="">All</option>
+            <% sources.forEach(function (s) { %><option value="<%= s._id %>" <%= String(query.sourceId) === String(s._id) ? 'selected' : '' %>><%= s.name %></option><% }) %>
+          </select>
+        </div>
+        <%# V1.1 §99 %>
+        <div class="field">
+          <label for="temperature">Temperature</label>
+          <select id="temperature" name="temperature">
+            <option value="">Any</option>
+            <% ['HOT','WARM','COLD'].forEach(function (t) { %>
+              <option value="<%= t %>" <%= query.temperature === t ? 'selected' : '' %>><%= t %></option>
+            <% }) %>
+          </select>
+        </div>
+      <% } %>
+      <div class="btn-group">
+        <button class="btn btn-primary" type="submit">Apply</button>
+        <a class="btn btn-ghost" href="/app/reports/<%= kind %>">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>

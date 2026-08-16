@@ -1,0 +1,63 @@
+<%- include('../../partials/app-head') %>
+<%- include('_nav') %>
+<%- include('_filters') %>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Execution and outcome by user</h2>
+    <span class="muted small">Response time is the median; discipline is on-time completions ÷ follow-ups due (§92)</span>
+  </div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No activity in this range', message: 'Widen the date range to see performance.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th>User</th><th class="num">Leads</th><th class="num">Median response</th><th class="num">SLA %</th>
+          <th class="num">Due</th><th class="num">Completed</th><th class="num">Missed</th><th class="num">Discipline %</th>
+          <th class="num">Visits</th><th class="num">Hot / warm / cold</th>
+          <th class="num">Blocks</th><th class="num">Bookings</th><th class="num">Revenue</th>
+          <th class="num">Lead→booking %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="User"><span class="t-name"><%= r.name %></span></td>
+            <td data-label="Leads" class="num"><%= r.leads %></td>
+            <td data-label="Median response" class="num"><%= r.medianResponseSeconds != null ? Math.round(r.medianResponseSeconds / 60) + ' min' : '—' %></td>
+            <td data-label="SLA %" class="num">
+              <% if (r.slaCompliancePct != null) { %>
+                <span class="badge <%= r.slaCompliancePct >= 80 ? 'b-green' : 'b-amber' %>"><%= r.slaCompliancePct %>%</span>
+              <% } else { %>—<% } %>
+            </td>
+            <td data-label="Due" class="num"><%= r.followupsDue %></td>
+            <td data-label="Completed" class="num"><%= r.followupsCompleted %></td>
+            <td data-label="Missed" class="num"><% if (r.followupsMissed) { %><span class="badge b-red"><%= r.followupsMissed %></span><% } else { %>0<% } %></td>
+            <td data-label="Discipline %" class="num"><%= r.followupDisciplinePct != null ? r.followupDisciplinePct + '%' : '—' %></td>
+            <td data-label="Visits" class="num"><%= r.visitsCompleted %></td>
+            <%# §99: the shape of the open book, not a judgement on the person. %>
+            <td data-label="Hot / warm / cold" class="num">
+              <span class="badge b-red"><%= r.hot %></span>
+              <span class="badge b-amber"><%= r.warm %></span>
+              <span class="badge b-slate"><%= r.cold %></span>
+            </td>
+            <td data-label="Blocks" class="num"><%= r.blocks %></td>
+            <td data-label="Bookings" class="num"><strong><%= r.bookings %></strong></td>
+            <td data-label="Revenue" class="num"><%= h.moneyShort(r.revenueMinor) %></td>
+            <td data-label="Lead→booking %" class="num"><%= r.leadToBookingPct != null ? r.leadToBookingPct + '%' : '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <div class="card-body">
+      <p class="small muted mb-0">
+        Execution metrics (response, discipline) and outcome metrics (blocks, bookings) are shown
+        side by side and never blended into a single score (§44). Temperature describes the book a
+        salesperson is holding — it is not a performance measure (V1.1 §99).
+      </p>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

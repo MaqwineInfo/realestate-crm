@@ -1,0 +1,162 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Leads</h1>
+    <div class="sub"><%= total %> lead<%= total === 1 ? '' : 's' %> in your current view</div>
+  </div>
+  <% if (can('lead.create')) { %>
+    <a class="btn btn-primary" href="/app/leads/new">New lead</a>
+  <% } %>
+</div>
+
+<div class="card mb-2">
+  <div class="card-body">
+    <form class="filters" method="get" action="/app/leads">
+      <div class="field">
+        <label for="q">Search</label>
+        <input type="search" id="q" name="q" value="<%= query.q || '' %>" placeholder="Name, mobile, email">
+      </div>
+      <div class="field">
+        <label for="stageId">Stage</label>
+        <select id="stageId" name="stageId">
+          <option value="">All stages</option>
+          <% stages.forEach(function (s) { %>
+            <option value="<%= s._id %>" <%= String(query.stageId) === String(s._id) ? 'selected' : '' %>><%= s.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <%# V1.1 §77: the sub-stage filter is a child of the stage filter — it stays
+          disabled until a parent stage is chosen, and only shows that stage's children. %>
+      <div class="field">
+        <label for="subStageId">Sub-stage</label>
+        <select id="subStageId" name="subStageId" data-substage-for="stageId" <%= query.stageId ? '' : 'disabled' %>>
+          <option value="">All sub-stages</option>
+          <% subStages.forEach(function (ss) { %>
+            <option value="<%= ss._id %>" data-stage="<%= ss.stageId %>" <%= String(query.subStageId) === String(ss._id) ? 'selected' : '' %>><%= ss.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="temperature">Temperature</label>
+        <select id="temperature" name="temperature">
+          <option value="">Any</option>
+          <% ['HOT','WARM','COLD'].forEach(function (t) { %>
+            <option value="<%= t %>" <%= query.temperature === t ? 'selected' : '' %>><%= t %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="projectId">Project</label>
+        <select id="projectId" name="projectId">
+          <option value="">All projects</option>
+          <% projects.forEach(function (p) { %>
+            <option value="<%= p._id %>" <%= String(query.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <% if (scopeOf('lead.view') !== 'own') { %>
+        <div class="field">
+          <label for="ownerUserId">Owner</label>
+          <select id="ownerUserId" name="ownerUserId">
+            <option value="">All owners</option>
+            <% owners.forEach(function (o) { %>
+              <option value="<%= o._id %>" <%= String(query.ownerUserId) === String(o._id) ? 'selected' : '' %>><%= o.name %></option>
+            <% }) %>
+          </select>
+        </div>
+      <% } %>
+      <div class="field">
+        <label for="sourceId">Source</label>
+        <select id="sourceId" name="sourceId">
+          <option value="">All sources</option>
+          <% sources.forEach(function (s) { %>
+            <option value="<%= s._id %>" <%= String(query.sourceId) === String(s._id) ? 'selected' : '' %>><%= s.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">Active &amp; closed</option>
+          <option value="ACTIVE" <%= query.status === 'ACTIVE' ? 'selected' : '' %>>Active only</option>
+          <option value="TERMINAL" <%= query.status === 'TERMINAL' ? 'selected' : '' %>>Closed only</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" type="submit">Apply</button>
+        <a class="btn btn-ghost" href="/app/leads">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No leads match this view',
+      message: 'Adjust the filters, or create a lead to start working it.',
+      ctaHref: can('lead.create') ? '/app/leads/new' : null,
+      ctaLabel: 'New lead'
+    }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Project</th>
+          <th>Stage</th>
+          <th>Next action</th>
+          <th class="hide-sm">Owner</th>
+          <th class="hide-sm">Source</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach(function (lead) { %>
+          <tr>
+            <td data-label="Customer">
+              <a class="t-name" href="/app/leads/<%= lead._id %>"><%= lead.contactId && lead.contactId.displayName || 'Unknown' %></a>
+              <div class="t-sub"><%= h.mobile(lead.contactId && lead.contactId.primaryMobile) %></div>
+              <%# §95: NEW, temperature, SLA — in that order, and nothing else. %>
+              <div class="badge-row"><%- include('../../partials/lead-badges', { lead: lead, dense: true }) %></div>
+            </td>
+            <td data-label="Project"><%= lead.projectId ? lead.projectId.name : '—' %></td>
+            <td data-label="Stage">
+              <span class="badge b-<%= lead.stageId && lead.stageId.colorToken || 'slate' %>"><%= lead.stageId ? lead.stageId.name : '—' %></span>
+              <% if (lead.subStageId) { %><div class="t-sub"><%= lead.subStageId.name %></div><% } %>
+            </td>
+            <td data-label="Next action">
+              <% if (lead.status === 'TERMINAL') { %>
+                <span class="muted small">Closed</span>
+              <% } else if (lead.nextActionAt) { %>
+                <div><%= lead.nextActionTypeId ? lead.nextActionTypeId.name : 'Follow-up' %></div>
+                <div class="t-sub <%= h.isOverdue(lead.nextActionAt) ? 'badge b-red' : '' %>"><%= h.dateTime(lead.nextActionAt) %></div>
+              <% } else if (!lead.firstGenuineActionAt) { %>
+                <span class="badge b-blue">New — call now</span>
+                <div class="t-sub"><%= h.rel(lead.latestInquiryAt) %></div>
+              <% } else { %>
+                <span class="badge b-red">No next action</span>
+              <% } %>
+            </td>
+            <td data-label="Owner" class="hide-sm"><%= lead.ownerUserId ? lead.ownerUserId.name : 'Unassigned' %></td>
+            <td data-label="Source" class="hide-sm">
+              <%= lead.latestSourceId ? lead.latestSourceId.name : '—' %>
+              <% if (lead.inquiryCount > 1) { %><div class="t-sub"><%= lead.inquiryCount %> inquiries</div><% } %>
+            </td>
+            <td class="row-actions">
+              <% if (lead.contactId) { %>
+                <a class="btn btn-sm" href="tel:<%= lead.contactId.normalizedMobile %>">Call</a>
+                <a class="btn btn-sm hide-sm" target="_blank" rel="noopener" href="https://wa.me/<%= (lead.contactId.normalizedMobile || '').replace('+','') %>">WhatsApp</a>
+              <% } %>
+              <a class="btn btn-sm btn-primary" href="/app/leads/<%= lead._id %>">Open</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <%- include('../../partials/pagination') %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

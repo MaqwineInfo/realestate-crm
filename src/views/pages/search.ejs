@@ -1,0 +1,99 @@
+<%- include('../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Search</h1>
+    <div class="sub">Name, mobile, email, lead id, project or unit number (§46).</div>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-body">
+    <form method="get" action="/app/search" class="filters">
+      <div class="field" style="min-width:280px">
+        <label for="q">Search</label>
+        <input type="search" id="q" name="q" value="<%= term %>" autofocus>
+      </div>
+      <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+  </div>
+</div>
+
+<% if (results) { %>
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Leads</h2></div>
+      <% if (!results.leads.length) { %>
+        <div class="card-body"><p class="muted mb-0">No matching lead you have access to.</p></div>
+      <% } else { %>
+        <table>
+          <thead><tr><th>Customer</th><th>Project</th><th>Stage</th></tr></thead>
+          <tbody>
+            <% results.leads.forEach(function (l) { %>
+              <tr>
+                <td><a class="t-name" href="/app/leads/<%= l._id %>"><%= l.contactId ? l.contactId.displayName : 'Lead' %></a></td>
+                <td><%= l.projectId ? l.projectId.name : '—' %></td>
+                <td><%= l.stageId ? l.stageId.name : '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Contacts</h2></div>
+      <% if (!results.contacts.length) { %>
+        <div class="card-body"><p class="muted mb-0">No matching contact.</p></div>
+      <% } else { %>
+        <table>
+          <thead><tr><th>Name</th><th>Mobile</th><th>City</th></tr></thead>
+          <tbody>
+            <% results.contacts.forEach(function (c) { %>
+              <tr>
+                <td><a class="t-name" href="/app/contacts/<%= c._id %>"><%= c.displayName %></a></td>
+                <td><%= h.mobile(c.primaryMobile) %></td>
+                <td><%= c.city || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Projects</h2></div>
+      <% if (!results.projects.length) { %>
+        <div class="card-body"><p class="muted mb-0">No matching project.</p></div>
+      <% } else { %>
+        <div class="card-body stack">
+          <% results.projects.forEach(function (p) { %>
+            <a href="/app/projects/<%= p._id %>"><%= p.name %> <span class="badge b-slate"><%= p.status %></span></a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Units</h2></div>
+      <% if (!results.units.length) { %>
+        <div class="card-body"><p class="muted mb-0">No matching unit.</p></div>
+      <% } else { %>
+        <table>
+          <thead><tr><th>Unit</th><th>Project</th><th>Status</th></tr></thead>
+          <tbody>
+            <% results.units.forEach(function (u) { %>
+              <tr>
+                <td class="t-name"><%= u.unitNumber %></td>
+                <td><a href="/app/inventory/<%= u.projectId ? u.projectId._id : '' %>"><%= u.projectId ? u.projectId.name : '—' %></a></td>
+                <td><span class="badge <%= u.status === 'AVAILABLE' ? 'b-green' : 'b-amber' %>"><%= u.status %></span></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../partials/app-foot') %>

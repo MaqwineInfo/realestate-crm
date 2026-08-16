@@ -1,0 +1,204 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Mark booked</h1>
+    <div class="sub">
+      Complete the unit booking and close this lead ·
+      <%= lead.contactId.displayName %> · <%= h.mobile(lead.contactId.primaryMobile) %><%= lead.projectId ? ' · ' + lead.projectId.name : '' %>
+    </div>
+  </div>
+  <a class="btn btn-ghost" href="/app/leads/<%= lead._id %>">Cancel</a>
+</div>
+
+<%# V1.1 §53: the checklist turns a rejected submit into a visible to-do list. %>
+<div class="card mb-2">
+  <div class="card-body">
+    <ul class="readiness">
+      <% checklist.forEach(function (c) { %>
+        <li class="<%= c.ok ? 'ok' : 'blocking' %>">
+          <span class="mark"><%= c.ok ? '✓' : '✕' %></span>
+          <%= c.label %>
+          <% if (!c.ok && c.hint) { %><span class="muted small"><%= c.hint %></span><% } %>
+        </li>
+      <% }) %>
+    </ul>
+    <% if (activeBlocks.length) { %>
+      <p class="small muted mb-0">
+        Booking the unit blocked for this customer — unit and project are locked to the block (§51.1).
+      </p>
+    <% } %>
+  </div>
+</div>
+
+<%# §51.2: no block, so offer a real picker rather than a dead end. %>
+<% if (!unit) { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Choose the unit</h2></div>
+    <div class="card-body">
+      <p class="muted">
+        No unit is blocked for this customer. The usual path is
+        shortlist → quotation → block → book, but you can book an available unit directly.
+      </p>
+      <% if (!available.length) { %>
+        <p class="muted mb-0">No available unit in this project.</p>
+      <% } else { %>
+        <div class="unit-grid">
+          <% available.forEach(function (u) { %>
+            <a class="unit-card" href="/app/leads/<%= lead._id %>/bookings/new?unitId=<%= u._id %>">
+              <span class="u-num"><%= u.unitNumber %></span>
+              <span class="u-meta">
+                <%= u.towerId ? u.towerId.name : '' %><%= u.unitTypeId ? ' · ' + u.unitTypeId.name : '' %>
+                <%= u.facing ? ' · ' + u.facing : '' %>
+              </span>
+              <% if (can('inventory.view_prices') && u.priceMinor != null) { %><span class="u-price"><%= h.moneyShort(u.priceMinor) %></span><% } %>
+              <span class="badge b-green"><%= u.status %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+      <div class="btn-group mt-2">
+        <% if (can('unit.block')) { %>
+          <a class="btn" href="/app/leads/<%= lead._id %>/blocks/new">Block a unit first</a>
+        <% } %>
+        <a class="btn btn-ghost" href="/app/leads/<%= lead._id %>">Back to lead</a>
+      </div>
+    </div>
+  </div>
+<% } else { %>
+  <form method="post" action="/api/leads/<%= lead._id %>/bookings"
+        data-confirm="Confirm this booking? The unit will be marked booked and the lead closed.">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="unitId" value="<%= unit._id %>">
+
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="card-head"><h2 class="grow">Deal</h2></div>
+        <div class="card-body">
+          <dl class="dl mb-2">
+            <dt>Unit</dt><dd><%= unit.unitNumber %><%= unit.towerId ? ' · ' + unit.towerId.name : '' %></dd>
+            <dt>Type</dt><dd><%= unit.unitTypeId ? unit.unitTypeId.name : '—' %></dd>
+            <dt>Status</dt><dd><span class="badge b-amber"><%= unit.status %></span></dd>
+            <dt>Customer</dt><dd><%= lead.contactId.displayName %></dd>
+            <dt>Source</dt><dd><%= lead.latestSourceId ? lead.latestSourceId.name : '—' %></dd>
+          </dl>
+
+          <div class="field">
+            <label for="costSheetId">Quotation</label>
+            <select id="costSheetId" name="costSheetId">
+              <option value="">Not linked</option>
+              <% sheets.forEach(function (s) { %>
+                <option value="<%= s._id %>" <%= liveSheet && String(liveSheet._id) === String(s._id) ? 'selected' : '' %>>
+                  <%= s.quotationNumber || ('v' + s.version) %> · <%= h.moneyShort(s.finalConsiderationMinor) %> · <%= s.status.replace('_',' ').toLowerCase() %>
+                </option>
+              <% }) %>
+            </select>
+            <div class="hint">Where a discount needed approval, the final price must match the approved sheet (§33.3).</div>
+          </div>
+
+          <%# §103: the booking defaults to the quotation's own frozen schedule. %>
+          <% if (schedule.length) { %>
+            <details class="mb-2">
+              <summary class="small muted">Payment schedule from <%= liveSheet.paymentPlanName %></summary>
+              <table class="mini mt-1">
+                <tbody>
+                  <% schedule.forEach(function (row) { %>
+                    <tr><td class="num" style="width:60px"><%= row.percentage %>%</td><td><%= row.label %></td><td class="num"><%= h.money(row.amountMinor) %></td></tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </details>
+          <% } %>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="bookingDate">Booking date</label>
+              <input type="date" id="bookingDate" name="bookingDate" required value="<%= today %>">
+            </div>
+            <div class="field">
+              <label for="paymentPlanId">Payment plan</label>
+              <select id="paymentPlanId" name="paymentPlanId" required>
+                <option value="">Select a plan</option>
+                <% plans.forEach(function (pl) { %>
+                  <option value="<%= pl._id %>" <%= liveSheet && String(liveSheet.paymentPlanId) === String(pl._id) ? 'selected' : '' %>><%= pl.name %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="finalPrice">Final booking price</label>
+              <input type="text" id="finalPrice" name="finalPrice" inputmode="decimal" required
+                     value="<%= liveSheet && liveSheet.finalConsiderationMinor ? (liveSheet.finalConsiderationMinor / 100) : '' %>">
+            </div>
+            <div class="field">
+              <label for="bookingAmount">Booking / token amount</label>
+              <input type="text" id="bookingAmount" name="bookingAmount" inputmode="decimal" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 class="grow">Buyer purpose</h2></div>
+        <div class="card-body">
+          <div class="field">
+            <label for="buyerPurpose">Purpose</label>
+            <select id="buyerPurpose" name="buyerPurpose" required data-purpose-select>
+              <option value="SELF_USE">Self use</option>
+              <option value="INVESTMENT">Investment</option>
+              <option value="RENTAL_INCOME">Rental income</option>
+              <option value="OTHER">Other</option>
+            </select>
+            <div class="hint">Investment and rental purposes create a future opportunity automatically (§35, §36).</div>
+          </div>
+
+          <fieldset data-purpose-panel="INVESTMENT" hidden>
+            <legend>Investor exit</legend>
+            <div class="field-row">
+              <div class="field"><label for="expectedExitDate">Expected exit date</label><input type="date" id="expectedExitDate" name="expectedExitDate"></div>
+              <div class="field"><label for="expectedExitPrice">Expected exit price</label><input type="text" id="expectedExitPrice" name="expectedExitPrice" inputmode="decimal"></div>
+            </div>
+            <div class="field"><label for="expectedRoiPercentage">Expected ROI %</label><input type="number" id="expectedRoiPercentage" name="expectedRoiPercentage" step="0.01"></div>
+          </fieldset>
+
+          <fieldset data-purpose-panel="RENTAL_INCOME" hidden>
+            <legend>Rental plan</legend>
+            <div class="field-row">
+              <div class="field"><label for="expectedRentalStartDate">Expected rental start</label><input type="date" id="expectedRentalStartDate" name="expectedRentalStartDate"></div>
+              <div class="field"><label for="expectedRent">Expected rent</label><input type="text" id="expectedRent" name="expectedRent" inputmode="decimal"></div>
+            </div>
+            <div class="field">
+              <label for="furnishing">Furnishing</label>
+              <select id="furnishing" name="furnishing">
+                <option value="">Not decided</option>
+                <option value="FURNISHED">Furnished</option>
+                <option value="SEMI_FURNISHED">Semi furnished</option>
+                <option value="UNFURNISHED">Unfurnished</option>
+              </select>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label for="purposeNotes">Purpose notes <span class="opt">optional</span></label>
+            <input type="text" id="purposeNotes" name="purposeNotes" maxlength="500">
+          </div>
+          <div class="field">
+            <label for="notes">Booking notes <span class="opt">optional</span></label>
+            <textarea id="notes" name="notes" rows="2" maxlength="1000"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group mt-2">
+      <button class="btn btn-primary" type="submit" <%= ready ? '' : 'disabled' %>>Confirm booking</button>
+      <a class="btn btn-ghost" href="/app/leads/<%= lead._id %>">Cancel</a>
+      <% if (!ready) { %>
+        <span class="hint-inline">Clear the ✕ items above before booking.</span>
+      <% } %>
+    </div>
+  </form>
+<% } %>
+
+<%- include('../../partials/app-foot') %>

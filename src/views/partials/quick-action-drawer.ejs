@@ -1,0 +1,106 @@
+<%#
+  Spec §113/§114: the one drawer the whole product leans on.
+  Field order is exactly as specified, and the next-action block disappears only
+  when the chosen stage closes the lead. One drawer serves every row on the page
+  — JS points its action at the right lead or follow-up.
+%>
+<div class="drawer-backdrop" id="drawer-quick" hidden>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Complete action">
+    <form method="post" action="" id="quick-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="returnTo" value="<%= typeof returnTo !== 'undefined' ? returnTo : '' %>">
+
+      <div class="drawer-head">
+        <h2 class="grow" id="quick-heading">Complete action</h2>
+        <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="read-only-summary" id="quick-summary"></div>
+
+        <div class="field" id="quick-actiontype-field" hidden>
+          <label for="quick-actionTypeId">What did you do?</label>
+          <select id="quick-actionTypeId" name="actionTypeId">
+            <% actionTypes.forEach(function (a) { %>
+              <option value="<%= a._id %>" <%= a.semantic === 'CALL' ? 'selected' : '' %>><%= a.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="quick-stageId">Stage</label>
+          <select id="quick-stageId" name="stageId">
+            <% stages.forEach(function (s) { %>
+              <option value="<%= s._id %>"
+                      data-terminal="<%= s.terminal ? '1' : '0' %>"
+                      data-requires-substage="<%= s.requiresSubStage ? '1' : '0' %>"
+                      <%= ['BOOKED','BLOCKED'].includes(s.semanticType) ? 'disabled' : '' %>>
+                <%= s.name %><%= ['BOOKED','BLOCKED'].includes(s.semanticType) ? ' (set by booking/block action)' : '' %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="quick-subStageId">Outcome</label>
+          <select id="quick-subStageId" name="subStageId" data-substage-for="quick-stageId">
+            <option value="">No outcome</option>
+            <% subStages.forEach(function (ss) { %>
+              <option value="<%= ss._id %>" data-stage="<%= ss.stageId %>"><%= ss.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="quick-note">Note <span class="opt">optional</span></label>
+          <textarea id="quick-note" name="note" maxlength="2000" rows="2"></textarea>
+        </div>
+
+        <div id="quick-next-block">
+          <fieldset>
+            <legend>Next action — required while the lead is open</legend>
+            <div class="field">
+              <label for="quick-nextActionTypeId">Next action type</label>
+              <select id="quick-nextActionTypeId" name="nextActionTypeId">
+                <% actionTypes.forEach(function (a) { %>
+                  <option value="<%= a._id %>" <%= a.semantic === 'CALL' ? 'selected' : '' %>><%= a.name %></option>
+                <% }) %>
+              </select>
+            </div>
+            <%# V1.1 §21.4: the common cases in one tap. The server still validates
+                the exact timestamp, so these are convenience, not authority. %>
+            <div class="presets" role="group" aria-label="Quick dates">
+              <button type="button" class="chip" data-preset="today" data-preset-time="18:00">Later today</button>
+              <button type="button" class="chip" data-preset="1">Tomorrow</button>
+              <button type="button" class="chip" data-preset="2">+2 days</button>
+              <button type="button" class="chip" data-preset="7">+7 days</button>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="quick-nextDate">Next date</label>
+                <input type="date" id="quick-nextDate" name="nextDate">
+              </div>
+              <div class="field">
+                <label for="quick-nextTime">Next time</label>
+                <input type="time" id="quick-nextTime" name="nextTime" value="10:00">
+              </div>
+            </div>
+            <div class="field">
+              <label for="quick-nextNote">Next action note <span class="opt">optional</span></label>
+              <input type="text" id="quick-nextNote" name="nextNote" maxlength="500">
+            </div>
+          </fieldset>
+        </div>
+
+        <p class="small muted mb-0" id="quick-terminal-hint" hidden>
+          This stage closes the lead, so no next action is needed.
+        </p>
+      </div>
+
+      <div class="drawer-foot">
+        <button type="button" class="btn" data-drawer-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="quick-submit">Save &amp; next</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,46 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow"><h1>My profile</h1></div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Details</h2></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Name</dt><dd><%= currentUser.name %></dd>
+        <dt>Email</dt><dd><%= currentUser.email %></dd>
+        <dt>Mobile</dt><dd><%= currentUser.mobile || '—' %></dd>
+        <dt>Role</dt><dd><%= currentUser.role.name %></dd>
+        <dt>Organization</dt><dd><%= tenant.name %></dd>
+        <dt>Time zone</dt><dd><%= zone %></dd>
+        <dt>Last login</dt><dd><%= currentUser.lastLoginAt ? h.dateTime(currentUser.lastLoginAt) : '—' %></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Change password</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/profile/password">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="currentPassword">Current password</label>
+          <input type="password" id="currentPassword" name="currentPassword" required autocomplete="current-password">
+        </div>
+        <div class="field">
+          <label for="password">New password</label>
+          <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="confirm">Confirm new password</label>
+          <input type="password" id="confirm" name="confirm" required minlength="8" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary" type="submit">Update password</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

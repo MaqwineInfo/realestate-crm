@@ -1,0 +1,48 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Projects</h1>
+    <div class="sub">One project record powers inventory, pricing, the mini site and AI.</div>
+  </div>
+  <% if (can('project.create')) { %><a class="btn btn-primary" href="/app/projects/new">New project</a><% } %>
+</div>
+
+<% if (!projects.length) { %>
+  <div class="card">
+    <%- include('../../partials/empty', {
+      heading: 'No projects yet',
+      message: 'Create your first project to start capturing and selling inventory.',
+      ctaHref: can('project.create') ? '/app/projects/new' : null,
+      ctaLabel: 'Create project'
+    }) %>
+  </div>
+<% } else { %>
+  <div class="grid cols-3">
+    <% projects.forEach(function (p) { %>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="grow"><a href="/app/projects/<%= p._id %>"><%= p.name %></a></h2>
+          <span class="badge <%= p.status === 'ACTIVE' ? 'b-green' : (p.status === 'DRAFT' ? 'b-slate' : 'b-amber') %>"><%= p.status %></span>
+        </div>
+        <div class="card-body">
+          <div class="muted small mb-1"><%= p.city || '—' %><%= p.developerName ? ' · ' + p.developerName : '' %></div>
+          <dl class="dl">
+            <dt>Available</dt><dd><%= p.stats.available %> of <%= p.stats.total %></dd>
+            <dt>Blocked</dt><dd><%= p.stats.blocked %></dd>
+            <dt>Booked</dt><dd><%= p.stats.booked %></dd>
+            <% if (p.startingPriceMinor) { %><dt>From</dt><dd><%= h.moneyShort(p.startingPriceMinor) %></dd><% } %>
+          </dl>
+          <div class="btn-group mt-2">
+            <a class="btn btn-sm" href="/app/inventory/<%= p._id %>">Inventory</a>
+            <% if (p.miniSite && p.miniSite.published) { %>
+              <a class="btn btn-sm" target="_blank" rel="noopener" href="/p/<%= p.slug %>">Mini site</a>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<%- include('../../partials/app-foot') %>

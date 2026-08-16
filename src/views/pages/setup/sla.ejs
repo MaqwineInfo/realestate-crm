@@ -1,0 +1,141 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Response SLA</h1>
+    <div class="sub">Nothing here is hard-coded — these thresholds drive the warning, the escalation and the auto-reassign (§16).</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Organization default</h2></div>
+    <div class="card-body">
+      <form method="post" action="/api/setup/sla/defaults">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field-row">
+          <div class="field">
+            <label for="slaResponseMinutes">Response target (min)</label>
+            <input type="number" id="slaResponseMinutes" name="slaResponseMinutes" min="1" value="<%= org.settings.slaResponseMinutes %>" required>
+            <div class="hint">A response inside this counts as within SLA.</div>
+          </div>
+          <div class="field">
+            <label for="slaWarningMinutes">Warn the owner at (min)</label>
+            <input type="number" id="slaWarningMinutes" name="slaWarningMinutes" min="1" value="<%= org.settings.slaWarningMinutes %>" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="slaEscalationMinutes">Escalate to manager at (min)</label>
+            <input type="number" id="slaEscalationMinutes" name="slaEscalationMinutes" min="1" value="<%= org.settings.slaEscalationMinutes %>" required>
+          </div>
+          <div class="field">
+            <label for="slaAutoReassignMinutes">Auto-reassign at (min)</label>
+            <input type="number" id="slaAutoReassignMinutes" name="slaAutoReassignMinutes" min="1" value="<%= org.settings.slaAutoReassignMinutes %>" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="slaMaxAutoReassignments">Max auto-reassignments</label>
+            <input type="number" id="slaMaxAutoReassignments" name="slaMaxAutoReassignments" min="0" max="10" value="<%= org.settings.slaMaxAutoReassignments %>" required>
+          </div>
+          <div class="field">
+            <label>Business hours</label>
+            <div class="field-row">
+              <input type="time" name="businessStart" value="<%= org.settings.businessHours.start %>" aria-label="Business hours start">
+              <input type="time" name="businessEnd" value="<%= org.settings.businessHours.end %>" aria-label="Business hours end">
+            </div>
+          </div>
+        </div>
+        <label class="check">
+          <input type="checkbox" name="slaBusinessHoursOnly" value="1" <%= org.settings.slaBusinessHoursOnly ? 'checked' : '' %>>
+          Run the SLA clock only inside business hours
+        </label>
+        <label class="check">
+          <input type="checkbox" name="reinquiryRestartsSla" value="1" <%= org.settings.reinquiryRestartsSla ? 'checked' : '' %>>
+          A re-inquiry restarts the response timer
+        </label>
+        <button class="btn btn-primary mt-1" type="submit">Save SLA defaults</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Project overrides</h2></div>
+    <div class="card-body">
+      <% if (!rules.length) { %>
+        <p class="muted">No project overrides. Every project uses the organization default.</p>
+      <% } else { %>
+        <table class="mb-2">
+          <thead><tr><th>Project</th><th>Target</th><th>Escalate</th><th>Reassign</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <% rules.forEach(function (rule) { %>
+              <tr>
+                <td><%= rule.projectId ? rule.projectId.name : 'Organization' %></td>
+                <td><%= rule.responseMinutes %>m</td>
+                <td><%= rule.escalationMinutes %>m</td>
+                <td><%= rule.autoReassignMinutes || '—' %><%= rule.autoReassignMinutes ? 'm' : '' %></td>
+                <td><span class="badge <%= rule.active ? 'b-green' : 'b-slate' %>"><%= rule.active ? 'Active' : 'Off' %></span></td>
+                <td class="row-actions">
+                  <form method="post" action="/api/setup/sla/rules/<%= rule._id %>/toggle">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm" type="submit"><%= rule.active ? 'Disable' : 'Enable' %></button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+
+      <% if (!projects.length) { %>
+        <p class="small muted mb-0">Create a project first to add an override.</p>
+      <% } else { %>
+        <form method="post" action="/api/setup/sla/rules">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="ov-project">Project</label>
+            <select id="ov-project" name="projectId" required>
+              <% projects.forEach(function (p) { %><option value="<%= p._id %>"><%= p.name %></option><% }) %>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="ov-response">Target (min)</label>
+              <input type="number" id="ov-response" name="responseMinutes" min="1" value="5" required>
+            </div>
+            <div class="field">
+              <label for="ov-warning">Warn (min)</label>
+              <input type="number" id="ov-warning" name="warningMinutes" min="1" value="5" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="ov-escalate">Escalate (min)</label>
+              <input type="number" id="ov-escalate" name="escalationMinutes" min="1" value="10" required>
+            </div>
+            <div class="field">
+              <label for="ov-reassign">Reassign (min)</label>
+              <input type="number" id="ov-reassign" name="autoReassignMinutes" min="1" value="15" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="ov-max">Max auto-reassignments</label>
+            <input type="number" id="ov-max" name="maxAutoReassignments" min="0" max="10" value="2" required>
+          </div>
+          <div class="field">
+            <label for="ov-escalation-users">Escalate to <span class="opt">optional</span></label>
+            <select id="ov-escalation-users" name="escalationUserIds" multiple size="4">
+              <% users.forEach(function (u) { %><option value="<%= u._id %>"><%= u.name %></option><% }) %>
+            </select>
+          </div>
+          <label class="check"><input type="checkbox" name="businessHoursOnly" value="1"> Business hours only</label>
+          <button class="btn btn-primary mt-1" type="submit">Save override</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

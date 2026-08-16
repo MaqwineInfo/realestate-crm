@@ -1,0 +1,68 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= role.name %></h1>
+    <div class="sub">Scoped permissions decide whose records the role can reach: own, team or all (§6.3).</div>
+  </div>
+  <a class="btn btn-ghost" href="/app/setup/roles">Back to roles</a>
+</div>
+
+<% if (role.isAdmin) { %>
+  <div class="flash flash-info">This is the organization administrator role. It always has full access.</div>
+<% } %>
+
+<form method="post" action="/api/setup/roles/<%= role._id %>">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <div class="card mb-2">
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label for="name">Role name</label>
+          <input type="text" id="name" name="name" value="<%= role.name %>" required maxlength="60">
+        </div>
+        <div class="field">
+          <label for="description">Description</label>
+          <input type="text" id="description" name="description" value="<%= role.description || '' %>" maxlength="250">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid cols-2">
+    <% Object.entries(catalog).forEach(function ([group, perms]) { %>
+      <div class="card">
+        <div class="card-head"><h2 class="grow"><%= group %></h2></div>
+        <div class="card-body">
+          <% perms.forEach(function (p) {
+               const current = role.permissions ? role.permissions[p.key] : undefined; %>
+            <% if (p.scoped) { %>
+              <div class="field">
+                <label for="perm-<%= p.key %>"><%= p.label %></label>
+                <select id="perm-<%= p.key %>" name="perm.<%= p.key %>">
+                  <% ['none','own','team','all'].forEach(function (s) { %>
+                    <option value="<%= s %>" <%= (current || 'none') === s ? 'selected' : '' %>><%= s === 'none' ? 'No access' : s.charAt(0).toUpperCase() + s.slice(1) %></option>
+                  <% }) %>
+                </select>
+              </div>
+            <% } else { %>
+              <label class="check">
+                <input type="checkbox" name="perm.<%= p.key %>" value="1" <%= current ? 'checked' : '' %>>
+                <%= p.label %>
+              </label>
+            <% } %>
+          <% }) %>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <div class="btn-group mt-2">
+    <button class="btn btn-primary" type="submit">Save permissions</button>
+    <a class="btn btn-ghost" href="/app/setup/roles">Cancel</a>
+  </div>
+</form>
+
+<%- include('../../partials/app-foot') %>

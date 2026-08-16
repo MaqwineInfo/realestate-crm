@@ -1,0 +1,57 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <div class="inline">
+      <h1><%= campaign.name %></h1>
+      <span class="badge <%= campaign.status === 'SENT' ? 'b-green' : (campaign.status === 'FAILED' ? 'b-red' : 'b-slate') %>"><%= campaign.status %></span>
+      <span class="badge b-blue"><%= campaign.channel %></span>
+    </div>
+    <div class="sub">
+      <%= campaign.templateId ? campaign.templateId.name : '' %>
+      · created by <%= campaign.createdBy ? campaign.createdBy.name : '—' %> <%= h.rel(campaign.createdAt) %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/campaigns/communication">All campaigns</a>
+    <% if (can('campaign.send') && ['DRAFT','SCHEDULED','PAUSED'].includes(campaign.status)) { %>
+      <form method="post" action="/api/campaigns/<%= campaign._id %>/send"
+            data-confirm="Send this campaign now? Recipients cannot be un-messaged.">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="btn btn-primary" type="submit">Send now</button>
+      </form>
+    <% } %>
+  </div>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= campaign.recipientCount %></div><div class="lbl muted small">Recipients</div></div></div>
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= counters.sent %></div><div class="lbl muted small">Sent</div></div></div>
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= counters.skipped %></div><div class="lbl muted small">Excluded (opt-out)</div></div></div>
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= counters.failed %></div><div class="lbl muted small">Failed</div></div></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Recipients</h2><span class="muted small">Snapshot taken at send time (§37.3)</span></div>
+  <% if (!recipients.length) { %>
+    <%- include('../../partials/empty', { heading: 'Not sent yet', message: 'Press Send to message this audience.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Contact</th><th>To</th><th>Status</th><th>Detail</th></tr></thead>
+      <tbody>
+        <% recipients.forEach(function (m) { %>
+          <tr>
+            <td data-label="Contact"><%= m.contactId ? m.contactId.displayName : '—' %></td>
+            <td data-label="To"><%= m.to || '—' %></td>
+            <td data-label="Status">
+              <span class="badge <%= m.status === 'SKIPPED' ? 'b-amber' : (m.status === 'FAILED' ? 'b-red' : 'b-green') %>"><%= m.status %></span>
+            </td>
+            <td data-label="Detail" class="muted small"><%= m.skippedReason || m.error || '' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

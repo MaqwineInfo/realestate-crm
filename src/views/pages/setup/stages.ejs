@@ -1,0 +1,167 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Lead stages</h1>
+    <div class="sub">Rename stages freely — automation follows the semantic type, not the label (§11.3).</div>
+  </div>
+  <button class="btn btn-primary" data-drawer="drawer-add-stage">Add stage</button>
+</div>
+
+<%#
+  V1.1 §19: stages and sub-stages as an actual parent/child tree. A flat list of
+  sub-stages beside a flat list of stages hides the only relationship that matters —
+  which outcomes belong to which stage.
+%>
+<div class="card">
+  <div class="card-body">
+    <% stages.forEach(function (stage) {
+         const subs = subStages.filter(function (s) { return String(s.stageId) === String(stage._id); });
+         const actionOnly = ['BOOKED', 'BLOCKED'].includes(stage.semanticType); %>
+      <details class="stage-node" <%= subs.length ? 'open' : '' %>>
+        <summary>
+          <span class="badge b-<%= stage.colorToken || 'slate' %>"><%= stage.name %></span>
+          <span class="muted small"><%= stage.semanticType %></span>
+          <% if (stage.terminal) { %><span class="badge b-slate">Terminal</span><% } %>
+          <% if (stage.requiresSubStage) { %><span class="badge b-amber">Sub-stage required</span><% } %>
+          <% if (actionOnly) { %><span class="badge b-violet">Set by action</span><% } %>
+          <% if (!stage.active) { %><span class="badge b-red">Inactive</span><% } %>
+          <span class="grow"></span>
+          <span class="muted small">order <%= stage.displayOrder %> · <%= subs.length %> sub-stage<%= subs.length === 1 ? '' : 's' %></span>
+        </summary>
+
+        <div class="stage-body">
+          <div class="btn-group mb-1">
+            <button class="btn btn-sm" data-drawer="drawer-stage-<%= stage._id %>">Edit stage</button>
+            <button class="btn btn-sm" data-drawer="drawer-substage-<%= stage._id %>">Add sub-stage</button>
+            <form method="post" action="/api/setup/stages/<%= stage._id %>/toggle">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm" type="submit"><%= stage.active ? 'Deactivate' : 'Activate' %></button>
+            </form>
+          </div>
+          <% if (actionOnly) { %>
+            <p class="small muted">
+              Leads reach this stage through the
+              <%= stage.semanticType === 'BOOKED' ? 'Mark Booked' : 'Block Unit' %> action only,
+              so inventory and the pipeline can never drift apart (§2.3).
+            </p>
+          <% } %>
+
+          <% if (!subs.length) { %>
+            <p class="small muted mb-0">No sub-stages. Outcomes recorded against this stage will have no qualifier.</p>
+          <% } else { %>
+            <ul class="substage-tree">
+              <% subs.forEach(function (s, i) { %>
+                <li>
+                  <span class="branch" aria-hidden="true"><%= i === subs.length - 1 ? '└──' : '├──' %></span>
+                  <span class="grow"><%= s.name %></span>
+                  <% if (s.defaultActionTypeId) { %><span class="muted small">default next action set</span><% } %>
+                  <% if (!s.active) { %><span class="badge b-red">Inactive</span><% } %>
+                  <form method="post" action="/api/setup/sub-stages/<%= s._id %>/toggle">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-ghost btn-sm" type="submit"><%= s.active ? 'Deactivate' : 'Activate' %></button>
+                  </form>
+                </li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </div>
+      </details>
+    <% }) %>
+  </div>
+</div>
+
+<%# One add-sub-stage drawer per stage, so the parent is never a guess. %>
+<% stages.forEach(function (stage) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-substage-' + stage._id, heading: 'Add sub-stage to ' + stage.name, action: '/api/setup/sub-stages' }) %>
+    <input type="hidden" name="stageId" value="<%= stage._id %>">
+    <div class="read-only-summary">Parent stage: <strong><%= stage.name %></strong></div>
+    <div class="field">
+      <label for="ss-name-<%= stage._id %>">Name</label>
+      <input type="text" id="ss-name-<%= stage._id %>" name="name" required maxlength="60">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="ss-order-<%= stage._id %>">Order</label>
+        <input type="number" id="ss-order-<%= stage._id %>" name="displayOrder" value="0" min="0">
+      </div>
+      <div class="field">
+        <label for="ss-action-<%= stage._id %>">Default next action <span class="opt">optional</span></label>
+        <select id="ss-action-<%= stage._id %>" name="defaultActionTypeId">
+          <option value="">None</option>
+          <% actionTypes.forEach(function (a) { %><option value="<%= a._id %>"><%= a.name %></option><% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="ss-offset-<%= stage._id %>">Follow-up in (hours) <span class="opt">optional</span></label>
+      <input type="number" id="ss-offset-<%= stage._id %>" name="defaultFollowupOffsetHours" min="0" step="1">
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Add sub-stage' }) %>
+<% }) %>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-add-stage', heading: 'Add stage', action: '/api/setup/stages' }) %>
+  <div class="field">
+    <label for="new-stage-name">Name</label>
+    <input type="text" id="new-stage-name" name="name" required maxlength="60">
+  </div>
+  <div class="field">
+    <label for="new-stage-semantic">Semantic type</label>
+    <select id="new-stage-semantic" name="semanticType" required>
+      <% semanticTypes.forEach(function (s) { %><option value="<%= s %>" <%= s === 'CUSTOM_ACTIVE' ? 'selected' : '' %>><%= s %></option><% }) %>
+    </select>
+    <div class="hint">Automation (SLA, visits, blocks, bookings) keys off this, not the name.</div>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="new-stage-order">Display order</label>
+      <input type="number" id="new-stage-order" name="displayOrder" value="0" min="0">
+    </div>
+    <div class="field">
+      <label for="new-stage-color">Colour</label>
+      <select id="new-stage-color" name="colorToken">
+        <% ['slate','blue','green','amber','red','violet'].forEach(function (c) { %><option value="<%= c %>"><%= c %></option><% }) %>
+      </select>
+    </div>
+  </div>
+  <label class="check"><input type="checkbox" name="terminal" value="1"> Terminal stage (closes the lead)</label>
+  <label class="check"><input type="checkbox" name="requiresSubStage" value="1"> Sub-stage required</label>
+  <label class="check"><input type="checkbox" name="requiresNextAction" value="1" checked> Requires a next action</label>
+<%- include('../../partials/drawer-close', { cta: 'Add stage' }) %>
+
+<% stages.forEach(function (stage) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-stage-' + stage._id, heading: 'Edit ' + stage.name, action: '/api/setup/stages/' + stage._id }) %>
+    <div class="field">
+      <label for="s-name-<%= stage._id %>">Name</label>
+      <input type="text" id="s-name-<%= stage._id %>" name="name" required maxlength="60" value="<%= stage.name %>">
+    </div>
+    <div class="field">
+      <label for="s-sem-<%= stage._id %>">Semantic type</label>
+      <select id="s-sem-<%= stage._id %>" name="semanticType" required>
+        <% semanticTypes.forEach(function (s) { %>
+          <option value="<%= s %>" <%= stage.semanticType === s ? 'selected' : '' %>><%= s %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="s-order-<%= stage._id %>">Display order</label>
+        <input type="number" id="s-order-<%= stage._id %>" name="displayOrder" value="<%= stage.displayOrder %>" min="0">
+      </div>
+      <div class="field">
+        <label for="s-color-<%= stage._id %>">Colour</label>
+        <select id="s-color-<%= stage._id %>" name="colorToken">
+          <% ['slate','blue','green','amber','red','violet'].forEach(function (c) { %>
+            <option value="<%= c %>" <%= stage.colorToken === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" name="terminal" value="1" <%= stage.terminal ? 'checked' : '' %>> Terminal stage</label>
+    <label class="check"><input type="checkbox" name="requiresSubStage" value="1" <%= stage.requiresSubStage ? 'checked' : '' %>> Sub-stage required</label>
+    <label class="check"><input type="checkbox" name="requiresNextAction" value="1" <%= stage.requiresNextAction ? 'checked' : '' %>> Requires a next action</label>
+  <%- include('../../partials/drawer-close', { cta: 'Save stage' }) %>
+<% }) %>
+
+<%- include('../../partials/app-foot') %>

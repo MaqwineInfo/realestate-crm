@@ -1,0 +1,72 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Contacts</h1>
+    <div class="sub">One person, one record — every inquiry they ever make hangs off it.</div>
+  </div>
+  <% if (can('contact.create')) { %><a class="btn btn-primary" href="/app/contacts/new">New contact</a><% } %>
+</div>
+
+<div class="card mb-2">
+  <div class="card-body">
+    <form class="filters" method="get" action="/app/contacts">
+      <div class="field">
+        <label for="q">Search</label>
+        <input type="search" id="q" name="q" value="<%= query.q || '' %>" placeholder="Name, mobile, email">
+      </div>
+      <div class="field">
+        <label for="tagId">Tag</label>
+        <select id="tagId" name="tagId">
+          <option value="">All tags</option>
+          <% tags.forEach(function (t) { %>
+            <option value="<%= t._id %>" <%= String(query.tagId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="city">City</label>
+        <input type="text" id="city" name="city" value="<%= query.city || '' %>">
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" type="submit">Apply</button>
+        <a class="btn btn-ghost" href="/app/contacts">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No contacts yet',
+      message: 'Contacts are created automatically from captured leads, or you can add one directly.',
+      ctaHref: can('contact.create') ? '/app/contacts/new' : null,
+      ctaLabel: 'New contact'
+    }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead>
+        <tr><th>Name</th><th>Mobile</th><th class="hide-sm">Email</th><th class="hide-sm">City</th><th>Tags</th><th class="hide-sm">Owner</th></tr>
+      </thead>
+      <tbody>
+        <% items.forEach(function (c) { %>
+          <tr>
+            <td data-label="Name"><a class="t-name" href="/app/contacts/<%= c._id %>"><%= c.displayName %></a></td>
+            <td data-label="Mobile"><%= h.mobile(c.primaryMobile) %></td>
+            <td data-label="Email" class="hide-sm"><%= c.email || '—' %></td>
+            <td data-label="City" class="hide-sm"><%= c.city || '—' %></td>
+            <td data-label="Tags">
+              <% (c.tagIds || []).forEach(function (t) { %><span class="badge b-slate"><%= t.name %></span> <% }) %>
+              <% if (!(c.tagIds || []).length) { %><span class="faint">—</span><% } %>
+            </td>
+            <td data-label="Owner" class="hide-sm"><%= c.ownerUserId ? c.ownerUserId.name : '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <%- include('../../partials/pagination') %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

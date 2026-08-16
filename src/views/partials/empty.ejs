@@ -1,0 +1,8 @@
+<%# Spec §69: every empty state says something useful and offers the next step. %>
+<div class="empty">
+  <h3><%= heading %></h3>
+  <p><%= message %></p>
+  <% if (typeof ctaHref !== 'undefined' && ctaHref) { %>
+    <a class="btn btn-primary" href="<%= ctaHref %>"><%= ctaLabel %></a>
+  <% } %>
+</div>

@@ -1,0 +1,763 @@
+<%- include('../../partials/app-head') %>
+<%
+  const contact = lead.contactId || {};
+  const stage = lead.stageId || {};
+  const isActive = lead.status === 'ACTIVE';
+  const waNumber = (contact.normalizedMobile || '').replace('+', '');
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <div class="inline">
+      <h1><%= contact.displayName %></h1>
+      <%- include('../../partials/lead-badges', { lead: lead }) %>
+      <span class="badge b-<%= stage.colorToken || 'slate' %>"><%= stage.name %></span>
+      <% if (lead.subStageId) { %><span class="badge b-slate"><%= lead.subStageId.name %></span><% } %>
+    </div>
+    <div class="sub">
+      <a href="tel:<%= contact.normalizedMobile %>"><%= h.mobile(contact.primaryMobile) %></a>
+      <% if (contact.email) { %> · <%= contact.email %><% } %>
+      <% if (lead.projectId) { %> · <%= lead.projectId.name %><% } %>
+      · Owner: <%= lead.ownerUserId ? lead.ownerUserId.name : 'Unassigned' %>
+      <% if (lead.latestSourceId) { %> · Source: <%= lead.latestSourceId.name %><% } %>
+      <% if (isActive && lead.nextActionAt) { %>
+        · Next: <%= lead.nextActionTypeId ? lead.nextActionTypeId.name : 'Follow-up' %> · <%= h.dateTime(lead.nextActionAt) %>
+      <% } %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="tel:<%= contact.normalizedMobile %>">Call</a>
+    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/<%= waNumber %>">WhatsApp</a>
+    <%# V1.1 §21/§92: one action records what happened AND what happens next. %>
+    <% if (isActive && can('followup.complete')) { %>
+      <% if (pendingFollowup) { %>
+        <button class="btn btn-primary"
+                data-quick="complete"
+                data-action="/api/followups/<%= pendingFollowup._id %>/complete"
+                data-stage-id="<%= lead.stageId._id %>"
+                data-summary="<%= pendingFollowup.actionTypeId ? pendingFollowup.actionTypeId.name : 'Follow-up' %> · due <%= h.dateTime(pendingFollowup.dueAt) %>">
+          Update lead &amp; set next action
+        </button>
+      <% } else { %>
+        <button class="btn btn-primary"
+                data-quick="first-action"
+                data-action="/api/leads/<%= lead._id %>/log-action"
+                data-stage-id="<%= lead.stageId._id %>"
+                data-summary="<%= contact.displayName %> · <%= h.mobile(contact.primaryMobile) %>">
+          Update lead &amp; set next action
+        </button>
+      <% } %>
+    <% } %>
+    <% if (isActive && can('visit.create')) { %>
+      <button class="btn" data-drawer="drawer-visit">Schedule visit</button>
+    <% } %>
+    <% if (isActive && can('followup.create')) { %>
+      <button class="btn" data-drawer="drawer-followup">Add follow-up</button>
+    <% } %>
+    <% if (can('lead.transfer')) { %>
+      <button class="btn" data-drawer="drawer-transfer">Transfer</button>
+    <% } %>
+    <% if (!isActive && can('lead.reopen_lost') && !lead.bookedAt) { %>
+      <button class="btn btn-primary" data-drawer="drawer-reopen">Reopen</button>
+    <% } %>
+  </div>
+</div>
+
+<%# V1.1 §17: journey first — where is this lead, and what did it actually pass through? %>
+<%- include('../../partials/lead-funnel', {
+      funnel: funnel, lead: lead,
+      canBlock: isActive && can('unit.block'),
+      canBook: isActive && can('unit.book'),
+    }) %>
+
+<%# §57: a block that expired is not a lost lead, but it is not a held unit either. %>
+<% if (isActive && !activeBlocks.length && lead.stageId && lead.stageId.semanticType === 'BLOCKED') { %>
+  <div class="flash flash-warn">
+    A previous block expired or was released — no unit is currently blocked for this customer.
+    Block another unit, or record the next outcome.
+  </div>
+<% } %>
+
+<div class="workspace">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2 class="grow">Activity</h2>
+        <% if (can('note.create')) { %><button class="btn btn-sm" data-drawer="drawer-note">Add note</button><% } %>
+      </div>
+      <div class="card-body">
+        <% if (!activities.length) { %>
+          <p class="muted mb-0">Nothing logged yet. Your first call, note or follow-up will appear here.</p>
+        <% } else { %>
+          <div class="timeline">
+            <% activities.forEach(function (a) {
+                 const kind = ['SLA_WARNING','SLA_BREACHED','FOLLOWUP_MISSED','LEAD_LOST','BLOCK_EXPIRED'].includes(a.type) ? 'alert'
+                   : ['BOOKING_COMPLETED','UNIT_BLOCKED','VISIT_COMPLETED','DISCOUNT_APPROVED'].includes(a.type) ? 'win'
+                   : ['FOLLOWUP_CREATED','FOLLOWUP_COMPLETED','CALL_COMPLETED','NOTE_ADDED'].includes(a.type) ? 'action' : '';
+            %>
+              <div class="tl-item kind-<%= kind %>">
+                <div class="tl-head">
+                  <span class="tl-title"><%= a.title %></span>
+                  <span class="tl-meta"><%= h.dateTime(a.at) %> · <%= a.actorUserId ? a.actorUserId.name : (a.actorLabel || 'System') %></span>
+                </div>
+                <% if (a.body) { %><div class="tl-body"><%= a.body %></div><% } %>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Follow-ups</h2></div>
+      <% if (!followups.length) { %>
+        <div class="card-body"><p class="muted mb-0">No follow-ups scheduled yet.</p></div>
+      <% } else { %>
+        <table class="responsive">
+          <thead><tr><th>Action</th><th>Due</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <% followups.forEach(function (fu) { %>
+              <tr>
+                <td data-label="Action"><%= fu.actionTypeId ? fu.actionTypeId.name : 'Follow-up' %><% if (fu.note) { %><div class="t-sub"><%= fu.note %></div><% } %></td>
+                <td data-label="Due"><%= h.dateTime(fu.dueAt) %></td>
+                <td data-label="Assigned"><%= fu.assignedUserId ? fu.assignedUserId.name : '—' %></td>
+                <td data-label="Status">
+                  <% if (['PENDING','MISSED'].includes(fu.status) && h.isOverdue(fu.dueAt)) { %><span class="badge b-red">Overdue</span>
+                  <% } else if (fu.status === 'PENDING') { %><span class="badge b-blue">Pending</span>
+                  <% } else if (fu.status === 'COMPLETED') { %><span class="badge b-green">Completed<%= fu.completedOnTime === false ? ' (late)' : '' %></span>
+                  <% } else { %><span class="badge b-slate"><%= fu.status %></span><% } %>
+                </td>
+                <td class="row-actions">
+                  <% if (['PENDING','MISSED'].includes(fu.status) && can('followup.complete')) { %>
+                    <button class="btn btn-sm"
+                            data-quick="complete"
+                            data-action="/api/followups/<%= fu._id %>/complete"
+                            data-stage-id="<%= lead.stageId._id %>"
+                            data-summary="<%= fu.actionTypeId ? fu.actionTypeId.name : 'Follow-up' %> · due <%= h.dateTime(fu.dueAt) %>">
+                      Complete
+                    </button>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2 class="grow">Site visits</h2>
+        <% if (isActive && can('visit.create')) { %><button class="btn btn-sm" data-drawer="drawer-visit">Schedule</button><% } %>
+      </div>
+      <% if (!visits.length) { %>
+        <div class="card-body"><p class="muted mb-0">No visits yet. A site visit is the strongest signal before a booking.</p></div>
+      <% } else { %>
+        <table class="responsive">
+          <thead><tr><th>Project</th><th>When</th><th>With</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <% visits.forEach(function (v) { %>
+              <tr>
+                <td data-label="Project"><%= v.projectId ? v.projectId.name : '—' %></td>
+                <td data-label="When"><%= h.dateTime(v.scheduledAt) %></td>
+                <td data-label="With">
+                  <%= v.visitingWith === 'CHANNEL_PARTNER' ? (v.channelPartnerName || 'Channel partner') : 'Direct' %>
+                  <% if (v.viaQr) { %><span class="badge b-violet">QR</span><% } %>
+                </td>
+                <td data-label="Status">
+                  <span class="badge <%= v.status === 'COMPLETED' ? 'b-green' : (['CANCELLED','NO_SHOW'].includes(v.status) ? 'b-slate' : 'b-violet') %>">
+                    <%= v.status.replace('_',' ') %>
+                  </span>
+                  <% if (v.outcomeId) { %><div class="t-sub"><%= v.outcomeId.name %></div><% } %>
+                </td>
+                <td class="row-actions">
+                  <% if (['PLANNED','CONFIRMED','IN_PROGRESS'].includes(v.status) && can('visit.complete')) { %>
+                    <button class="btn btn-sm" data-drawer="drawer-visit-<%= v._id %>">Complete</button>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <%#
+      V1.1 §25 + §81: the Deal card. The CTA chain is the point —
+      Shortlist → Generate Quotation → Block Unit → Mark Booked — so the next
+      commercial step is always one visible click, never a hunt through menus.
+    %>
+    <div class="card" id="deal">
+      <div class="card-head">
+        <h2 class="grow">Deal</h2>
+        <% if (isActive && can('unit.shortlist')) { %><a class="btn btn-sm" href="/app/inventory">Browse inventory</a><% } %>
+      </div>
+      <div class="card-body">
+        <div class="deal-strip">
+          <div><span class="lbl">Shortlisted</span><span class="val"><%= shortlist.length %></span></div>
+          <div><span class="lbl">Quotation</span><span class="val">
+            <% if (!costSheets.length) { %>—<% } else { %>
+              v<%= costSheets[0].version %><% if (can('inventory.view_prices')) { %> · <%= h.moneyShort(costSheets[0].finalConsiderationMinor) %><% } %>
+              <span class="badge <%= costSheets[0].status === 'APPROVED' ? 'b-green' : (costSheets[0].status === 'APPROVAL_PENDING' ? 'b-amber' : 'b-slate') %>"><%= costSheets[0].status.replace('_',' ').toLowerCase() %></span>
+            <% } %>
+          </span></div>
+          <div><span class="lbl">Block</span><span class="val">
+            <% if (!activeBlocks.length) { %>—<% } else { %>
+              <%= activeBlocks[0].unitId ? activeBlocks[0].unitId.unitNumber : '' %>
+              <span class="small muted">until <%= h.dateTime(activeBlocks[0].expiryAt) %></span>
+            <% } %>
+          </span></div>
+          <div><span class="lbl">Booking</span><span class="val">
+            <%= lead.bookedAt ? 'Completed · ' + h.date(lead.bookedAt) : '—' %>
+          </span></div>
+        </div>
+
+        <div class="btn-group mb-2">
+          <% if (lead.bookingId) { %>
+            <a class="btn btn-primary" href="/app/bookings/<%= lead.bookingId %>">View booking</a>
+          <% } else if (isActive) { %>
+            <%# §81: the CTA chain — quote → block → book, in that order of emphasis. %>
+            <% if (can('costsheet.create')) { %>
+              <a class="btn <%= shortlist.length && !costSheets.length ? 'btn-primary' : '' %>"
+                 href="/app/leads/<%= lead._id %>/cost-sheets/new">Generate quotation</a>
+            <% } %>
+            <% if (can('unit.block') && !activeBlocks.length) { %>
+              <a class="btn <%= costSheets.length ? 'btn-primary' : '' %>"
+                 href="/app/leads/<%= lead._id %>/blocks/new">Block unit</a>
+            <% } %>
+            <% if (can('unit.book')) { %>
+              <a class="btn <%= activeBlocks.length ? 'btn-primary' : '' %>"
+                 href="/app/leads/<%= lead._id %>/bookings/new">Mark booked</a>
+              <% if (activeBlocks.length) { %>
+                <span class="hint-inline">Completes the unit booking and closes this lead.</span>
+              <% } %>
+            <% } %>
+          <% } %>
+        </div>
+
+        <% if (!shortlist.length) { %>
+          <p class="muted">No units shortlisted yet. Shortlist from inventory to start the deal.</p>
+        <% } else { %>
+          <table class="mb-2">
+            <thead><tr><th>Unit</th><th>Type</th><th class="num">Price</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <% shortlist.forEach(function (s) { if (!s.unitId) return; %>
+                <tr>
+                  <td class="t-name"><%= s.unitId.unitNumber %><div class="t-sub"><%= s.unitId.towerId ? s.unitId.towerId.name : '' %></div></td>
+                  <td><%= s.unitId.unitTypeId ? s.unitId.unitTypeId.name : '—' %></td>
+                  <td class="num"><%= s.priceMinor != null && can('inventory.view_prices') ? h.moneyShort(s.priceMinor) : '—' %></td>
+                  <td><span class="badge <%= s.unitId.status === 'AVAILABLE' ? 'b-green' : 'b-amber' %>"><%= s.unitId.status %></span></td>
+                  <td class="row-actions">
+                    <% if (isActive && can('costsheet.create')) { %>
+                      <a class="btn btn-sm" href="/app/leads/<%= lead._id %>/cost-sheets/new?unitId=<%= s.unitId._id %>">Generate quotation</a>
+                    <% } %>
+                    <% if (isActive && can('unit.block') && s.unitId.status === 'AVAILABLE') { %>
+                      <%# §46: through the picker, so the expiry is seen before it starts. %>
+                      <a class="btn btn-sm btn-primary" href="/app/leads/<%= lead._id %>/blocks/new?unitId=<%= s.unitId._id %>">Block</a>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } %>
+
+        <% if (activeBlocks.length) { %>
+          <h3 class="mb-1">Active blocks</h3>
+          <% activeBlocks.forEach(function (b) { %>
+            <div class="inline mb-1">
+              <span class="badge b-amber">Unit <%= b.unitId ? b.unitId.unitNumber : '' %></span>
+              <span class="small muted">expires <%= h.dateTime(b.expiryAt) %></span>
+              <% if (can('unit.release_block')) { %>
+                <form method="post" action="/api/blocks/<%= b._id %>/release" data-confirm="Release this block and return the unit to inventory?">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm" type="submit">Release</button>
+                </form>
+              <% } %>
+              <% if (isActive && can('unit.book')) { %>
+                <a class="btn btn-sm btn-primary" href="/app/leads/<%= lead._id %>/bookings/new?unitId=<%= b.unitId ? b.unitId._id : '' %>">Book</a>
+              <% } %>
+            </div>
+          <% }) %>
+        <% } %>
+
+        <% if (costSheets.length) { %>
+          <h3 class="mb-1 mt-2">Cost sheets</h3>
+          <div class="stack">
+            <% costSheets.forEach(function (cs) { %>
+              <div class="inline">
+                <a href="/app/cost-sheets/<%= cs._id %>">v<%= cs.version %> · <%= cs.unitId ? cs.unitId.unitNumber : '' %></a>
+                <span class="badge <%= cs.status === 'APPROVED' ? 'b-green' : (cs.status === 'APPROVAL_PENDING' ? 'b-amber' : 'b-slate') %>"><%= cs.status.replace('_',' ') %></span>
+                <% if (can('inventory.view_prices')) { %><span class="small muted"><%= h.moneyShort(cs.finalConsiderationMinor) %></span><% } %>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Requirement</h2></div>
+      <div class="card-body">
+        <%# V1.1 §23: qualification stays visible, not buried in notes. %>
+        <% const _label = function (v) { return v ? String(v).replace(/_/g, ' ').toLowerCase() : null; }; %>
+        <dl class="dl">
+          <dt>Budget</dt>
+          <dd><%= lead.budgetMinMinor != null || lead.budgetMaxMinor != null
+                ? [lead.budgetMinMinor != null ? h.moneyShort(lead.budgetMinMinor) : '', lead.budgetMaxMinor != null ? h.moneyShort(lead.budgetMaxMinor) : ''].filter(Boolean).join(' – ')
+                : 'Not captured' %></dd>
+          <dt>Configuration</dt>
+          <dd><%= (lead.preferredConfigurations || []).join(', ') || 'Not captured' %></dd>
+          <% if (lead.areaMin || lead.areaMax) { %>
+            <dt>Area</dt>
+            <dd><%= [lead.areaMin, lead.areaMax].filter(Boolean).join(' – ') %> <%= _label(lead.areaBasis) || '' %></dd>
+          <% } %>
+          <% const _facings = (lead.preferredFacings && lead.preferredFacings.length) ? lead.preferredFacings : (lead.preferredFacing ? [lead.preferredFacing] : []); %>
+          <% if (_facings.length) { %><dt>Facing</dt><dd><%= _facings.join(', ') %></dd><% } %>
+          <% if (lead.preferredFloorMin != null || lead.preferredFloorMax != null) { %>
+            <dt>Floor</dt><dd><%= [lead.preferredFloorMin, lead.preferredFloorMax].filter(function (v) { return v != null; }).join(' – ') %></dd>
+          <% } %>
+          <dt>Purpose</dt>
+          <dd><%= _label(lead.purpose) || 'Not captured' %></dd>
+          <% if (lead.purchaseTimeline) { %><dt>Timeline</dt><dd><%= _label(lead.purchaseTimeline) %></dd><% } %>
+          <% if (lead.fundingType) { %>
+            <dt>Funding</dt>
+            <dd><%= _label(lead.fundingType) %><%= lead.loanStatus ? ' · loan ' + _label(lead.loanStatus) : '' %></dd>
+          <% } %>
+          <% if (lead.possessionPreference) { %><dt>Possession</dt><dd><%= _label(lead.possessionPreference) %></dd><% } %>
+          <% if (lead.decisionMaker) { %><dt>Decision maker</dt><dd><%= _label(lead.decisionMaker) %></dd><% } %>
+          <dt>City</dt>
+          <dd><%= contact.city || '—' %></dd>
+        </dl>
+        <% if (lead.requirementNote) { %><p class="small muted mt-1 mb-0"><%= lead.requirementNote %></p><% } %>
+        <% if (can('lead.edit')) { %>
+          <button class="btn btn-sm mt-2" data-drawer="drawer-details">Edit requirement</button>
+        <% } %>
+      </div>
+    </div>
+
+    <%# V1.1 §24: the next action is the product's whole promise, so it gets a card. %>
+    <div class="card <%= isActive && !pendingFollowup ? 'card-alert' : '' %>">
+      <div class="card-head"><h2 class="grow">Next action</h2></div>
+      <div class="card-body">
+        <% if (pendingFollowup) { %>
+          <div class="t-name"><%= pendingFollowup.actionTypeId ? pendingFollowup.actionTypeId.name : 'Follow-up' %></div>
+          <div class="small <%= h.isOverdue(pendingFollowup.dueAt) ? 'badge b-red' : 'muted' %>"><%= h.dateTime(pendingFollowup.dueAt) %></div>
+          <% if (pendingFollowup.note) { %><div class="small muted mt-1"><%= pendingFollowup.note %></div><% } %>
+          <div class="btn-group mt-2">
+            <% if (can('followup.complete')) { %>
+              <button class="btn btn-sm btn-primary"
+                      data-quick="complete"
+                      data-action="/api/followups/<%= pendingFollowup._id %>/complete"
+                      data-stage-id="<%= lead.stageId._id %>"
+                      data-summary="<%= pendingFollowup.actionTypeId ? pendingFollowup.actionTypeId.name : 'Follow-up' %> · due <%= h.dateTime(pendingFollowup.dueAt) %>">
+                Complete
+              </button>
+            <% } %>
+            <% if (can('followup.edit_own') || can('followup.edit_team')) { %>
+              <button class="btn btn-sm" data-drawer="drawer-reschedule">Reschedule</button>
+            <% } %>
+          </div>
+        <% } else if (isActive) { %>
+          <%# §24: legacy or interrupted data — say so plainly and offer the fix. %>
+          <div class="t-name">Next action missing</div>
+          <p class="small muted">This active lead has no follow-up scheduled. Every active lead must have one.</p>
+          <% if (can('followup.create')) { %>
+            <button class="btn btn-sm btn-primary" data-drawer="drawer-followup">Set next action</button>
+          <% } %>
+        <% } else { %>
+          <p class="muted small mb-0">Lead closed — no next action needed.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <%# V1.1 §14: temperature, with the signals that produced it. %>
+    <% if (isActive) { %>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="grow">Temperature</h2>
+          <% if (can('lead.edit')) { %><button class="btn btn-sm" data-drawer="drawer-temperature">Change</button><% } %>
+        </div>
+        <div class="card-body">
+          <div class="inline">
+            <span class="badge <%= { HOT: 'b-red', WARM: 'b-amber', COLD: 'b-slate' }[lead.temperature] || 'b-slate' %>"><%= lead.temperature || 'WARM' %></span>
+            <span class="small muted">
+              <%= lead.temperatureMode === 'MANUAL' ? 'Set manually' : 'Score ' + (lead.temperatureScore || 0) + '/100' %>
+            </span>
+          </div>
+          <% if (lead.temperatureMode === 'MANUAL' && lead.temperatureOverrideReason) { %>
+            <p class="small muted mt-1 mb-0"><%= lead.temperatureOverrideReason %></p>
+          <% } else if (!lead.firstGenuineActionAt) { %>
+            <p class="small muted mt-1 mb-0">New leads start warm — scoring begins after the first genuine action.</p>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Marketing</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Original source</dt><dd><%= lead.originalSourceId ? lead.originalSourceId.name : '—' %></dd>
+          <dt>Latest source</dt><dd><%= lead.latestSourceId ? lead.latestSourceId.name : '—' %></dd>
+          <dt>First inquiry</dt><dd><%= h.date(lead.firstInquiryAt) %></dd>
+          <dt>Latest inquiry</dt><dd><%= h.date(lead.latestInquiryAt) %></dd>
+          <dt>Inquiries</dt><dd><%= lead.inquiryCount %></dd>
+          <% if (lead.firstResponseSeconds != null) { %>
+            <dt>First response</dt><dd><%= Math.round(lead.firstResponseSeconds / 60) %> min</dd>
+          <% } %>
+        </dl>
+      </div>
+    </div>
+
+    <% if (siblingLeads.length) { %>
+      <div class="card">
+        <div class="card-head"><h2 class="grow">Other inquiries</h2></div>
+        <div class="card-body stack">
+          <% siblingLeads.forEach(function (s) { %>
+            <a href="/app/leads/<%= s._id %>" class="small">
+              <%= s.projectId ? s.projectId.name : 'Generic inquiry' %> · <%= s.stageId ? s.stageId.name : '' %>
+            </a>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%# ------------------------------- drawers ------------------------------- %>
+
+<% if (isActive && can('followup.create')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-followup', heading: 'Add follow-up', action: '/api/leads/' + lead._id + '/followups' }) %>
+    <div class="field">
+      <label for="fu-action">Action type</label>
+      <select id="fu-action" name="actionTypeId" required>
+        <% actionTypes.forEach(function (a) { %><option value="<%= a._id %>"><%= a.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="fu-date">Date</label>
+        <input type="date" id="fu-date" name="date" required>
+      </div>
+      <div class="field">
+        <label for="fu-time">Time</label>
+        <input type="time" id="fu-time" name="time" value="10:00" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="fu-owner">Assigned to</label>
+      <select id="fu-owner" name="assignedUserId">
+        <option value="">Lead owner<%= lead.ownerUserId ? ' (' + lead.ownerUserId.name + ')' : '' %></option>
+        <% owners.forEach(function (o) { %><option value="<%= o._id %>"><%= o.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="fu-note">Note <span class="opt">optional</span></label>
+      <textarea id="fu-note" name="note" maxlength="2000" rows="2"></textarea>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Schedule follow-up' }) %>
+<% } %>
+
+<% if (can('note.create')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-note', heading: 'Add note', action: '/api/leads/' + lead._id + '/notes' }) %>
+    <div class="field">
+      <label for="note-body">Note</label>
+      <textarea id="note-body" name="body" required maxlength="5000" placeholder="Use @Name to notify a colleague"></textarea>
+      <div class="hint">Mentioned users get a notification with a link back to this lead.</div>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save note' }) %>
+<% } %>
+
+<%#
+  V1.1 §92: there is deliberately no standalone "change stage" drawer any more.
+  A stage change without a recorded outcome and a next action is exactly the
+  disconnected update this release exists to remove — it happens in the unified
+  drawer or not at all.
+%>
+
+<% if (isActive && pendingFollowup && (can('followup.edit_own') || can('followup.edit_team'))) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-reschedule', heading: 'Reschedule follow-up', action: '/api/followups/' + pendingFollowup._id + '/reschedule' }) %>
+    <div class="read-only-summary">
+      <%= pendingFollowup.actionTypeId ? pendingFollowup.actionTypeId.name : 'Follow-up' %> · currently due <%= h.dateTime(pendingFollowup.dueAt) %>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="rs-date">New date</label><input type="date" id="rs-date" name="date" required></div>
+      <div class="field"><label for="rs-time">New time</label><input type="time" id="rs-time" name="time" value="10:00" required></div>
+    </div>
+    <div class="field">
+      <label for="rs-note">Note <span class="opt">optional</span></label>
+      <input type="text" id="rs-note" name="note" maxlength="500">
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Reschedule' }) %>
+<% } %>
+
+<% if (isActive && can('lead.edit')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-temperature', heading: 'Lead temperature', action: '/api/leads/' + lead._id + '/temperature' }) %>
+    <div class="read-only-summary">
+      Temperature is scored automatically from recorded activity. Pin it manually only when
+      you know something the CRM cannot see.
+    </div>
+    <div class="field">
+      <label for="tmp-mode">Mode</label>
+      <select id="tmp-mode" name="mode" data-temp-mode>
+        <option value="MANUAL" <%= lead.temperatureMode === 'MANUAL' ? 'selected' : '' %>>Set manually</option>
+        <option value="AUTO" <%= lead.temperatureMode !== 'MANUAL' ? 'selected' : '' %>>Automatic scoring</option>
+      </select>
+    </div>
+    <div data-temp-manual>
+      <div class="field">
+        <label for="tmp-value">Temperature</label>
+        <select id="tmp-value" name="temperature">
+          <% ['HOT','WARM','COLD'].forEach(function (t) { %>
+            <option value="<%= t %>" <%= lead.temperature === t ? 'selected' : '' %>><%= t %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="tmp-reason">Reason</label>
+        <input type="text" id="tmp-reason" name="reason" maxlength="500"
+               placeholder="e.g. customer confirmed a booking decision this week">
+        <div class="hint">Recorded on the timeline and in the audit trail.</div>
+      </div>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save temperature' }) %>
+<% } %>
+
+<% if (can('lead.transfer')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-transfer', heading: 'Transfer lead', action: '/api/leads/' + lead._id + '/transfer' }) %>
+    <div class="read-only-summary">
+      Full history — calls, notes, follow-ups, visits and source — stays attached to this lead.
+    </div>
+    <div class="field">
+      <label for="transfer-to">New owner</label>
+      <select id="transfer-to" name="toUserId" required>
+        <option value="">Select a user</option>
+        <% owners.forEach(function (o) { %>
+          <% if (String(o._id) !== String(lead.ownerUserId && lead.ownerUserId._id)) { %>
+            <option value="<%= o._id %>"><%= o.name %></option>
+          <% } %>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="transfer-reason">Reason</label>
+      <input type="text" id="transfer-reason" name="reason" required maxlength="120">
+    </div>
+    <div class="field">
+      <label for="transfer-note">Note <span class="opt">optional</span></label>
+      <textarea id="transfer-note" name="note" maxlength="1000"></textarea>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Transfer lead' }) %>
+<% } %>
+
+<% if (!isActive && can('lead.reopen_lost') && !lead.bookedAt) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-reopen', heading: 'Reopen lead', action: '/api/leads/' + lead._id + '/reopen' }) %>
+    <div class="read-only-summary">The previous lost reason and history are preserved.</div>
+    <div class="field">
+      <label for="reopen-stage">Reopen into stage</label>
+      <select id="reopen-stage" name="stageId" required>
+        <% stages.filter(function (s) { return !s.terminal; }).forEach(function (s) { %>
+          <option value="<%= s._id %>"><%= s.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="reopen-owner">Owner</label>
+      <select id="reopen-owner" name="ownerUserId">
+        <option value="">Keep current owner</option>
+        <% owners.forEach(function (o) { %><option value="<%= o._id %>"><%= o.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="reopen-reason">Reason</label>
+      <input type="text" id="reopen-reason" name="reason" required maxlength="500">
+    </div>
+    <%# §84: a reopened lead is an active lead, so it leaves with its next action. %>
+    <fieldset>
+      <legend>Next action</legend>
+      <div class="field">
+        <label for="reopen-action">Action type</label>
+        <select id="reopen-action" name="nextActionTypeId">
+          <option value="">Set it later</option>
+          <% actionTypes.forEach(function (a) { %>
+            <option value="<%= a._id %>" <%= a.semantic === 'CALL' ? 'selected' : '' %>><%= a.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="reopen-date">Date</label><input type="date" id="reopen-date" name="nextDate"></div>
+        <div class="field"><label for="reopen-time">Time</label><input type="time" id="reopen-time" name="nextTime" value="10:00"></div>
+      </div>
+    </fieldset>
+  <%- include('../../partials/drawer-close', { cta: 'Reopen lead' }) %>
+<% } %>
+
+<% if (can('lead.edit')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-details', heading: 'Edit requirement', action: '/api/leads/' + lead._id }) %>
+    <div class="field-row">
+      <div class="field">
+        <label for="d-budget-min">Budget from</label>
+        <input type="text" id="d-budget-min" name="budgetMinMinor" inputmode="decimal" value="<%= lead.budgetMinMinor != null ? (lead.budgetMinMinor / 100) : '' %>">
+      </div>
+      <div class="field">
+        <label for="d-budget-max">Budget to</label>
+        <input type="text" id="d-budget-max" name="budgetMaxMinor" inputmode="decimal" value="<%= lead.budgetMaxMinor != null ? (lead.budgetMaxMinor / 100) : '' %>">
+      </div>
+    </div>
+    <div class="field">
+      <label for="d-purpose">Purpose</label>
+      <select id="d-purpose" name="purpose">
+        <option value="">Not stated</option>
+        <% ['SELF_USE','INVESTMENT','RENTAL_INCOME','OTHER'].forEach(function (p) { %>
+          <option value="<%= p %>" <%= lead.purpose === p ? 'selected' : '' %>><%= p.replace('_',' ') %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="d-config">Configuration <span class="opt">comma separated</span></label>
+        <input type="text" id="d-config" name="preferredConfigurations" data-list-input
+               value="<%= (lead.preferredConfigurations || []).join(', ') %>" placeholder="2 BHK, 3 BHK">
+      </div>
+      <div class="field">
+        <label for="d-facing">Facing <span class="opt">comma separated</span></label>
+        <input type="text" id="d-facing" name="preferredFacings" data-list-input
+               value="<%= ((lead.preferredFacings && lead.preferredFacings.length) ? lead.preferredFacings : (lead.preferredFacing ? [lead.preferredFacing] : [])).join(', ') %>"
+               placeholder="East, North-East">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="d-area-min">Area from</label><input type="text" id="d-area-min" name="areaMin" inputmode="numeric" value="<%= lead.areaMin != null ? lead.areaMin : '' %>"></div>
+      <div class="field"><label for="d-area-max">Area to</label><input type="text" id="d-area-max" name="areaMax" inputmode="numeric" value="<%= lead.areaMax != null ? lead.areaMax : '' %>"></div>
+      <div class="field">
+        <label for="d-area-basis">Area basis</label>
+        <select id="d-area-basis" name="areaBasis">
+          <option value="">Not stated</option>
+          <% ['CARPET','BUILT_UP','SALEABLE'].forEach(function (b) { %>
+            <option value="<%= b %>" <%= lead.areaBasis === b ? 'selected' : '' %>><%= b.replace('_',' ') %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="d-floor-min">Floor from</label><input type="text" id="d-floor-min" name="preferredFloorMin" inputmode="numeric" value="<%= lead.preferredFloorMin != null ? lead.preferredFloorMin : '' %>"></div>
+      <div class="field"><label for="d-floor-max">Floor to</label><input type="text" id="d-floor-max" name="preferredFloorMax" inputmode="numeric" value="<%= lead.preferredFloorMax != null ? lead.preferredFloorMax : '' %>"></div>
+    </div>
+
+    <%# V1.1 §10.1: qualification that actually moves a real-estate deal. %>
+    <div class="field-row">
+      <div class="field">
+        <label for="d-timeline">Purchase timeline</label>
+        <select id="d-timeline" name="purchaseTimeline">
+          <option value="">Not stated</option>
+          <% [['IMMEDIATE','Immediate'],['DAYS_0_30','0–30 days'],['MONTHS_1_3','1–3 months'],['MONTHS_3_6','3–6 months'],['MONTHS_6_PLUS','6+ months'],['EXPLORING','Exploring']].forEach(function (o) { %>
+            <option value="<%= o[0] %>" <%= lead.purchaseTimeline === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="d-possession">Possession preference</label>
+        <select id="d-possession" name="possessionPreference">
+          <option value="">Not stated</option>
+          <% [['READY','Ready to move'],['NEAR_POSSESSION','Near possession'],['UNDER_CONSTRUCTION','Under construction'],['ANY','Any']].forEach(function (o) { %>
+            <option value="<%= o[0] %>" <%= lead.possessionPreference === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="d-funding">Funding</label>
+        <select id="d-funding" name="fundingType" data-funding-select>
+          <option value="">Not stated</option>
+          <% [['SELF_FUNDED','Self funded'],['HOME_LOAN','Home loan'],['MIXED','Mixed'],['UNKNOWN','Unknown']].forEach(function (o) { %>
+            <option value="<%= o[0] %>" <%= lead.fundingType === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field" data-loan-field <%= ['HOME_LOAN','MIXED'].includes(lead.fundingType) ? '' : 'hidden' %>>
+        <label for="d-loan">Loan status</label>
+        <select id="d-loan" name="loanStatus">
+          <option value="">Not stated</option>
+          <% [['NOT_STARTED','Not started'],['EXPLORING','Exploring'],['PRE_APPROVED','Pre-approved'],['APPROVED','Approved']].forEach(function (o) { %>
+            <option value="<%= o[0] %>" <%= lead.loanStatus === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="d-decision">Decision maker</label>
+        <select id="d-decision" name="decisionMaker">
+          <option value="">Not stated</option>
+          <% [['SELF','Self'],['SPOUSE','Spouse'],['FAMILY','Family'],['BUSINESS_PARTNER','Business partner'],['OTHER','Other']].forEach(function (o) { %>
+            <option value="<%= o[0] %>" <%= lead.decisionMaker === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="d-priority">Follow-up priority <span class="opt">queue order</span></label>
+      <select id="d-priority" name="priority">
+        <% ['LOW','MEDIUM','HIGH'].forEach(function (p) { %>
+          <option value="<%= p %>" <%= lead.priority === p ? 'selected' : '' %>><%= p %></option>
+        <% }) %>
+      </select>
+      <div class="hint">Separate from temperature — this only affects how your queue sorts.</div>
+    </div>
+    <div class="field">
+      <label for="d-note">Requirement</label>
+      <textarea id="d-note" name="requirementNote" maxlength="2000"><%= lead.requirementNote || '' %></textarea>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save changes' }) %>
+<% } %>
+
+<% if (isActive && can('visit.create')) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-visit', heading: 'Schedule site visit', action: '/api/leads/' + lead._id + '/visits' }) %>
+    <div class="field">
+      <label for="v-project">Project</label>
+      <select id="v-project" name="projectId" required>
+        <% projects.forEach(function (p) { %>
+          <option value="<%= p._id %>" <%= lead.projectId && String(lead.projectId._id) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="v-date">Date</label><input type="date" id="v-date" name="date" required></div>
+      <div class="field"><label for="v-time">Time</label><input type="time" id="v-time" name="time" value="11:00" required></div>
+    </div>
+    <div class="field">
+      <label for="v-user">Sales user</label>
+      <select id="v-user" name="salesUserId">
+        <option value="">Lead owner</option>
+        <% owners.forEach(function (o) { %><option value="<%= o._id %>"><%= o.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="v-with">Visiting with</label>
+      <select id="v-with" name="visitingWith" data-cp-select>
+        <option value="DIRECT">Direct</option>
+        <option value="CHANNEL_PARTNER">Channel partner</option>
+      </select>
+    </div>
+    <div data-cp-panel hidden>
+      <div class="field"><label for="v-cp">Channel partner name</label><input type="text" id="v-cp" name="channelPartnerName" maxlength="120"></div>
+      <div class="field"><label for="v-cpm">Channel partner mobile</label><input type="tel" id="v-cpm" name="channelPartnerMobile"></div>
+    </div>
+    <div class="field">
+      <label for="v-notes">Note <span class="opt">optional</span></label>
+      <textarea id="v-notes" name="notes" rows="2" maxlength="2000"></textarea>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Schedule visit' }) %>
+<% } %>
+
+<% if (can('visit.complete')) { %>
+  <% openVisits.forEach(function (visit) { %>
+    <%- include('../../partials/visit-complete-drawer', { visit: visit, returnTo: '/app/leads/' + lead._id }) %>
+  <% }) %>
+<% } %>
+
+<%- include('../../partials/quick-action-drawer', { returnTo: '/app/leads/' + lead._id }) %>
+<%- include('../../partials/app-foot') %>

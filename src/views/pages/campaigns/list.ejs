@@ -1,0 +1,45 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Communication campaigns</h1>
+    <div class="sub">WhatsApp, SMS and email to a Contact Book audience.</div>
+  </div>
+  <div class="btn-group">
+    <% if (can('campaign.view_performance')) { %><a class="btn" href="/app/campaigns/performance">Ad performance</a><% } %>
+    <% if (can('campaign.create')) { %><a class="btn btn-primary" href="/app/campaigns/communication/new">New campaign</a><% } %>
+  </div>
+</div>
+
+<div class="card">
+  <% if (!campaigns.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No campaigns yet',
+      message: 'Build an audience from the contact book and send your first WhatsApp, SMS or email campaign.',
+      ctaHref: can('campaign.create') ? '/app/campaigns/communication/new' : null,
+      ctaLabel: 'New campaign'
+    }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Campaign</th><th>Channel</th><th>Status</th><th class="num">Sent</th><th class="num">Excluded</th><th class="num">Failed</th><th>When</th></tr></thead>
+      <tbody>
+        <% campaigns.forEach(function (c) { %>
+          <tr>
+            <td data-label="Campaign"><a class="t-name" href="/app/campaigns/<%= c._id %>"><%= c.name %></a>
+              <div class="t-sub"><%= c.templateId ? c.templateId.name : '' %></div></td>
+            <td data-label="Channel"><span class="badge b-blue"><%= c.channel %></span></td>
+            <td data-label="Status">
+              <span class="badge <%= c.status === 'SENT' ? 'b-green' : (c.status === 'FAILED' ? 'b-red' : 'b-slate') %>"><%= c.status %></span>
+            </td>
+            <td data-label="Sent" class="num"><%= c.sentCount %></td>
+            <td data-label="Excluded" class="num"><%= c.excludedCount %></td>
+            <td data-label="Failed" class="num"><%= c.failedCount %></td>
+            <td data-label="When"><%= c.sentAt ? h.dateTime(c.sentAt) : (c.scheduledAt ? 'Scheduled ' + h.dateTime(c.scheduledAt) : '—') %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

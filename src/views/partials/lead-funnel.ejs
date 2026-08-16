@@ -1,0 +1,59 @@
+<%#
+  V1.1 §17: the journey, not a stage editor.
+
+  Every state comes from real stage history (§17.3) — a stage the lead skipped is
+  never ticked just because it sorts earlier. Clicking an action-only stage
+  explains the right action instead of silently refusing it (§93).
+
+  Locals: funnel, lead. Optional: canBlock, canBook.
+%>
+<%
+  const _canBlock = typeof canBlock !== 'undefined' && canBlock;
+  const _canBook = typeof canBook !== 'undefined' && canBook;
+  const _mark = { completed: '✓', current: '●', skipped: '○', future: '○' };
+%>
+<div class="card funnel-card">
+  <div class="card-body">
+    <ol class="funnel" aria-label="Lead journey">
+      <% funnel.steps.forEach(function (step) { %>
+        <li class="fn-step fn-<%= step.state %>">
+          <% if (step.state === 'current' && !lead.firstGenuineActionAt && lead.status === 'ACTIVE') { %>
+            <span class="fn-mark pulse-new" aria-hidden="true"><%= _mark[step.state] %></span>
+          <% } else { %>
+            <span class="fn-mark" aria-hidden="true"><%= _mark[step.state] %></span>
+          <% } %>
+          <span class="fn-name"><%= step.name %></span>
+          <% if (step.state === 'current' && funnel.currentSubStage) { %>
+            <span class="fn-sub">└ <%= funnel.currentSubStage %></span>
+          <% } %>
+          <% if (step.state === 'completed' && step.enteredAt) { %>
+            <span class="fn-when"><%= h.date(step.enteredAt) %></span>
+          <% } %>
+          <% if (step.state === 'skipped') { %><span class="fn-when">skipped</span><% } %>
+
+          <%# §93: tell the user which action moves the lead here. %>
+          <% if (step.state !== 'current' && step.actionOnly && lead.status === 'ACTIVE') { %>
+            <% if (step.semanticType === 'BLOCKED' && _canBlock) { %>
+              <a class="fn-hint" href="#deal"
+                 title="To move this lead to <%= step.name %>, choose a unit and complete the Block Unit action.">
+                how?
+              </a>
+            <% } else if (step.semanticType === 'BOOKED' && _canBook) { %>
+              <a class="fn-hint" href="/app/leads/<%= lead._id %>/bookings/new"
+                 title="To mark this lead booked, complete the booking form so inventory and revenue stay accurate.">
+                how?
+              </a>
+            <% } %>
+          <% } %>
+        </li>
+      <% }) %>
+    </ol>
+
+    <% if (funnel.lost) { %>
+      <div class="funnel-branch <%= funnel.lost.active ? 'is-lost' : '' %>">
+        <%= funnel.lost.active ? '✕ ' + funnel.lost.name : '↳ ' + funnel.lost.name + ' — exit branch' %>
+        <% if (funnel.lost.active && lead.lostNote) { %><span class="fn-when"><%= lead.lostNote %></span><% } %>
+      </div>
+    <% } %>
+  </div>
+</div>

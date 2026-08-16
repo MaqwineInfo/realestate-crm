@@ -1,0 +1,14 @@
+<div class="page-head">
+  <div class="grow">
+    <h1><%= title %></h1>
+    <div class="sub">Few reports, each one trustworthy. Every number here comes from the same query that lists its records (§118).</div>
+  </div>
+  <div class="btn-group">
+    <% ['leads','sales','projects','campaigns','activities'].forEach(function (k) { %>
+      <a class="btn btn-sm <%= kind === k ? 'btn-primary' : '' %>" href="/app/reports/<%= k %>"><%= k.charAt(0).toUpperCase() + k.slice(1) %></a>
+    <% }) %>
+    <% if (can('report.export')) { %>
+      <a class="btn btn-sm" href="/app/reports/<%= kind %>/export?<%= new URLSearchParams(query).toString() %>">Export CSV</a>
+    <% } %>
+  </div>
+</div>

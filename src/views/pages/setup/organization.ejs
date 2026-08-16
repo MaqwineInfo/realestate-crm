@@ -1,0 +1,73 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow"><h1>Organization</h1><div class="sub">Timezone and currency drive every "today" boundary and money display (§72, §73).</div></div>
+</div>
+
+<form method="post" action="/api/setup/organization">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="card" style="max-width:720px">
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label for="name">Organization name</label>
+          <input type="text" id="name" name="name" required minlength="2" maxlength="120" value="<%= org.name %>">
+        </div>
+        <div class="field">
+          <label for="legalName">Legal / display name <span class="opt">optional</span></label>
+          <input type="text" id="legalName" name="legalName" maxlength="150" value="<%= org.legalName || '' %>">
+        </div>
+      </div>
+      <div class="field-row three">
+        <div class="field">
+          <label for="timezone">Time zone</label>
+          <select id="timezone" name="timezone" required>
+            <% ['Asia/Kolkata','Asia/Dubai','Asia/Singapore','Europe/London','America/New_York','UTC'].forEach(function (t) { %>
+              <option value="<%= t %>" <%= org.timezone === t ? 'selected' : '' %>><%= t %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="currency">Currency</label>
+          <select id="currency" name="currency" required>
+            <% ['INR','AED','USD','GBP','SGD'].forEach(function (c) { %>
+              <option value="<%= c %>" <%= org.currency === c ? 'selected' : '' %>><%= c %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="locale">Number / date locale</label>
+          <select id="locale" name="locale" required>
+            <% ['en-IN','en-AE','en-US','en-GB','en-SG'].forEach(function (l) { %>
+              <option value="<%= l %>" <%= org.locale === l ? 'selected' : '' %>><%= l %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="website">Website <span class="opt">optional</span></label>
+        <input type="url" id="website" name="website" value="<%= org.website || '' %>">
+      </div>
+      <div class="field">
+        <label for="address">Address <span class="opt">optional</span></label>
+        <textarea id="address" name="address" maxlength="500"><%= org.address || '' %></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Save organization</button>
+    </div>
+  </div>
+</form>
+
+<div class="card mt-2" style="max-width:720px">
+  <div class="card-head"><h2 class="grow">Operating rules</h2></div>
+  <div class="card-body">
+    <dl class="dl">
+      <dt>Lead response SLA</dt><dd><%= org.settings.slaResponseMinutes %> min target · escalate at <%= org.settings.slaEscalationMinutes %> · auto-reassign at <%= org.settings.slaAutoReassignMinutes %></dd>
+      <dt>Block duration</dt><dd><%= org.settings.blockDurationHours %> hours</dd>
+      <dt>Attribution</dt><dd><%= org.settings.attributionModel.replace('_', ' ').toLowerCase() %></dd>
+    </dl>
+    <p class="small muted mb-0">SLA, block and attribution rules get their own setup screens as those modules land.</p>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

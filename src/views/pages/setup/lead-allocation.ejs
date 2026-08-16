@@ -1,0 +1,183 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Lead allocation</h1>
+    <div class="sub">Who gets the next lead, and in what order. Round robin, and only round robin (§66).</div>
+  </div>
+  <button class="btn btn-primary" data-drawer="drawer-new-pool">Add project rule</button>
+</div>
+
+<%# §67: the mental model, before the configuration. %>
+<div class="card">
+  <div class="card-body">
+    <div class="alloc-model">
+      <span>Incoming lead</span> <span class="arrow">→</span>
+      <span>Project rule?</span> <span class="arrow">→</span>
+      <span>Default pool</span> <span class="arrow">→</span>
+      <span>Next active member</span> <span class="arrow">→</span>
+      <span><strong>Owner</strong></span>
+    </div>
+    <p class="small muted mb-0 mt-1">
+      A project rule wins when one exists and has an active member. If it does not, the default pool
+      takes over (§72). With nobody eligible anywhere the lead waits in Unassigned, the response clock
+      keeps running, and the escalation users are told.
+    </p>
+  </div>
+</div>
+
+<% pools.forEach(function (pool) { %>
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">
+        <%= pool.name %>
+        <% if (pool.isDefault) { %><span class="badge b-blue">Default</span>
+        <% } else if (pool.projectId) { %><span class="badge b-violet"><%= pool.projectId.name %></span><% } %>
+        <span class="badge <%= pool.active ? 'b-green' : 'b-slate' %>"><%= pool.active ? 'Active' : 'Inactive' %></span>
+      </h2>
+      <span class="muted small">Round robin</span>
+      <button class="btn btn-sm" data-drawer="drawer-pool-<%= pool._id %>">Edit</button>
+      <% if (!pool.isDefault) { %>
+        <form method="post" action="/api/setup/assignment-pools/<%= pool._id %>/toggle">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-sm" type="submit"><%= pool.active ? 'Deactivate' : 'Activate' %></button>
+        </form>
+      <% } %>
+    </div>
+    <div class="card-body">
+      <% if (!pool.memberIds.length) { %>
+        <p class="muted mb-0">No members yet — leads matching this rule fall through to the default pool.</p>
+      <% } else { %>
+        <div class="grid cols-2">
+          <div>
+            <h3 class="mb-1">Rotation order</h3>
+            <%# §70: order is the rotation, so it is editable in place. %>
+            <form method="post" action="/api/setup/assignment-pools/<%= pool._id %>/reorder" data-reorder>
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <ol class="member-list">
+                <% pool.memberIds.forEach(function (m) { %>
+                  <li class="member <%= m.status === 'ACTIVE' ? '' : 'is-inactive' %>">
+                    <input type="hidden" name="memberUserIds" value="<%= m._id %>">
+                    <span class="grip" aria-hidden="true">☰</span>
+                    <span class="grow"><%= m.name %></span>
+                    <% if (m.status !== 'ACTIVE') { %>
+                      <span class="badge b-red"><%= m.status.toLowerCase() %> · skipped</span>
+                    <% } %>
+                    <button type="button" class="btn btn-ghost btn-sm" data-move="up" aria-label="Move up">↑</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-move="down" aria-label="Move down">↓</button>
+                  </li>
+                <% }) %>
+              </ol>
+              <button class="btn btn-sm mt-1" type="submit">Save order</button>
+            </form>
+          </div>
+
+          <div>
+            <%# §71: informational only — reading it never advances the cursor. %>
+            <h3 class="mb-1">Next assignments</h3>
+            <% if (!pool.upcoming.length) { %>
+              <p class="muted small">No active member to assign to.</p>
+            <% } else { %>
+              <ol class="upcoming">
+                <% pool.upcoming.forEach(function (row) { %>
+                  <li><span class="pos"><%= row.position %></span> <%= row.user.name %></li>
+                <% }) %>
+              </ol>
+              <p class="small muted">Preview only. The live rotation cursor is not editable (§68).</p>
+            <% } %>
+
+            <h3 class="mb-1 mt-2">Escalation</h3>
+            <% if (!pool.escalationUserIds.length) { %>
+              <p class="muted small mb-0">Falls back to organization admins.</p>
+            <% } else { %>
+              <div class="inline">
+                <% pool.escalationUserIds.forEach(function (u) { %><span class="badge b-slate"><%= u.name %></span><% }) %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+        <% if (pool.inactiveMembers) { %>
+          <p class="small mt-1 mb-0" style="color:var(--warn)">
+            <%= pool.inactiveMembers %> member(s) are no longer active and are skipped at assignment time.
+          </p>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+<% }) %>
+
+<%# ------------------------------- drawers ------------------------------- %>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-new-pool', heading: 'Add project allocation rule', action: '/api/setup/assignment-pools' }) %>
+  <input type="hidden" name="scopeType" value="PROJECT">
+  <div class="field">
+    <label for="np-name">Rule name</label>
+    <input type="text" id="np-name" name="name" required maxlength="80" placeholder="e.g. Green Avenue sales team">
+  </div>
+  <div class="field">
+    <label for="np-project">Project</label>
+    <select id="np-project" name="projectId" required>
+      <option value="">Select a project</option>
+      <% projects.forEach(function (p) { %><option value="<%= p._id %>"><%= p.name %></option><% }) %>
+    </select>
+    <div class="hint">One active rule per project.</div>
+  </div>
+  <div class="field">
+    <label for="np-members">Members <span class="opt">rotation order</span></label>
+    <select id="np-members" name="memberUserIds" multiple size="6" required>
+      <% users.forEach(function (u) { %><option value="<%= u._id %>"><%= u.name %></option><% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="np-esc">Escalation users <span class="opt">optional</span></label>
+    <select id="np-esc" name="escalationUserIds" multiple size="4">
+      <% users.forEach(function (u) { %><option value="<%= u._id %>"><%= u.name %></option><% }) %>
+    </select>
+    <div class="hint">Told when a lead cannot be assigned or an SLA breaches. Defaults to admins.</div>
+  </div>
+<%- include('../../partials/drawer-close', { cta: 'Create rule' }) %>
+
+<% pools.forEach(function (pool) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-pool-' + pool._id, heading: 'Edit ' + pool.name, action: '/api/setup/assignment-pools/' + pool._id }) %>
+    <input type="hidden" name="scopeType" value="<%= pool.isDefault ? 'DEFAULT' : 'PROJECT' %>">
+    <div class="field">
+      <label for="p-name-<%= pool._id %>">Name</label>
+      <input type="text" id="p-name-<%= pool._id %>" name="name" required maxlength="80" value="<%= pool.name %>">
+    </div>
+    <% if (!pool.isDefault) { %>
+      <div class="field">
+        <label for="p-project-<%= pool._id %>">Project</label>
+        <select id="p-project-<%= pool._id %>" name="projectId" required>
+          <% projects.forEach(function (p) { %>
+            <option value="<%= p._id %>" <%= pool.projectId && String(pool.projectId._id) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    <% } else { %>
+      <div class="read-only-summary">
+        This is the organization default. Every project without its own rule uses it, so it cannot be
+        switched off or left empty.
+      </div>
+    <% } %>
+    <div class="field">
+      <label for="p-members-<%= pool._id %>">Members</label>
+      <select id="p-members-<%= pool._id %>" name="memberUserIds" multiple size="6">
+        <% users.forEach(function (u) { %>
+          <option value="<%= u._id %>" <%= pool.memberIds.some(function (m) { return String(m._id) === String(u._id); }) ? 'selected' : '' %>><%= u.name %></option>
+        <% }) %>
+      </select>
+      <div class="hint">Active users only. Order is edited on the card itself.</div>
+    </div>
+    <div class="field">
+      <label for="p-esc-<%= pool._id %>">Escalation users</label>
+      <select id="p-esc-<%= pool._id %>" name="escalationUserIds" multiple size="4">
+        <% users.forEach(function (u) { %>
+          <option value="<%= u._id %>" <%= pool.escalationUserIds.some(function (e) { return String(e._id) === String(u._id); }) ? 'selected' : '' %>><%= u.name %></option>
+        <% }) %>
+      </select>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save rule' }) %>
+<% }) %>
+
+<%- include('../../partials/app-foot') %>

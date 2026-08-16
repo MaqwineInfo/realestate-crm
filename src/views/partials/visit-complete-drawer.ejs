@@ -1,0 +1,68 @@
+<%#
+  Spec §24.3: completing a visit. Outcome is mandatory; the next action is
+  mandatory too while the lead is open, which the server enforces regardless of
+  what this form sends.
+%>
+<div class="drawer-backdrop" id="drawer-visit-<%= visit._id %>" hidden>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Complete site visit">
+    <form method="post" action="/api/visits/<%= visit._id %>/complete">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="returnTo" value="<%= typeof returnTo !== 'undefined' ? returnTo : '' %>">
+
+      <div class="drawer-head">
+        <h2 class="grow">Complete site visit</h2>
+        <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="read-only-summary">
+          <%= visit.contactId ? visit.contactId.displayName : 'Customer' %>
+          · <%= visit.projectId ? visit.projectId.name : '' %>
+          · <%= h.dateTime(visit.scheduledAt) %>
+        </div>
+
+        <div class="field">
+          <label for="vo-<%= visit._id %>">Outcome</label>
+          <select id="vo-<%= visit._id %>" name="outcomeId" required>
+            <option value="">Select the outcome</option>
+            <% visitOutcomes.forEach(function (o) { %>
+              <option value="<%= o._id %>"><%= o.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="vn-<%= visit._id %>">Notes <span class="opt">optional</span></label>
+          <textarea id="vn-<%= visit._id %>" name="notes" rows="2" maxlength="2000"></textarea>
+        </div>
+
+        <fieldset>
+          <legend>Next action — required while the lead is open</legend>
+          <div class="field">
+            <label for="va-<%= visit._id %>">Next action type</label>
+            <select id="va-<%= visit._id %>" name="nextActionTypeId">
+              <% actionTypes.forEach(function (a) { %>
+                <option value="<%= a._id %>" <%= a.semantic === 'CALL' ? 'selected' : '' %>><%= a.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="vd-<%= visit._id %>">Next date</label>
+              <input type="date" id="vd-<%= visit._id %>" name="nextDate">
+            </div>
+            <div class="field">
+              <label for="vt-<%= visit._id %>">Next time</label>
+              <input type="time" id="vt-<%= visit._id %>" name="nextTime" value="11:00">
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="drawer-foot">
+        <button type="button" class="btn" data-drawer-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save visit outcome</button>
+      </div>
+    </form>
+  </div>
+</div>

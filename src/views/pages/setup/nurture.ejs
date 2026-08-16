@@ -1,0 +1,112 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Nurture sequences</h1>
+    <div class="sub">A trigger, a few timed steps, and clear stop conditions — not a workflow canvas (§19).</div>
+  </div>
+  <button class="btn btn-primary" data-drawer="drawer-sequence">New sequence</button>
+</div>
+
+<div class="card">
+  <% if (!sequences.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No sequences yet',
+      message: 'Add a cadence so leads sitting in a stage keep hearing from you.',
+      ctaHref: null, ctaLabel: ''
+    }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Sequence</th><th>Trigger</th><th>Steps</th><th>Stops on</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% sequences.forEach(function (s) { %>
+          <tr>
+            <td data-label="Sequence"><span class="t-name"><%= s.name %></span></td>
+            <td data-label="Trigger">
+              <%= s.projectId ? s.projectId.name : 'Any project' %>
+              · <%= s.stageId ? s.stageId.name : 'Any stage' %>
+            </td>
+            <td data-label="Steps">
+              <% (s.steps || []).forEach(function (step) { %>
+                <span class="badge b-slate">D+<%= step.delayDays %> <%= step.kind === 'TASK' ? 'task' : (step.channel || 'msg') %></span>
+              <% }) %>
+            </td>
+            <td data-label="Stops on" class="muted small">
+              <%= [s.stopOnBooked ? 'booked' : null, s.stopOnLost ? 'lost' : null].filter(Boolean).join(', ') || '—' %>
+            </td>
+            <td data-label="Status"><span class="badge <%= s.active ? 'b-green' : 'b-slate' %>"><%= s.active ? 'Active' : 'Off' %></span></td>
+            <td class="row-actions">
+              <form method="post" action="/api/setup/nurture/<%= s._id %>/toggle">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm" type="submit"><%= s.active ? 'Disable' : 'Enable' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-sequence', heading: 'New nurture sequence', action: '/api/setup/nurture' }) %>
+  <div class="field">
+    <label for="ns-name">Name</label>
+    <input type="text" id="ns-name" name="name" required maxlength="100" placeholder="Cold lead re-engagement">
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="ns-project">Project</label>
+      <select id="ns-project" name="projectId">
+        <option value="">Any project</option>
+        <% projects.forEach(function (p) { %><option value="<%= p._id %>"><%= p.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="ns-stage">Stage</label>
+      <select id="ns-stage" name="stageId">
+        <option value="">Any stage</option>
+        <% stages.forEach(function (s) { %><option value="<%= s._id %>"><%= s.name %></option><% }) %>
+      </select>
+    </div>
+  </div>
+
+  <fieldset>
+    <legend>Steps</legend>
+    <% [1, 2, 3].forEach(function (n) { %>
+      <div class="field-row three">
+        <div class="field">
+          <label for="ns-delay-<%= n %>">Step <%= n %> — day</label>
+          <input type="number" id="ns-delay-<%= n %>" name="stepDelay" min="0" value="<%= n === 1 ? 1 : (n === 2 ? 3 : 7) %>">
+        </div>
+        <div class="field">
+          <label for="ns-kind-<%= n %>">Type</label>
+          <select id="ns-kind-<%= n %>" name="stepKind">
+            <option value="MESSAGE">Message</option>
+            <option value="TASK">Task for the owner</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ns-template-<%= n %>">Template</label>
+          <select id="ns-template-<%= n %>" name="stepTemplateId">
+            <option value="">None</option>
+            <% templates.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %></option><% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="ns-action-<%= n %>">…or action type for a task</label>
+        <select id="ns-action-<%= n %>" name="stepActionTypeId">
+          <option value="">None</option>
+          <% actionTypes.forEach(function (a) { %><option value="<%= a._id %>"><%= a.name %></option><% }) %>
+        </select>
+        <input type="hidden" name="stepNote" value="">
+      </div>
+    <% }) %>
+  </fieldset>
+
+  <label class="check"><input type="checkbox" name="stopOnBooked" value="1" checked> Stop when the lead is booked</label>
+  <label class="check"><input type="checkbox" name="stopOnLost" value="1" checked> Stop when the lead is lost</label>
+<%- include('../../partials/drawer-close', { cta: 'Save sequence' }) %>
+
+<%- include('../../partials/app-foot') %>

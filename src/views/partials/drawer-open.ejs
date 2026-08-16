@@ -1,0 +1,10 @@
+<%# Compact action drawer (§103.1). Pair with drawer-close.ejs; the fields go between. %>
+<div class="drawer-backdrop" id="<%= id %>" hidden>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="<%= heading %>">
+    <form method="post" action="<%= action %>"<% if (typeof confirmMessage !== 'undefined' && confirmMessage) { %> data-confirm="<%= confirmMessage %>"<% } %>>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="drawer-head">
+        <h2 class="grow"><%= heading %></h2>
+        <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+      </div>
+      <div class="drawer-body">

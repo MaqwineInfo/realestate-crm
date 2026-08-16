@@ -1,0 +1,310 @@
+<%- include('../../partials/app-head') %>
+<%
+  const base = '/app/leads/' + lead._id + '/cost-sheets/new';
+  const q = function (extra) {
+    const parts = Object.assign({
+      unitId: unit ? String(unit._id) : '',
+      discount: discountInput,
+      paymentPlanId: selectedPlan ? String(selectedPlan._id) : '',
+    }, extra || {});
+    return base + '?' + Object.keys(parts)
+      .filter(function (k) { return parts[k]; })
+      .map(function (k) { return k + '=' + encodeURIComponent(parts[k]); }).join('&');
+  };
+  const shortlistedIds = shortlisted.filter(function (s) { return s.unitId; })
+    .map(function (s) { return String(s.unitId._id); });
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Generate quotation</h1>
+    <div class="sub">
+      <%= lead.contactId.displayName %> · <%= h.mobile(lead.contactId.primaryMobile) %>
+      <% if (lead.projectId) { %> · <%= lead.projectId.name %><% } %>
+    </div>
+  </div>
+  <a class="btn btn-ghost" href="/app/leads/<%= lead._id %>">Back to lead</a>
+</div>
+
+<%# V1.1 §39: four visible steps, so nobody wonders what happens next. %>
+<nav class="steps" aria-label="Quotation steps">
+  <% [['unit','Select unit'],['plan','Payment plan'],['price','Price &amp; discount'],['preview','Preview &amp; share']]
+       .forEach(function (s, i) { %>
+    <a class="step <%= step === s[0] ? 'on' : '' %>" href="<%= q({ step: s[0] }) %>">
+      <span class="n"><%= (s[0] === 'unit' && unit) || (s[0] === 'plan' && selectedPlan) ? '✓' : i + 1 %></span> <%- s[1] %>
+    </a>
+  <% }) %>
+</nav>
+
+<% if (typeof priceError !== 'undefined' && priceError) { %>
+  <div class="flash flash-error"><%= priceError %></div>
+<% } %>
+
+<%# ------------------------------ 1. Select unit ---------------------------- %>
+<% if (step === 'unit' || !unit) { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Shortlisted for this lead</h2></div>
+    <div class="card-body">
+      <% if (!shortlisted.length) { %>
+        <p class="muted mb-0">Nothing shortlisted yet — pick from available inventory below.</p>
+      <% } else { %>
+        <div class="unit-grid">
+          <% shortlisted.forEach(function (s) { if (!s.unitId) return; %>
+            <a class="unit-card <%= unit && String(unit._id) === String(s.unitId._id) ? 'on' : '' %>"
+               href="<%= base %>?unitId=<%= s.unitId._id %>&step=plan">
+              <span class="u-num"><%= s.unitId.unitNumber %></span>
+              <span class="u-meta">
+                <%= s.unitId.towerId ? s.unitId.towerId.name : '' %>
+                <%= s.unitId.unitTypeId ? ' · ' + s.unitId.unitTypeId.name : '' %>
+              </span>
+              <% if (can('inventory.view_prices') && s.priceMinor != null) { %>
+                <span class="u-price"><%= h.moneyShort(s.priceMinor) %></span>
+              <% } %>
+              <span class="badge <%= s.unitId.status === 'AVAILABLE' ? 'b-green' : 'b-amber' %>"><%= s.unitId.status %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">All available units</h2></div>
+    <div class="card-body">
+      <%# §40 filters, on the same page as the choice. %>
+      <form class="filters mb-2" method="get" action="<%= base %>">
+        <input type="hidden" name="step" value="unit">
+        <div class="field">
+          <label for="f-tower">Tower</label>
+          <select id="f-tower" name="towerId">
+            <option value="">All</option>
+            <% facets.towers.forEach(function (t) { %>
+              <option value="<%= t._id %>" <%= String(query.towerId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-type">Configuration</label>
+          <select id="f-type" name="unitTypeId">
+            <option value="">All</option>
+            <% facets.unitTypes.forEach(function (ut) { %>
+              <option value="<%= ut._id %>" <%= String(query.unitTypeId) === String(ut._id) ? 'selected' : '' %>><%= ut.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-facing">Facing</label>
+          <input type="text" id="f-facing" name="facing" value="<%= query.facing || '' %>">
+        </div>
+        <div class="field">
+          <label for="f-status">Status</label>
+          <select id="f-status" name="status">
+            <option value="AVAILABLE" <%= query.status === 'AVAILABLE' || !query.status ? 'selected' : '' %>>Available</option>
+            <option value="">Any</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">Filter</button>
+      </form>
+
+      <% if (!available.length) { %>
+        <p class="muted mb-0">No units match. Adjust the filters, or add inventory to this project.</p>
+      <% } else { %>
+        <div class="unit-grid">
+          <% available.forEach(function (u) { %>
+            <a class="unit-card <%= unit && String(unit._id) === String(u._id) ? 'on' : '' %>"
+               href="<%= base %>?unitId=<%= u._id %>&step=plan">
+              <span class="u-num">
+                <%= u.unitNumber %>
+                <% if (shortlistedIds.includes(String(u._id))) { %><span class="badge b-violet">shortlisted</span><% } %>
+              </span>
+              <span class="u-meta">
+                <%= u.towerId ? u.towerId.name : '' %><%= u.floorNumber != null ? ' · Floor ' + u.floorNumber : '' %>
+                <%= u.unitTypeId ? ' · ' + u.unitTypeId.name : '' %>
+                <%= u.saleableArea ? ' · ' + u.saleableArea + ' sqft' : '' %>
+                <%= u.facing ? ' · ' + u.facing : '' %>
+              </span>
+              <% if (can('inventory.view_prices') && u.priceMinor != null) { %>
+                <span class="u-price"><%= h.moneyShort(u.priceMinor) %></span>
+              <% } %>
+              <span class="badge <%= u.status === 'AVAILABLE' ? 'b-green' : 'b-amber' %>"><%= u.status %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<% if (unit && step !== 'unit') { %>
+  <div class="card mb-2">
+    <div class="card-body inline">
+      <strong>Unit <%= unit.unitNumber %></strong>
+      <span class="muted small">
+        <%= unit.towerId ? unit.towerId.name : '' %><%= unit.unitTypeId ? ' · ' + unit.unitTypeId.name : '' %>
+        <%= unit.saleableArea ? ' · ' + unit.saleableArea + ' sqft' : '' %>
+      </span>
+      <span class="badge <%= unit.status === 'AVAILABLE' ? 'b-green' : 'b-amber' %>"><%= unit.status %></span>
+      <span class="grow"></span>
+      <a class="btn btn-sm" href="<%= q({ step: 'unit' }) %>">Change unit</a>
+    </div>
+  </div>
+<% } %>
+
+<%# ----------------------------- 2. Payment plan --------------------------- %>
+<% if (unit && step === 'plan') { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Payment plan</h2></div>
+    <div class="card-body">
+      <% if (!plans.length) { %>
+        <p class="muted">No active payment plan on this project. You can still quote a price, but a booking will need one.</p>
+        <a class="btn btn-primary" href="<%= q({ step: 'price' }) %>">Continue without a plan</a>
+      <% } else { %>
+        <div class="stack">
+          <% plans.forEach(function (pl) { %>
+            <a class="plan-pick <%= selectedPlan && String(selectedPlan._id) === String(pl._id) ? 'on' : '' %>"
+               href="<%= base %>?unitId=<%= unit._id %>&discount=<%= encodeURIComponent(discountInput) %>&paymentPlanId=<%= pl._id %>&step=price">
+              <div class="inline">
+                <strong><%= pl.name %></strong>
+                <span class="muted small"><%= pl.type.replace('_',' ').toLowerCase() %></span>
+                <% if (!pl.configured) { %><span class="badge b-amber">Schedule not configured</span><% } %>
+              </div>
+              <% if (pl.milestones && pl.milestones.length) { %>
+                <div class="small muted">
+                  <% pl.milestones.slice(0, 6).forEach(function (m, i) { %><%= i ? ' · ' : '' %><%= m.percentage %>% <%= m.label %><% }) %>
+                </div>
+              <% } %>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%# --------------------------- 3. Price & discount -------------------------- %>
+<% if (unit && preview && (step === 'price' || step === 'preview')) { %>
+  <div class="workspace">
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="grow">Price</h2>
+          <span class="muted small">Computed on the server from the project pricing profile (§85)</span>
+        </div>
+        <div class="card-body">
+          <form class="filters" method="get" action="<%= base %>">
+            <input type="hidden" name="unitId" value="<%= unit._id %>">
+            <% if (selectedPlan) { %><input type="hidden" name="paymentPlanId" value="<%= selectedPlan._id %>"><% } %>
+            <input type="hidden" name="step" value="price">
+            <div class="field">
+              <label for="discount">Discount</label>
+              <input type="text" id="discount" name="discount" inputmode="decimal" value="<%= discountInput %>">
+            </div>
+            <button class="btn" type="submit">Recalculate</button>
+          </form>
+        </div>
+        <table>
+          <thead><tr><th>Component</th><th>Basis</th><th class="num">Amount</th></tr></thead>
+          <tbody>
+            <% preview.lines.forEach(function (line) { %>
+              <tr>
+                <td><%= line.name %><% if (!line.customerVisible) { %> <span class="badge b-slate">internal</span><% } %></td>
+                <td class="muted small">
+                  <% if (line.calcType === 'PER_AREA') { %><%= line.quantity %> × <%= h.money(line.rateMinor || 0) %>
+                  <% } else if (line.calcType === 'PERCENTAGE') { %><%= line.percentage %>%
+                  <% } else { %>—<% } %>
+                </td>
+                <td class="num"><%= h.money(line.amountMinor) %></td>
+              </tr>
+            <% }) %>
+            <tr><td colspan="2" class="right"><strong>Gross</strong></td><td class="num"><strong><%= h.money(preview.grossAmountMinor) %></strong></td></tr>
+            <% if (preview.discountMinor) { %>
+              <tr><td colspan="2" class="right">Discount (<%= preview.discountPercentage.toFixed(2) %>%)</td><td class="num">− <%= h.money(preview.discountMinor) %></td></tr>
+            <% } %>
+            <% if (preview.taxAndChargesMinor) { %>
+              <tr><td colspan="2" class="right">Tax</td><td class="num"><%= h.money(preview.taxAndChargesMinor) %></td></tr>
+            <% } %>
+            <tr><td colspan="2" class="right"><strong>Final consideration</strong></td><td class="num"><strong><%= h.money(preview.finalConsiderationMinor) %></strong></td></tr>
+          </tbody>
+        </table>
+        <% if (preview.informationalLines.length) { %>
+          <div class="card-body">
+            <h3 class="mb-1">Informational — not included in the total</h3>
+            <dl class="dl">
+              <% preview.informationalLines.forEach(function (line) { %>
+                <dt><%= line.name %></dt><dd><%= h.money(line.amountMinor) %></dd>
+              <% }) %>
+            </dl>
+          </div>
+        <% } %>
+      </div>
+
+      <%# §41/§80: the schedule with real amounts, not just percentages. %>
+      <% if (planSchedule.length) { %>
+        <div class="card">
+          <div class="card-head">
+            <h2 class="grow">Payment schedule</h2>
+            <span class="muted small"><%= selectedPlan.name %></span>
+          </div>
+          <table>
+            <thead><tr><th>#</th><th>Milestone</th><th class="num">%</th><th class="num">Amount</th></tr></thead>
+            <tbody>
+              <% planSchedule.forEach(function (row) { %>
+                <tr>
+                  <td class="muted"><%= row.sequence %></td>
+                  <td><%= row.label %><% if (row.customerNote) { %><div class="t-sub"><%= row.customerNote %></div><% } %></td>
+                  <td class="num"><%= row.percentage %>%</td>
+                  <td class="num"><%= h.money(row.amountMinor) %></td>
+                </tr>
+              <% }) %>
+              <tr>
+                <td colspan="3" class="right"><strong>Total</strong></td>
+                <td class="num"><strong><%= h.money(planSchedule.reduce(function (s, r) { return s + r.amountMinor; }, 0)) %></strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="card-body">
+            <p class="small muted mb-0">
+              The last milestone absorbs rounding, so the schedule always totals the consideration exactly.
+              No receivables or reminders are created (§35.4).
+            </p>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Save quotation</h2></div>
+      <div class="card-body">
+        <form method="post" action="/api/leads/<%= lead._id %>/cost-sheets">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="unitId" value="<%= unit._id %>">
+          <input type="hidden" name="discount" value="<%= discountInput %>">
+          <div class="field">
+            <label for="paymentPlanId">Payment plan</label>
+            <select id="paymentPlanId" name="paymentPlanId">
+              <option value="">Not selected yet</option>
+              <% plans.forEach(function (pl) { %>
+                <option value="<%= pl._id %>" <%= selectedPlan && String(selectedPlan._id) === String(pl._id) ? 'selected' : '' %>><%= pl.name %></option>
+              <% }) %>
+            </select>
+            <div class="hint">The schedule is frozen onto this quotation, so later plan edits cannot change it (§44).</div>
+          </div>
+          <div class="field">
+            <label for="validUntil">Valid until <span class="opt">optional</span></label>
+            <input type="date" id="validUntil" name="validUntil">
+          </div>
+          <div class="field">
+            <label for="notes">Notes <span class="opt">optional</span></label>
+            <textarea id="notes" name="notes" rows="3" maxlength="2000"></textarea>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Save quotation</button>
+          <p class="small muted mt-1 mb-0">
+            If the discount crosses a configured threshold this goes for approval automatically (§31).
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../../partials/app-foot') %>

@@ -1,0 +1,66 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow"><h1><%= spec.label %></h1><div class="sub"><%= spec.help %></div></div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Current list</h2></div>
+    <% if (!items.length) { %>
+      <div class="card-body"><p class="muted mb-0">Nothing configured yet. Add the first one on the right.</p></div>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Name</th><% if (spec.extra) { %><th><%= spec.extra.label %></th><% } %><th>Order</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% items.forEach(function (item) { %>
+            <tr>
+              <td><span class="t-name"><%= item.name %></span></td>
+              <% if (spec.extra) { %><td class="muted small"><%= item[spec.extra.key] || '—' %></td><% } %>
+              <td class="muted"><%= item.displayOrder %></td>
+              <td><span class="badge <%= item.active ? 'b-green' : 'b-slate' %>"><%= item.active ? 'Active' : 'Inactive' %></span></td>
+              <td class="row-actions">
+                <form method="post" action="/api/setup/<%= slug %>/<%= item._id %>/toggle">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm" type="submit"><%= item.active ? 'Deactivate' : 'Activate' %></button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Add <%= spec.singular.toLowerCase() %></h2></div>
+    <div class="card-body">
+      <form method="post" action="/api/setup/<%= slug %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" required maxlength="80">
+        </div>
+        <% if (spec.extra) { %>
+          <div class="field">
+            <label for="<%= spec.extra.key %>"><%= spec.extra.label %></label>
+            <select id="<%= spec.extra.key %>" name="<%= spec.extra.key %>">
+              <% spec.extra.options.forEach(function (o) { %><option value="<%= o %>"><%= o %></option><% }) %>
+            </select>
+          </div>
+        <% } %>
+        <div class="field">
+          <label for="displayOrder">Display order</label>
+          <input type="number" id="displayOrder" name="displayOrder" value="0" min="0">
+        </div>
+        <button class="btn btn-primary" type="submit">Add <%= spec.singular.toLowerCase() %></button>
+        <div class="hint mt-1">Items used in history are deactivated rather than deleted (§95).</div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

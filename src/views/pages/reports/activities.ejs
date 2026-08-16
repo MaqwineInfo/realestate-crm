@@ -1,0 +1,62 @@
+<%- include('../../partials/app-head') %>
+<%- include('_nav') %>
+<%- include('_filters') %>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Activity by type</h2></div>
+    <% if (!data.byType.length) { %>
+      <div class="card-body"><p class="muted mb-0">No activity recorded in this range.</p></div>
+    <% } else { %>
+      <table>
+        <thead><tr><th>Type</th><th class="num">Count</th></tr></thead>
+        <tbody>
+          <% data.byType.forEach(function (r) { %>
+            <tr><td><%= r.type.replace(/_/g,' ').toLowerCase() %></td><td class="num"><%= r.count %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Most active users</h2></div>
+      <table>
+        <thead><tr><th>User</th><th class="num">Activities</th></tr></thead>
+        <tbody>
+          <% data.byUser.forEach(function (r) { %>
+            <tr><td><%= r.name %></td><td class="num"><%= r.count %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Follow-ups &amp; visits</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Pending</dt><dd><%= data.followups.PENDING || 0 %></dd>
+          <dt>Completed</dt><dd><%= data.followups.COMPLETED || 0 %></dd>
+          <dt>Missed</dt><dd><%= data.followups.MISSED || 0 %></dd>
+          <dt>Visits planned</dt><dd><%= data.visits.PLANNED || 0 %></dd>
+          <dt>Visits completed</dt><dd><%= data.visits.COMPLETED || 0 %></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Messages</h2></div>
+      <table>
+        <thead><tr><th>Channel</th><th>Status</th><th class="num">Count</th></tr></thead>
+        <tbody>
+          <% data.messages.forEach(function (m) { %>
+            <tr><td><%= m.channel %></td><td><%= m.status %></td><td class="num"><%= m.count %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

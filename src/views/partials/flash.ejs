@@ -1,0 +1,12 @@
+<% if (flash) { %>
+  <div class="flash flash-<%= flash.type || 'info' %>">
+    <%= flash.message %>
+    <% if (flash.details && typeof flash.details === 'object') { %>
+      <ul class="mb-0" style="margin-top:6px;padding-left:18px">
+        <% Object.entries(flash.details).forEach(function ([field, msg]) { %>
+          <li><%= field === '_' ? msg : field + ': ' + msg %></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+<% } %>

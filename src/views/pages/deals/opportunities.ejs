@@ -1,0 +1,63 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= kind === 'rental' ? 'Rental' : 'Resale' %> opportunities</h1>
+    <div class="sub">Bookings become future inventory. Lightweight queue, real follow-up (§35.3).</div>
+  </div>
+  <div class="btn-group">
+    <a class="btn <%= kind === 'resale' ? 'btn-primary' : '' %>" href="/app/opportunities/resale">Resale</a>
+    <a class="btn <%= kind === 'rental' ? 'btn-primary' : '' %>" href="/app/opportunities/rental">Rental</a>
+  </div>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= summary.resaleNext30 %></div><div class="lbl muted small">Resale in 30 days</div></div></div>
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= summary.resaleNext90 %></div><div class="lbl muted small">Resale in 90 days</div></div></div>
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= summary.rentalNext30 %></div><div class="lbl muted small">Rental in 30 days</div></div></div>
+  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= h.moneyShort(summary.expectedResaleValueMinor) %></div><div class="lbl muted small">Expected resale value</div></div></div>
+</div>
+
+<div class="card">
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'Nothing upcoming',
+      message: 'When an investor or rental booking is made, its future opportunity appears here.',
+      ctaHref: null, ctaLabel: ''
+    }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead>
+        <tr><th>Customer</th><th>Unit</th><th>Expected</th><th class="num"><%= kind === 'rental' ? 'Rent' : 'Asking' %></th><th>Owner</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% items.forEach(function (o) { %>
+          <tr>
+            <td data-label="Customer">
+              <span class="t-name"><%= o.contactId ? o.contactId.displayName : '—' %></span>
+              <div class="t-sub"><%= o.contactId ? h.mobile(o.contactId.primaryMobile) : '' %></div>
+            </td>
+            <td data-label="Unit"><%= o.unitId ? o.unitId.unitNumber : '—' %><div class="t-sub"><%= o.projectId ? o.projectId.name : '' %></div></td>
+            <td data-label="Expected"><%= o.expectedAvailableDate ? h.date(o.expectedAvailableDate) : 'Not set' %></td>
+            <td data-label="Amount" class="num">
+              <%= kind === 'rental'
+                ? (o.expectedRentMinor ? h.money(o.expectedRentMinor) : '—')
+                : (o.expectedAskingPriceMinor ? h.moneyShort(o.expectedAskingPriceMinor) : '—') %>
+            </td>
+            <td data-label="Owner"><%= o.assignedUserId ? o.assignedUserId.name : 'Unassigned' %></td>
+            <td data-label="Status"><span class="badge b-slate"><%= o.status.replace('_',' ') %></span></td>
+            <td class="row-actions">
+              <form method="post" action="/api/opportunities/<%= kind %>/<%= o._id %>">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="status" value="IN_DISCUSSION">
+                <button class="btn btn-sm" type="submit">Start discussion</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

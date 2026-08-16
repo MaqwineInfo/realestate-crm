@@ -1,0 +1,337 @@
+<%- include('../../partials/app-head') %>
+<%
+  const v = values || {};
+  const val = function (key) { return v[key] == null ? '' : v[key]; };
+  const sel = function (key, option) { return String(v[key] || '') === String(option) ? 'selected' : ''; };
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>New lead</h1>
+    <div class="sub">Mobile and source are all that is required. Qualification can wait for the first call (§7).</div>
+  </div>
+  <a class="btn btn-ghost" href="/app/leads">Cancel</a>
+</div>
+
+<%#
+  V1.1 §13: the existing-contact decision. Rendered instead of creating a second
+  active lead — the user chooses, nothing has been written yet.
+%>
+<% if (existing) { %>
+  <div class="card decision-card">
+    <div class="card-head">
+      <h2 class="grow">
+        <%= existing.kind === 'LOST_SAME_PROJECT' ? 'This customer was marked lost on this project' : 'This customer already has an open lead here' %>
+      </h2>
+    </div>
+    <div class="card-body">
+      <p class="mb-1">
+        <strong><%= existing.contact.displayName %></strong> · <%= h.mobile(existing.contact.primaryMobile) %>
+        · <%= existing.leadCount %> previous inquir<%= existing.leadCount === 1 ? 'y' : 'ies' %>
+      </p>
+      <% if (existing.kind === 'LOST_SAME_PROJECT') { %>
+        <p class="small muted">
+          Lost <%= existing.lead.lostAt ? h.date(existing.lead.lostAt) : '' %><%= existing.lead.lostNote ? ' — ' + existing.lead.lostNote : '' %>.
+          Recording a re-inquiry reopens that lead and keeps its history.
+        </p>
+      <% } else { %>
+        <p class="small muted">
+          Creating a second lead for the same customer and project splits the history in two.
+          Record this as a re-inquiry on the existing lead instead.
+        </p>
+      <% } %>
+      <div class="btn-group">
+        <a class="btn" href="/app/leads/<%= existing.lead._id %>">Open existing lead</a>
+        <form method="post" action="/api/leads" style="display:inline">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <% Object.keys(v).forEach(function (key) {
+               if (key === '_csrf' || key === 'intent') return;
+               const raw = v[key];
+               (Array.isArray(raw) ? raw : [raw]).forEach(function (one) { %>
+            <input type="hidden" name="<%= key %>" value="<%= one %>">
+          <% }); }) %>
+          <input type="hidden" name="intent" value="REINQUIRY">
+          <button class="btn btn-primary" type="submit">
+            <%= existing.kind === 'LOST_SAME_PROJECT' ? 'Record re-inquiry &amp; reopen' : 'Record re-inquiry' %>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<form method="post" action="/api/leads" id="lead-form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <% if (existing && existing.bookedHere) { %>
+    <%# §13.4: a booked customer buying again is a genuine new inquiry. %>
+    <input type="hidden" name="intent" value="NEW_INQUIRY">
+  <% } %>
+
+  <div class="grid cols-2">
+    <%# ---------------------------- 1. Customer ---------------------------- %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">1 · Customer</h2></div>
+      <div class="card-body">
+        <%# Mobile first: it is what decides whether this is a new person at all. %>
+        <div class="field">
+          <label for="primaryMobile">Mobile</label>
+          <input type="tel" id="primaryMobile" name="primaryMobile" required autofocus
+                 value="<%= val('primaryMobile') %>" data-dup-mobile autocomplete="off">
+          <div class="hint">The mobile number identifies the customer. An existing contact is reused, never duplicated.</div>
+          <div class="dup-notice" data-dup-notice hidden></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="firstName">First name</label>
+            <input type="text" id="firstName" name="firstName" required maxlength="80" value="<%= val('firstName') %>">
+          </div>
+          <div class="field">
+            <label for="lastName">Last name <span class="opt">optional</span></label>
+            <input type="text" id="lastName" name="lastName" maxlength="80" value="<%= val('lastName') %>">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="email">Email <span class="opt">optional</span></label>
+            <input type="email" id="email" name="email" value="<%= val('email') %>">
+          </div>
+          <div class="field">
+            <label for="altMobile">Alternate mobile <span class="opt">optional</span></label>
+            <input type="tel" id="altMobile" name="altMobile" value="<%= val('altMobile') %>">
+          </div>
+        </div>
+        <div class="field-row three">
+          <div class="field">
+            <label for="city">City <span class="opt">optional</span></label>
+            <input type="text" id="city" name="city" maxlength="80" value="<%= val('city') %>">
+          </div>
+          <div class="field">
+            <label for="state">State <span class="opt">optional</span></label>
+            <input type="text" id="state" name="state" maxlength="80" value="<%= val('state') %>">
+          </div>
+          <div class="field">
+            <label for="pincode">Pincode <span class="opt">optional</span></label>
+            <input type="text" id="pincode" name="pincode" maxlength="12" value="<%= val('pincode') %>">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# ------------------------ 2. Inquiry & source ------------------------ %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">2 · Inquiry &amp; source</h2></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="sourceId">Lead source</label>
+          <select id="sourceId" name="sourceId" required data-source-select>
+            <option value="">Select a source</option>
+            <% sources.forEach(function (s) { %>
+              <option value="<%= s._id %>" data-category="<%= s.category %>" <%= sel('sourceId', s._id) %>><%= s.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sourceDetail">Source detail <span class="opt">optional</span></label>
+          <input type="text" id="sourceDetail" name="sourceDetail" maxlength="120"
+                 value="<%= val('sourceDetail') %>" placeholder="Campaign, form or listing name">
+        </div>
+
+        <%# §9.1: a referral is only useful if you know who referred them. %>
+        <div data-referral-panel hidden>
+          <div class="field-row">
+            <div class="field">
+              <label for="referrerName">Referrer / channel partner</label>
+              <input type="text" id="referrerName" name="referrerName" maxlength="120" value="<%= val('referrerName') %>">
+            </div>
+            <div class="field">
+              <label for="referrerMobile">Their mobile</label>
+              <input type="tel" id="referrerMobile" name="referrerMobile" value="<%= val('referrerMobile') %>">
+            </div>
+          </div>
+        </div>
+
+        <%# §9.2 %>
+        <div data-portal-panel hidden>
+          <div class="field-row">
+            <div class="field">
+              <label for="portalLeadId">Portal lead ID</label>
+              <input type="text" id="portalLeadId" name="portalLeadId" maxlength="80" value="<%= val('portalLeadId') %>">
+            </div>
+            <div class="field">
+              <label for="listingReference">Listing reference</label>
+              <input type="text" id="listingReference" name="listingReference" maxlength="120" value="<%= val('listingReference') %>">
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="projectId">Project <span class="opt">recommended</span></label>
+          <select id="projectId" name="projectId">
+            <option value="">Generic inquiry</option>
+            <% projects.forEach(function (p) { %><option value="<%= p._id %>" <%= sel('projectId', p._id) %>><%= p.name %></option><% }) %>
+          </select>
+        </div>
+        <% if (campaigns.length) { %>
+          <div class="field">
+            <label for="campaignId">Marketing campaign <span class="opt">optional</span></label>
+            <select id="campaignId" name="campaignId">
+              <option value="">None</option>
+              <% campaigns.forEach(function (c) { %>
+                <option value="<%= c._id %>" <%= sel('campaignId', c._id) %>><%= c.name %> · <%= c.platform %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } %>
+
+        <%# §11.3 / §74: auto allocation is the default. %>
+        <div class="field">
+          <label for="assignmentMode">Assignment</label>
+          <select id="assignmentMode" name="assignmentMode" data-assign-mode>
+            <option value="AUTO" <%= v.assignmentMode === 'MANUAL' ? '' : 'selected' %>>Auto allocate (round robin)</option>
+            <% if (canAssign) { %>
+              <option value="MANUAL" <%= v.assignmentMode === 'MANUAL' ? 'selected' : '' %>>Assign to a specific user</option>
+            <% } %>
+          </select>
+        </div>
+        <div class="field" data-assign-manual hidden>
+          <label for="ownerUserId">Owner</label>
+          <select id="ownerUserId" name="ownerUserId">
+            <option value="">Select a user</option>
+            <% owners.forEach(function (o) { %><option value="<%= o._id %>" <%= sel('ownerUserId', o._id) %>><%= o.name %></option><% }) %>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# --------------------- 3. Requirement (collapsible) --------------------- %>
+  <details class="card section" <%= v.budgetMinMinor || v.preferredConfigurations ? 'open' : '' %>>
+    <summary class="card-head"><h2 class="grow">3 · Property requirement</h2><span class="muted small">optional</span></summary>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label for="budgetMinMinor">Budget from</label>
+          <input type="text" id="budgetMinMinor" name="budgetMinMinor" inputmode="decimal" value="<%= val('budgetMinMinor') %>" placeholder="e.g. 6500000">
+        </div>
+        <div class="field">
+          <label for="budgetMaxMinor">Budget to</label>
+          <input type="text" id="budgetMaxMinor" name="budgetMaxMinor" inputmode="decimal" value="<%= val('budgetMaxMinor') %>">
+        </div>
+        <div class="field">
+          <label for="purpose">Purchase purpose</label>
+          <select id="purpose" name="purpose">
+            <option value="">Not stated</option>
+            <% [['SELF_USE','Self use'],['INVESTMENT','Investment'],['RENTAL_INCOME','Rental income'],['OTHER','Other']].forEach(function (o) { %>
+              <option value="<%= o[0] %>" <%= sel('purpose', o[0]) %>><%= o[1] %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="preferredConfigurations">Configuration <span class="opt">comma separated</span></label>
+          <input type="text" id="preferredConfigurations" name="preferredConfigurations" data-list-input
+                 value="<%= Array.isArray(v.preferredConfigurations) ? v.preferredConfigurations.join(', ') : val('preferredConfigurations') %>" placeholder="2 BHK, 3 BHK">
+        </div>
+        <div class="field">
+          <label for="preferredFacings">Facing <span class="opt">comma separated</span></label>
+          <input type="text" id="preferredFacings" name="preferredFacings" data-list-input
+                 value="<%= Array.isArray(v.preferredFacings) ? v.preferredFacings.join(', ') : val('preferredFacings') %>" placeholder="East, North-East">
+        </div>
+      </div>
+      <div class="field-row three">
+        <div class="field"><label for="areaMin">Area from</label><input type="text" id="areaMin" name="areaMin" inputmode="numeric" value="<%= val('areaMin') %>"></div>
+        <div class="field"><label for="areaMax">Area to</label><input type="text" id="areaMax" name="areaMax" inputmode="numeric" value="<%= val('areaMax') %>"></div>
+        <div class="field">
+          <label for="areaBasis">Area basis</label>
+          <select id="areaBasis" name="areaBasis">
+            <option value="">Not stated</option>
+            <% [['CARPET','Carpet'],['BUILT_UP','Built-up'],['SALEABLE','Saleable']].forEach(function (o) { %>
+              <option value="<%= o[0] %>" <%= sel('areaBasis', o[0]) %>><%= o[1] %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="field-row three">
+        <div class="field"><label for="preferredFloorMin">Floor from</label><input type="text" id="preferredFloorMin" name="preferredFloorMin" inputmode="numeric" value="<%= val('preferredFloorMin') %>"></div>
+        <div class="field"><label for="preferredFloorMax">Floor to</label><input type="text" id="preferredFloorMax" name="preferredFloorMax" inputmode="numeric" value="<%= val('preferredFloorMax') %>"></div>
+        <div class="field">
+          <label for="possessionPreference">Possession</label>
+          <select id="possessionPreference" name="possessionPreference">
+            <option value="">Not stated</option>
+            <% [['READY','Ready to move'],['NEAR_POSSESSION','Near possession'],['UNDER_CONSTRUCTION','Under construction'],['ANY','Any']].forEach(function (o) { %>
+              <option value="<%= o[0] %>" <%= sel('possessionPreference', o[0]) %>><%= o[1] %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="preferredLocation">Preferred location <span class="opt">useful when no project is chosen</span></label>
+        <input type="text" id="preferredLocation" name="preferredLocation" maxlength="200" value="<%= val('preferredLocation') %>">
+      </div>
+    </div>
+  </details>
+
+  <%# ------------------ 4. Qualification (collapsible, §10.1) --------------- %>
+  <details class="card section">
+    <summary class="card-head"><h2 class="grow">4 · Qualification</h2><span class="muted small">optional</span></summary>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label for="purchaseTimeline">Purchase timeline</label>
+          <select id="purchaseTimeline" name="purchaseTimeline">
+            <option value="">Not stated</option>
+            <% [['IMMEDIATE','Immediate'],['DAYS_0_30','0–30 days'],['MONTHS_1_3','1–3 months'],['MONTHS_3_6','3–6 months'],['MONTHS_6_PLUS','6+ months'],['EXPLORING','Exploring']].forEach(function (o) { %>
+              <option value="<%= o[0] %>" <%= sel('purchaseTimeline', o[0]) %>><%= o[1] %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fundingType">Funding</label>
+          <select id="fundingType" name="fundingType" data-funding-select>
+            <option value="">Not stated</option>
+            <% [['SELF_FUNDED','Self funded'],['HOME_LOAN','Home loan'],['MIXED','Mixed'],['UNKNOWN','Unknown']].forEach(function (o) { %>
+              <option value="<%= o[0] %>" <%= sel('fundingType', o[0]) %>><%= o[1] %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field" data-loan-field hidden>
+          <label for="loanStatus">Loan status</label>
+          <select id="loanStatus" name="loanStatus">
+            <option value="">Not stated</option>
+            <% [['NOT_STARTED','Not started'],['EXPLORING','Exploring'],['PRE_APPROVED','Pre-approved'],['APPROVED','Approved']].forEach(function (o) { %>
+              <option value="<%= o[0] %>" <%= sel('loanStatus', o[0]) %>><%= o[1] %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="decisionMaker">Decision maker</label>
+          <select id="decisionMaker" name="decisionMaker">
+            <option value="">Not stated</option>
+            <% [['SELF','Self'],['SPOUSE','Spouse'],['FAMILY','Family'],['BUSINESS_PARTNER','Business partner'],['OTHER','Other']].forEach(function (o) { %>
+              <option value="<%= o[0] %>" <%= sel('decisionMaker', o[0]) %>><%= o[1] %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <%# ------------------------------ 5. Notes ------------------------------ %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">5 · Notes</h2></div>
+    <div class="card-body">
+      <div class="field">
+        <label for="requirementNote">What did the customer ask for? <span class="opt">optional</span></label>
+        <textarea id="requirementNote" name="requirementNote" maxlength="2000" rows="3"><%= val('requirementNote') %></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-group mt-2">
+    <button class="btn btn-primary" type="submit">Create lead</button>
+    <a class="btn btn-ghost" href="/app/leads">Cancel</a>
+  </div>
+</form>
+
+<%- include('../../partials/app-foot') %>

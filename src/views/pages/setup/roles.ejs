@@ -1,0 +1,50 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Roles &amp; permissions</h1>
+    <div class="sub">Rename, clone or rebuild any role — nothing beyond these defaults is hard-coded (§6).</div>
+  </div>
+  <button class="btn btn-primary" data-drawer="drawer-role">New role</button>
+</div>
+
+<div class="card">
+  <table class="responsive">
+    <thead><tr><th>Role</th><th>Description</th><th>Users</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      <% roles.forEach(function (r) { %>
+        <tr>
+          <td data-label="Role">
+            <a class="t-name" href="/app/setup/roles/<%= r._id %>"><%= r.name %></a>
+            <% if (r.isAdmin) { %><span class="badge b-blue">Full access</span><% } %>
+          </td>
+          <td data-label="Description" class="muted"><%= r.description || '—' %></td>
+          <td data-label="Users"><%= countByRole[String(r._id)] || 0 %></td>
+          <td data-label="Status"><span class="badge <%= r.active ? 'b-green' : 'b-slate' %>"><%= r.active ? 'Active' : 'Disabled' %></span></td>
+          <td class="row-actions"><a class="btn btn-sm" href="/app/setup/roles/<%= r._id %>">Edit permissions</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-role', heading: 'New role', action: '/api/setup/roles' }) %>
+  <div class="field">
+    <label for="r-name">Role name</label>
+    <input type="text" id="r-name" name="name" required maxlength="60">
+  </div>
+  <div class="field">
+    <label for="r-desc">Description <span class="opt">optional</span></label>
+    <input type="text" id="r-desc" name="description" maxlength="250">
+  </div>
+  <div class="field">
+    <label for="r-clone">Start from <span class="opt">optional</span></label>
+    <select id="r-clone" name="cloneFromId">
+      <option value="">Empty role</option>
+      <% roles.forEach(function (r) { %><option value="<%= r._id %>">Copy of <%= r.name %></option><% }) %>
+    </select>
+  </div>
+<%- include('../../partials/drawer-close', { cta: 'Create role' }) %>
+
+<%- include('../../partials/app-foot') %>

@@ -1,0 +1,39 @@
+<%#
+  V1.1 §94/§95: four badges, four separate meanings, always in this order.
+    NEW           = unattended urgency  (pulses until the first genuine action)
+    HOT/WARM/COLD = sales temperature   (hidden once the lead closes, §14.5)
+    SLA           = response discipline
+    Re-inquiry    = the customer came back
+  Locals: lead. Optional: dense (drops the lower-value badges on list rows).
+%>
+<%
+  const _isActive = lead.status === 'ACTIVE';
+  const _isNew = _isActive && !lead.firstGenuineActionAt;
+  const _dense = typeof dense !== 'undefined' && dense;
+  const _tempTone = { HOT: 'b-red', WARM: 'b-amber', COLD: 'b-slate' }[lead.temperature] || 'b-slate';
+%>
+<% if (_isNew) { %>
+  <span class="badge b-blue pulse-new" title="Not attended yet — the response clock is running">
+    <span class="dot" aria-hidden="true"></span> New
+  </span>
+<% } %>
+
+<% if (lead.bookedAt) { %>
+  <span class="badge b-green">Booked</span>
+<% } else if (!_isActive) { %>
+  <span class="badge b-slate">Lost</span>
+<% } else { %>
+  <span class="badge <%= _tempTone %>" title="<%= lead.temperatureMode === 'MANUAL' ? 'Set manually' : 'Scored from recorded activity' %>">
+    <%= lead.temperature || 'WARM' %><%= lead.temperatureMode === 'MANUAL' ? ' ·' : '' %>
+  </span>
+<% } %>
+
+<% if (lead.slaStatus === 'BREACHED') { %>
+  <span class="badge b-red">SLA breached</span>
+<% } else if (lead.slaStatus === 'AT_RISK') { %>
+  <span class="badge b-amber">SLA risk</span>
+<% } %>
+
+<% if (!_dense && lead.reinquiryPendingAt) { %>
+  <span class="badge b-amber">Re-inquiry · <%= lead.inquiryCount %></span>
+<% } %>

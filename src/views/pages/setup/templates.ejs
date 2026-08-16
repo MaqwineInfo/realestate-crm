@@ -1,0 +1,173 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Templates &amp; acknowledgement</h1>
+    <div class="sub">Acknowledgement is configured by project + source (§17). Use <code>{{contact.first_name}}</code>-style variables.</div>
+  </div>
+  <button class="btn btn-primary" data-drawer="drawer-template">New template</button>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Acknowledgement rules</h2><button class="btn btn-sm" data-drawer="drawer-ack">Add rule</button></div>
+  <% if (!ackRules.length) { %>
+    <%- include('../../partials/empty', { heading: 'No acknowledgement configured', message: 'Add a rule so every captured lead gets an instant reply.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Project</th><th>Source</th><th>Channel</th><th>Template</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% ackRules.forEach(function (rule) { %>
+          <tr>
+            <td data-label="Project"><%= rule.projectId ? rule.projectId.name : 'Any project' %></td>
+            <td data-label="Source"><%= rule.sourceId ? rule.sourceId.name : 'Any source' %></td>
+            <td data-label="Channel"><span class="badge b-blue"><%= rule.channel %></span><% if (rule.fallbackChannel) { %> <span class="badge b-slate">fallback <%= rule.fallbackChannel %></span><% } %></td>
+            <td data-label="Template"><%= rule.templateId ? rule.templateId.name : '—' %></td>
+            <td data-label="Status"><span class="badge <%= rule.active ? 'b-green' : 'b-slate' %>"><%= rule.active ? 'Active' : 'Off' %></span></td>
+            <td class="row-actions">
+              <form method="post" action="/api/setup/ack-rules/<%= rule._id %>/toggle">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm" type="submit"><%= rule.active ? 'Disable' : 'Enable' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Templates</h2></div>
+  <table class="responsive">
+    <thead><tr><th>Name</th><th>Channel</th><th>Purpose</th><th>Preview</th><th></th></tr></thead>
+    <tbody>
+      <% templates.forEach(function (t) { %>
+        <tr>
+          <td data-label="Name"><span class="t-name"><%= t.name %></span></td>
+          <td data-label="Channel"><span class="badge b-blue"><%= t.channel %></span></td>
+          <td data-label="Purpose"><span class="badge b-slate"><%= t.purpose %></span></td>
+          <td data-label="Preview" class="muted small"><%= t.body.slice(0, 90) %><%= t.body.length > 90 ? '…' : '' %></td>
+          <td class="row-actions"><button class="btn btn-sm" data-drawer="drawer-template-<%= t._id %>">Edit</button></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-template', heading: 'New template', action: '/api/setup/templates' }) %>
+  <div class="field">
+    <label for="t-name">Name</label>
+    <input type="text" id="t-name" name="name" required maxlength="100">
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="t-channel">Channel</label>
+      <select id="t-channel" name="channel" required>
+        <option value="WHATSAPP">WhatsApp</option><option value="SMS">SMS</option><option value="EMAIL">Email</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="t-purpose">Purpose</label>
+      <select id="t-purpose" name="purpose" required>
+        <option value="ACKNOWLEDGEMENT">Acknowledgement</option>
+        <option value="CAMPAIGN">Campaign</option>
+        <option value="NURTURE">Nurture</option>
+        <option value="GENERAL">General</option>
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="t-subject">Subject <span class="opt">email only</span></label>
+    <input type="text" id="t-subject" name="subject" maxlength="200">
+  </div>
+  <div class="field">
+    <label for="t-body">Message</label>
+    <textarea id="t-body" name="body" required maxlength="4000" rows="6"></textarea>
+    <div class="hint">Variables: {{contact.first_name}}, {{project.name}}, {{owner.name}}, {{owner.mobile}}, {{project.mini_site_url}}, {{organization.name}}</div>
+  </div>
+<%- include('../../partials/drawer-close', { cta: 'Save template' }) %>
+
+<% templates.forEach(function (t) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-template-' + t._id, heading: 'Edit ' + t.name, action: '/api/setup/templates/' + t._id }) %>
+    <div class="field">
+      <label for="te-name-<%= t._id %>">Name</label>
+      <input type="text" id="te-name-<%= t._id %>" name="name" required maxlength="100" value="<%= t.name %>">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="te-channel-<%= t._id %>">Channel</label>
+        <select id="te-channel-<%= t._id %>" name="channel" required>
+          <% ['WHATSAPP','SMS','EMAIL'].forEach(function (c) { %>
+            <option value="<%= c %>" <%= t.channel === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="te-purpose-<%= t._id %>">Purpose</label>
+        <select id="te-purpose-<%= t._id %>" name="purpose" required>
+          <% ['ACKNOWLEDGEMENT','CAMPAIGN','NURTURE','GENERAL'].forEach(function (p) { %>
+            <option value="<%= p %>" <%= t.purpose === p ? 'selected' : '' %>><%= p %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="te-subject-<%= t._id %>">Subject</label>
+      <input type="text" id="te-subject-<%= t._id %>" name="subject" maxlength="200" value="<%= t.subject || '' %>">
+    </div>
+    <div class="field">
+      <label for="te-body-<%= t._id %>">Message</label>
+      <textarea id="te-body-<%= t._id %>" name="body" required maxlength="4000" rows="6"><%= t.body %></textarea>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save template' }) %>
+<% }) %>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-ack', heading: 'Acknowledgement rule', action: '/api/setup/ack-rules' }) %>
+  <div class="field-row">
+    <div class="field">
+      <label for="a-project">Project</label>
+      <select id="a-project" name="projectId">
+        <option value="">Any project</option>
+        <% projects.forEach(function (p) { %><option value="<%= p._id %>"><%= p.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="a-source">Source</label>
+      <select id="a-source" name="sourceId">
+        <option value="">Any source</option>
+        <% sources.forEach(function (s) { %><option value="<%= s._id %>"><%= s.name %></option><% }) %>
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="a-channel">Channel</label>
+    <select id="a-channel" name="channel" required>
+      <option value="WHATSAPP">WhatsApp</option><option value="SMS">SMS</option><option value="EMAIL">Email</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="a-template">Template</label>
+    <select id="a-template" name="templateId" required>
+      <% templates.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %> (<%= t.channel %>)</option><% }) %>
+    </select>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="a-fallback-channel">Fallback channel <span class="opt">optional</span></label>
+      <select id="a-fallback-channel" name="fallbackChannel">
+        <option value="">None</option>
+        <option value="SMS">SMS</option><option value="EMAIL">Email</option><option value="WHATSAPP">WhatsApp</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="a-fallback-template">Fallback template</label>
+      <select id="a-fallback-template" name="fallbackTemplateId">
+        <option value="">None</option>
+        <% templates.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %> (<%= t.channel %>)</option><% }) %>
+      </select>
+    </div>
+  </div>
+<%- include('../../partials/drawer-close', { cta: 'Save rule' }) %>
+
+<%- include('../../partials/app-foot') %>

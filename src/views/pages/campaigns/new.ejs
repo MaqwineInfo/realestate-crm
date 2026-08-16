@@ -1,0 +1,132 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>New campaign</h1>
+    <div class="sub">Pick the audience, check the count, then send (§38.1).</div>
+  </div>
+  <a class="btn btn-ghost" href="/app/campaigns/communication">Cancel</a>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Audience</h2><span class="badge b-blue"><%= preview.total %> contacts</span></div>
+  <div class="card-body">
+    <form class="filters" method="get" action="/app/campaigns/communication/new">
+      <div class="field">
+        <label for="tagId">Tag</label>
+        <select id="tagId" name="tagId">
+          <option value="">Any</option>
+          <% tags.forEach(function (t) { %><option value="<%= t._id %>" <%= String(filters.tagId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="projectId">Project interest</label>
+        <select id="projectId" name="projectId">
+          <option value="">Any</option>
+          <% projects.forEach(function (p) { %><option value="<%= p._id %>" <%= String(filters.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="stageId">Lead stage</label>
+        <select id="stageId" name="stageId">
+          <option value="">Any</option>
+          <% stages.forEach(function (s) { %><option value="<%= s._id %>" <%= String(filters.stageId) === String(s._id) ? 'selected' : '' %>><%= s.name %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sourceId">Source</label>
+        <select id="sourceId" name="sourceId">
+          <option value="">Any</option>
+          <% sources.forEach(function (s) { %><option value="<%= s._id %>" <%= String(filters.sourceId) === String(s._id) ? 'selected' : '' %>><%= s.name %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="city">City</label>
+        <input type="text" id="city" name="city" value="<%= filters.city || '' %>">
+      </div>
+      <div class="field">
+        <label for="hasVisited">Visited</label>
+        <select id="hasVisited" name="hasVisited">
+          <option value="">Any</option>
+          <option value="1" <%= filters.hasVisited === '1' ? 'selected' : '' %>>Has completed a visit</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" type="submit">Update count</button>
+        <a class="btn btn-ghost" href="/app/campaigns/communication/new">Clear</a>
+      </div>
+    </form>
+
+    <% if (preview.items.length) { %>
+      <div class="mt-2">
+        <h3 class="mb-1">Sample of the audience</h3>
+        <table>
+          <thead><tr><th>Name</th><th>Mobile</th><th>City</th><th>Consent</th></tr></thead>
+          <tbody>
+            <% preview.items.slice(0, 8).forEach(function (c) { %>
+              <tr>
+                <td><%= c.displayName %></td>
+                <td><%= h.mobile(c.primaryMobile) %></td>
+                <td><%= c.city || '—' %></td>
+                <td>
+                  <% if (c.consent && c.consent.dnd) { %><span class="badge b-red">DND — will be excluded</span>
+                  <% } else { %><span class="badge b-green">OK</span><% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<form method="post" action="/api/campaigns/communication">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <% Object.entries(filters).forEach(function ([key, value]) { %>
+    <input type="hidden" name="<%= key %>" value="<%= value %>">
+  <% }) %>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Message</h2></div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label for="name">Campaign name</label>
+          <input type="text" id="name" name="name" required maxlength="120">
+        </div>
+        <div class="field">
+          <label for="channel">Channel</label>
+          <select id="channel" name="channel" required>
+            <option value="WHATSAPP">WhatsApp</option><option value="SMS">SMS</option><option value="EMAIL">Email</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="templateId">Template</label>
+        <select id="templateId" name="templateId" required>
+          <option value="">Select a template</option>
+          <% templates.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %> (<%= t.channel %>)</option><% }) %>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="scheduledDate">Schedule for <span class="opt">optional</span></label>
+          <input type="date" id="scheduledDate" name="scheduledDate">
+        </div>
+        <div class="field">
+          <label for="scheduledTime">Time</label>
+          <input type="time" id="scheduledTime" name="scheduledTime" value="10:00">
+        </div>
+      </div>
+      <div class="field">
+        <label for="saveSegmentAs">Save this audience as a segment <span class="opt">optional</span></label>
+        <input type="text" id="saveSegmentAs" name="saveSegmentAs" maxlength="80">
+      </div>
+      <button class="btn btn-primary" type="submit">Save campaign</button>
+      <p class="small muted mt-1 mb-0">Nothing is sent until you press Send on the campaign page. Opted-out contacts are excluded and counted (§67).</p>
+    </div>
+  </div>
+</form>
+
+<%- include('../../partials/app-foot') %>

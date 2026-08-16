@@ -1,0 +1,20 @@
+<% if (pages > 1) { %>
+  <%
+    const base = (n) => {
+      const params = new URLSearchParams(query || {});
+      params.set('page', n);
+      return '?' + params.toString();
+    };
+    const from = Math.max(1, page - 2);
+    const to = Math.min(pages, from + 4);
+  %>
+  <div class="pagination">
+    <span class="muted" style="border:0;background:none"><%= total %> record<%= total === 1 ? '' : 's' %></span>
+    <% if (page > 1) { %><a href="<%= base(page - 1) %>">Prev</a><% } %>
+    <% for (let n = from; n <= to; n++) { %>
+      <% if (n === page) { %><span class="current"><%= n %></span>
+      <% } else { %><a href="<%= base(n) %>"><%= n %></a><% } %>
+    <% } %>
+    <% if (page < pages) { %><a href="<%= base(page + 1) %>">Next</a><% } %>
+  </div>
+<% } %>

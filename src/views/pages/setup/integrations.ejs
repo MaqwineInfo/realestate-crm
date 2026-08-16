@@ -1,0 +1,239 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Integrations</h1>
+    <div class="sub">Lead capture, messaging and telephony providers. Secrets are stored encrypted and never shown again (§49.1).</div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/setup/health">Health<% if (failures) { %> <span class="badge b-red"><%= failures %></span><% } %></a>
+    <button class="btn btn-primary" data-drawer="drawer-integration">Add integration</button>
+  </div>
+</div>
+
+<div class="card">
+  <% if (!integrations.length) { %>
+    <%- include('../../partials/empty', { heading: 'No integrations yet', message: 'Connect an ad platform or add a website webhook to start capturing leads automatically.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Provider</th><th>Type</th><th>Status</th><th>Endpoint / last activity</th><th></th></tr></thead>
+      <tbody>
+        <% integrations.forEach(function (i) { %>
+          <tr>
+            <td data-label="Provider">
+              <span class="t-name"><%= i.name || i.provider %></span>
+              <div class="t-sub"><%= i.driver === 'mock' ? 'simulated driver' : i.provider %></div>
+            </td>
+            <td data-label="Type"><span class="badge b-slate"><%= i.category.replace(/_/g, ' ') %></span></td>
+            <td data-label="Status">
+              <% if (!i.active) { %><span class="badge b-slate">Disabled</span>
+              <% } else if (i.status === 'CONNECTED') { %><span class="badge b-green">Connected</span>
+              <% } else { %><span class="badge b-red">Attention required</span><% } %>
+            </td>
+            <td data-label="Endpoint">
+              <% if (i.webhookKey) { %>
+                <code class="small"><%= appUrl %>/api/webhooks/leads/<%= i.webhookKey %></code>
+              <% } %>
+              <div class="t-sub">
+                <% if (i.lastSuccessAt) { %>Last success <%= h.rel(i.lastSuccessAt) %><% } else { %>No traffic yet<% } %>
+                <% if (i.lastError) { %> · <span class="badge b-red"><%= i.lastError.slice(0, 60) %></span><% } %>
+              </div>
+            </td>
+            <td class="row-actions">
+              <% if (i.webhookKey) { %>
+                <button class="btn btn-sm" data-drawer="drawer-api-<%= i._id %>">API console</button>
+                <form method="post" action="/api/setup/integrations/<%= i._id %>/rotate-key" data-confirm="Rotating the key breaks the current webhook URL until the provider is updated. Continue?">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm" type="submit">Rotate key</button>
+                </form>
+              <% } %>
+              <form method="post" action="/api/setup/integrations/<%= i._id %>/toggle">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm" type="submit"><%= i.active ? 'Disable' : 'Enable' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%#
+  V1.1 §58–§65: the API console.
+
+  A webhook contract that lives in someone's head is a webhook contract that gets
+  implemented wrong. Everything a provider's developer needs — URL, headers, a
+  real payload, a copyable cURL, every response they will actually receive, and
+  the signature rule — is on this screen. The stored secret is never among it.
+%>
+<% integrations.filter(function (i) { return i.webhookKey; }).forEach(function (i) { %>
+  <%
+    const url = appUrl + '/api/webhooks/leads/' + i.webhookKey;
+    const sample = {
+      externalId: 'lead-100023',
+      firstName: 'Rahul',
+      lastName: 'Shah',
+      mobile: '9876543210',
+      email: 'rahul@example.com',
+      city: 'Ahmedabad',
+      project: i.defaultProjectId ? i.defaultProjectId.name : 'Green Avenue',
+      source: i.defaultSourceId ? i.defaultSourceId.name : 'Website',
+      sourceDetail: 'Search lead form',
+      campaignId: 'cmp-123',
+      adsetId: 'adset-456',
+      adId: 'ad-789',
+      formId: 'form-101',
+      landingUrl: 'https://example.com/green-avenue',
+      utm_source: 'google',
+      utm_medium: 'cpc',
+      utm_campaign: 'green_avenue_launch',
+      message: 'Looking for a 3 BHK within 1.5 Cr',
+    };
+    const sampleJson = JSON.stringify(sample, null, 2);
+    const curl = 'curl --request POST \\\n'
+      + "  --url '" + url + "' \\\n"
+      + "  --header 'Content-Type: application/json' \\\n"
+      + "  --header 'x-idempotency-key: demo-lead-001' \\\n"
+      + "  --data '" + JSON.stringify(sample) + "'";
+  %>
+  <div class="drawer-backdrop" id="drawer-api-<%= i._id %>" hidden>
+    <div class="drawer drawer-wide" role="dialog" aria-modal="true" aria-label="Lead capture API">
+      <div class="drawer-head">
+        <h2 class="grow">Lead capture API · <%= i.name || i.provider %></h2>
+        <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+      </div>
+      <div class="drawer-body">
+        <h3>Endpoint</h3>
+        <pre class="code" data-copy>POST <%= url %></pre>
+        <p class="small muted">
+          The key identifies both the organization and this integration — a tenant id is never read
+          from the body (§4.2). Rotating it invalidates this URL immediately.
+        </p>
+
+        <h3>Headers</h3>
+        <pre class="code">Content-Type: application/json
+x-idempotency-key: &lt;your unique id&gt;   # optional but recommended
+<% if (i.secrets && i.secrets.signingSecret) { %>x-signature: sha256=&lt;HMAC_SHA256(raw_body, signing_secret)&gt;<% } %></pre>
+
+        <h3>Copyable cURL</h3>
+        <pre class="code" data-copy><%= curl %></pre>
+
+        <h3>Field mapping</h3>
+        <table class="mini">
+          <thead><tr><th>Meaning</th><th>Keys accepted</th></tr></thead>
+          <tbody>
+            <tr><td>External lead ID</td><td><code>externalId</code>, <code>lead_id</code>, <code>leadgen_id</code>, <code>id</code></td></tr>
+            <tr><td><strong>Mobile — mandatory</strong></td><td><code>mobile</code>, <code>phone</code>, <code>phone_number</code>, <code>contact_number</code></td></tr>
+            <tr><td>Name</td><td><code>name</code>, <code>full_name</code>, or <code>firstName</code> + <code>lastName</code></td></tr>
+            <tr><td>Email</td><td><code>email</code></td></tr>
+            <tr><td>Project</td><td><code>projectId</code>, <code>project</code>, <code>project_name</code></td></tr>
+            <tr><td>Source</td><td><code>sourceId</code>, <code>source</code>, <code>sourceDetail</code></td></tr>
+            <tr><td>Campaign</td><td><code>campaignId</code>, <code>adsetId</code>, <code>adId</code>, <code>formId</code></td></tr>
+            <tr><td>UTM</td><td><code>utm_source</code>, <code>utm_medium</code>, <code>utm_campaign</code>, <code>utm_term</code>, <code>utm_content</code></td></tr>
+            <tr><td>Message</td><td><code>message</code>, <code>requirement</code>, <code>comments</code></td></tr>
+          </tbody>
+        </table>
+        <p class="small muted">
+          Mobile is the only mandatory field — it is what identifies the customer.
+          Missing project or source fall back to this integration's defaults
+          (<%= i.defaultProjectId ? i.defaultProjectId.name : 'none set' %> /
+          <%= i.defaultSourceId ? i.defaultSourceId.name : 'none set' %>).
+        </p>
+
+        <h3>Sample request</h3>
+        <pre class="code" data-copy><%= sampleJson %></pre>
+
+        <h3>Responses</h3>
+        <p class="small muted mb-1"><strong>201</strong> — new lead</p>
+        <pre class="code">{ "ok": true, "leadId": "66c123...", "contactId": "66c100...", "reinquiry": false }</pre>
+        <p class="small muted mb-1"><strong>201</strong> — re-inquiry from an existing customer</p>
+        <pre class="code">{ "ok": true, "leadId": "66c123...", "contactId": "66c100...", "reinquiry": true }</pre>
+        <p class="small muted mb-1"><strong>200</strong> — duplicate delivery, already processed</p>
+        <pre class="code">{ "ok": true, "duplicate": true, "leadId": "66c123..." }</pre>
+        <p class="small muted mb-1"><strong>400</strong> · <strong>401</strong> · <strong>404</strong></p>
+        <pre class="code">{ "ok": false, "error": "A valid mobile number is required to capture a lead." }
+{ "ok": false, "error": "Invalid signature." }
+{ "ok": false, "error": "Unknown webhook endpoint." }</pre>
+        <p class="small muted">
+          A retry with the same <code>externalId</code> or <code>x-idempotency-key</code> returns the
+          200 duplicate response — it never creates a second lead (§98).
+        </p>
+
+        <h3>Signature</h3>
+        <% if (i.secrets && i.secrets.signingSecret) { %>
+          <pre class="code">x-signature: sha256=HMAC_SHA256(raw_request_body, signing_secret)</pre>
+          <p class="small muted">
+            A signing secret is configured for this integration and every delivery is verified against
+            it. The secret itself is stored encrypted and is never displayed again (§49.1, §65).
+          </p>
+        <% } else { %>
+          <p class="small muted">
+            No signing secret configured — deliveries are accepted on the unguessable key alone.
+            Add one on the integration to enable HMAC verification.
+          </p>
+        <% } %>
+
+        <h3>Send a test lead</h3>
+        <form method="post" action="/api/setup/integrations/<%= i._id %>/test">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="test-mobile-<%= i._id %>">Mobile</label>
+            <input type="tel" id="test-mobile-<%= i._id %>" name="mobile" value="9000000000" required>
+          </div>
+          <div class="field">
+            <label for="test-name-<%= i._id %>">Name</label>
+            <input type="text" id="test-name-<%= i._id %>" name="name" value="API Test Lead" required>
+          </div>
+          <div class="flash flash-warn">
+            This creates a <strong>real lead</strong> in this organization, assigns it and sends the
+            acknowledgement, exactly as a live delivery would (§64).
+          </div>
+          <button class="btn btn-primary" type="submit">Send test lead</button>
+        </form>
+      </div>
+    </div>
+  </div>
+<% }) %>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-integration', heading: 'Add integration', action: '/api/setup/integrations' }) %>
+  <div class="field">
+    <label for="i-category">Type</label>
+    <select id="i-category" name="category" required>
+      <% categories.forEach(function (c) { %><option value="<%= c %>"><%= c.replace(/_/g, ' ') %></option><% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="i-provider">Provider</label>
+    <input type="text" id="i-provider" name="provider" required maxlength="60" placeholder="e.g. housing, meta, twilio">
+  </div>
+  <div class="field">
+    <label for="i-name">Display name <span class="opt">optional</span></label>
+    <input type="text" id="i-name" name="name" maxlength="100">
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="i-project">Default project <span class="opt">optional</span></label>
+      <select id="i-project" name="defaultProjectId">
+        <option value="">None</option>
+        <% projects.forEach(function (p) { %><option value="<%= p._id %>"><%= p.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="i-source">Default source <span class="opt">optional</span></label>
+      <select id="i-source" name="defaultSourceId">
+        <option value="">None</option>
+        <% sources.forEach(function (s) { %><option value="<%= s._id %>"><%= s.name %></option><% }) %>
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="i-secret">Signing secret <span class="opt">optional</span></label>
+    <input type="password" id="i-secret" name="signingSecret" maxlength="200" autocomplete="off">
+    <div class="hint">If the provider signs its payloads, inbound requests will be verified. Stored encrypted; never shown again.</div>
+  </div>
+  <p class="small muted mb-0">Inbound types get a webhook URL as soon as you save.</p>
+<%- include('../../partials/drawer-close', { cta: 'Add integration' }) %>
+
+<%- include('../../partials/app-foot') %>

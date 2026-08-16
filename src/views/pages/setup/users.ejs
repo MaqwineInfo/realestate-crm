@@ -1,0 +1,107 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Users</h1>
+    <div class="sub">Users with history are deactivated, never deleted (§95).</div>
+  </div>
+  <button class="btn btn-primary" data-drawer="drawer-invite">Invite user</button>
+</div>
+
+<% if (inviteLink) { %>
+  <div class="flash flash-info">
+    No email provider is connected yet — share this activation link with the new user:
+    <div class="mt-1"><a href="<%= inviteLink %>"><%= inviteLink %></a></div>
+  </div>
+<% } %>
+
+<div class="card">
+  <table class="responsive">
+    <thead>
+      <tr><th>Name</th><th>Email</th><th>Role</th><th>Reports to</th><th>Status</th><th>Last login</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% users.forEach(function (u) { %>
+        <tr>
+          <td data-label="Name"><span class="t-name"><%= u.name %></span><% if (u.mobile) { %><div class="t-sub"><%= u.mobile %></div><% } %></td>
+          <td data-label="Email"><%= u.email %></td>
+          <td data-label="Role"><%= u.roleId ? u.roleId.name : '—' %></td>
+          <td data-label="Reports to"><%= u.managerId ? u.managerId.name : '—' %></td>
+          <td data-label="Status">
+            <span class="badge <%= u.status === 'ACTIVE' ? 'b-green' : (u.status === 'INVITED' ? 'b-blue' : 'b-slate') %>"><%= u.status %></span>
+          </td>
+          <td data-label="Last login"><%= u.lastLoginAt ? h.date(u.lastLoginAt) : '—' %></td>
+          <td class="row-actions">
+            <button class="btn btn-sm" data-drawer="drawer-user-<%= u._id %>">Edit</button>
+            <% if (String(u._id) !== String(currentUser._id)) { %>
+              <form method="post" action="/api/setup/users/<%= u._id %>/status">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="status" value="<%= u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' %>">
+                <button class="btn btn-sm" type="submit"><%= u.status === 'ACTIVE' ? 'Deactivate' : 'Activate' %></button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../../partials/drawer-open', { id: 'drawer-invite', heading: 'Invite user', action: '/api/setup/users' }) %>
+  <div class="field">
+    <label for="i-name">Full name</label>
+    <input type="text" id="i-name" name="name" required maxlength="100">
+  </div>
+  <div class="field">
+    <label for="i-email">Work email</label>
+    <input type="email" id="i-email" name="email" required>
+  </div>
+  <div class="field">
+    <label for="i-mobile">Mobile <span class="opt">optional</span></label>
+    <input type="tel" id="i-mobile" name="mobile">
+  </div>
+  <div class="field">
+    <label for="i-role">Role</label>
+    <select id="i-role" name="roleId" required>
+      <option value="">Select a role</option>
+      <% roles.forEach(function (r) { %><option value="<%= r._id %>"><%= r.name %></option><% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="i-manager">Reports to <span class="opt">optional</span></label>
+    <select id="i-manager" name="managerId">
+      <option value="">No manager</option>
+      <% users.filter(function (u) { return u.status === 'ACTIVE'; }).forEach(function (u) { %>
+        <option value="<%= u._id %>"><%= u.name %></option>
+      <% }) %>
+    </select>
+    <div class="hint">Team data scope covers a manager and their direct reports.</div>
+  </div>
+<%- include('../../partials/drawer-close', { cta: 'Send invite' }) %>
+
+<% users.forEach(function (u) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-user-' + u._id, heading: 'Edit ' + u.name, action: '/api/setup/users/' + u._id + '/role' }) %>
+    <div class="field">
+      <label for="u-role-<%= u._id %>">Role</label>
+      <select id="u-role-<%= u._id %>" name="roleId" required>
+        <% roles.forEach(function (r) { %>
+          <option value="<%= r._id %>" <%= u.roleId && String(u.roleId._id) === String(r._id) ? 'selected' : '' %>><%= r.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="u-manager-<%= u._id %>">Reports to</label>
+      <select id="u-manager-<%= u._id %>" name="managerId">
+        <option value="">No manager</option>
+        <% users.forEach(function (m) { %>
+          <% if (String(m._id) !== String(u._id)) { %>
+            <option value="<%= m._id %>" <%= u.managerId && String(u.managerId._id) === String(m._id) ? 'selected' : '' %>><%= m.name %></option>
+          <% } %>
+        <% }) %>
+      </select>
+    </div>
+  <%- include('../../partials/drawer-close', { cta: 'Save user' }) %>
+<% }) %>
+
+<%- include('../../partials/app-foot') %>

@@ -1,0 +1,67 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Audit trail</h1>
+    <div class="sub">Who changed what, and what it was before. Read-only by design (§56).</div>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-body">
+    <form class="filters" method="get" action="/app/setup/audit">
+      <div class="field">
+        <label for="entity">Entity</label>
+        <select id="entity" name="entity">
+          <option value="">All</option>
+          <% entities.forEach(function (e) { %>
+            <option value="<%= e %>" <%= query.entity === e ? 'selected' : '' %>><%= e %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="userId">User</label>
+        <select id="userId" name="userId">
+          <option value="">All</option>
+          <% users.forEach(function (u) { %>
+            <option value="<%= u._id %>" <%= String(query.userId) === String(u._id) ? 'selected' : '' %>><%= u.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" type="submit">Apply</button>
+        <a class="btn btn-ghost" href="/app/setup/audit">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Recent changes</h2><span class="muted small"><%= total %> entries</span></div>
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing audited yet', message: 'Role changes, transfers, stage moves, pricing edits, blocks and bookings all land here.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>When</th><th>User</th><th>Entity</th><th>Action</th><th>Change</th></tr></thead>
+      <tbody>
+        <% items.forEach(function (log) { %>
+          <tr>
+            <td data-label="When"><%= h.dateTime(log.at) %></td>
+            <td data-label="User"><%= log.userName || 'System' %></td>
+            <td data-label="Entity"><%= log.entity %><div class="t-sub"><%= log.entityId || '' %></div></td>
+            <td data-label="Action"><span class="badge b-slate"><%= log.action %></span></td>
+            <td data-label="Change" class="muted small">
+              <% if (log.before || log.after) { %>
+                <%= JSON.stringify(log.after || {}).slice(0, 160) %>
+              <% } else { %>—<% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <%- include('../../partials/pagination', { total: total }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

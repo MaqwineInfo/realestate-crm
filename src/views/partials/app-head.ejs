@@ -1,0 +1,64 @@
+<%- include('head') %>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <%= tenant.name %>
+      <small>Sales CRM</small>
+    </div>
+    <nav>
+      <a href="/app/dashboard" class="<%= path.startsWith('/app/dashboard') ? 'active' : '' %>"><span class="ico">▦</span> Dashboard</a>
+      <% if (can('lead.view')) { %>
+        <a href="/app/leads" class="<%= path.startsWith('/app/leads') ? 'active' : '' %>"><span class="ico">☎</span> Leads</a>
+      <% } %>
+      <% if (can('project.view')) { %>
+        <a href="/app/projects" class="<%= path.startsWith('/app/projects') ? 'active' : '' %>"><span class="ico">▤</span> Projects</a>
+      <% } %>
+      <% if (can('inventory.view')) { %>
+        <a href="/app/inventory" class="<%= path.startsWith('/app/inventory') ? 'active' : '' %>"><span class="ico">▩</span> Inventory</a>
+      <% } %>
+      <% if (can('contact.view')) { %>
+        <a href="/app/contacts" class="<%= path.startsWith('/app/contacts') ? 'active' : '' %>"><span class="ico">☰</span> Contacts</a>
+      <% } %>
+      <% if (can('campaign.view')) { %>
+        <a href="/app/campaigns" class="<%= path.startsWith('/app/campaigns') ? 'active' : '' %>"><span class="ico">◈</span> Campaigns</a>
+      <% } %>
+      <% if (can('discount.approve')) { %>
+        <a href="/app/approvals" class="<%= path.startsWith('/app/approvals') ? 'active' : '' %>"><span class="ico">✓</span> Approvals</a>
+      <% } %>
+      <% if (can('lead.view')) { %>
+        <a href="/app/opportunities/resale" class="<%= path.startsWith('/app/opportunities') ? 'active' : '' %>"><span class="ico">↻</span> Opportunities</a>
+      <% } %>
+      <% if (can('dashboard.management')) { %>
+        <a href="/app/dashboard/management" class="<%= path.startsWith('/app/dashboard/management') ? 'active' : '' %>"><span class="ico">◎</span> Management</a>
+      <% } %>
+      <% if (can('report.view')) { %>
+        <a href="/app/reports/leads" class="<%= path.startsWith('/app/reports') ? 'active' : '' %>"><span class="ico">◑</span> Reports</a>
+      <% } %>
+      <% if (can('setup.users') || can('setup.stages') || can('setup.organization')) { %>
+        <a href="/app/setup/users" class="<%= path.startsWith('/app/setup') ? 'active' : '' %>"><span class="ico">⚙</span> Setup</a>
+      <% } %>
+    </nav>
+    <div class="side-foot">
+      <div><%= currentUser.name %></div>
+      <div class="inline">
+        <a href="/app/profile">Profile</a>
+        <span class="faint">·</span>
+        <form method="post" action="/logout" style="display:inline">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="btn btn-ghost btn-sm" style="padding:0;color:#94a3b8">Logout</button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <form class="search" method="get" action="/app/search">
+        <input type="search" name="q" placeholder="Search name, mobile, email, unit…" value="<%= query.q || '' %>" aria-label="Global search">
+      </form>
+      <div class="spacer"></div>
+      <a class="btn btn-sm" href="/app/notifications">Notifications<% if (typeof unreadCount !== 'undefined' && unreadCount) { %> <span class="badge b-red"><%= unreadCount %></span><% } %></a>
+    </header>
+
+    <main class="content">
+      <%- include('flash') %>

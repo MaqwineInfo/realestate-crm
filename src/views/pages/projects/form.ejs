@@ -1,0 +1,174 @@
+<%- include('../../partials/app-head') %>
+<% const p = project || {}; %>
+
+<div class="page-head">
+  <div class="grow"><h1><%= project ? 'Edit ' + project.name : 'New project' %></h1></div>
+  <a class="btn btn-ghost" href="<%= project ? '/app/projects/' + project._id : '/app/projects' %>">Cancel</a>
+</div>
+
+<form method="post" action="<%= project ? '/api/projects/' + project._id : '/api/projects' %>">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Identity</h2></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="name">Project name</label>
+          <input type="text" id="name" name="name" required maxlength="150" value="<%= p.name || '' %>">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="developerName">Developer / brand</label>
+            <input type="text" id="developerName" name="developerName" value="<%= p.developerName || '' %>">
+          </div>
+          <div class="field">
+            <label for="code">Project code</label>
+            <input type="text" id="code" name="code" maxlength="20" value="<%= p.code || '' %>">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              <% ['DRAFT','ACTIVE','ON_HOLD','SOLD_OUT','ARCHIVED'].forEach(function (s) { %>
+                <option value="<%= s %>" <%= p.status === s ? 'selected' : '' %>><%= s.replace('_',' ') %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="projectType">Project type</label>
+            <select id="projectType" name="projectType">
+              <% ['RESIDENTIAL','COMMERCIAL','PLOTTING','VILLA','MIXED_USE'].forEach(function (s) { %>
+                <option value="<%= s %>" <%= p.projectType === s ? 'selected' : '' %>><%= s.replace('_',' ') %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="reraNumber">RERA number</label>
+            <input type="text" id="reraNumber" name="reraNumber" value="<%= p.reraNumber || '' %>">
+          </div>
+          <div class="field">
+            <label for="reraUrl">RERA URL</label>
+            <input type="text" id="reraUrl" name="reraUrl" value="<%= p.reraUrl || '' %>">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Location</h2></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="address">Address</label>
+          <textarea id="address" name="address" maxlength="500" rows="2"><%= p.address || '' %></textarea>
+        </div>
+        <div class="field-row three">
+          <div class="field">
+            <label for="city">City</label>
+            <input type="text" id="city" name="city" value="<%= p.city || '' %>">
+          </div>
+          <div class="field">
+            <label for="state">State</label>
+            <input type="text" id="state" name="state" value="<%= p.state || '' %>">
+          </div>
+          <div class="field">
+            <label for="pincode">Pincode</label>
+            <input type="text" id="pincode" name="pincode" value="<%= p.pincode || '' %>">
+          </div>
+        </div>
+        <div class="field">
+          <label for="landmark">Landmark</label>
+          <input type="text" id="landmark" name="landmark" value="<%= p.landmark || '' %>">
+        </div>
+        <div class="field">
+          <label for="mapUrl">Google Maps URL</label>
+          <input type="text" id="mapUrl" name="mapUrl" value="<%= p.mapUrl || '' %>">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Sales</h2></div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field">
+            <label for="startingPriceMinor">Starting price</label>
+            <input type="text" id="startingPriceMinor" name="startingPriceMinor" inputmode="decimal"
+                   value="<%= p.startingPriceMinor ? (p.startingPriceMinor / 100) : '' %>">
+          </div>
+          <div class="field">
+            <label for="priceRangeMaxMinor">Up to</label>
+            <input type="text" id="priceRangeMaxMinor" name="priceRangeMaxMinor" inputmode="decimal"
+                   value="<%= p.priceRangeMaxMinor ? (p.priceRangeMaxMinor / 100) : '' %>">
+          </div>
+        </div>
+        <div class="field">
+          <label for="configurations">Configurations <span class="opt">comma separated</span></label>
+          <input type="text" id="configurations" name="configurations" data-list-input value="<%= (p.configurations || []).join(', ') %>"
+                 placeholder="2 BHK, 3 BHK">
+        </div>
+        <div class="field-row three">
+          <div class="field">
+            <label for="areaMin">Area from</label>
+            <input type="number" id="areaMin" name="areaMin" value="<%= p.areaMin || '' %>">
+          </div>
+          <div class="field">
+            <label for="areaMax">Area to</label>
+            <input type="number" id="areaMax" name="areaMax" value="<%= p.areaMax || '' %>">
+          </div>
+          <div class="field">
+            <label for="possessionDate">Possession</label>
+            <input type="date" id="possessionDate" name="possessionDate" value="<%= p.possessionDate ? h.dateInput(p.possessionDate) : '' %>">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="salesContactName">Sales contact</label>
+            <input type="text" id="salesContactName" name="salesContactName" value="<%= p.salesContactName || '' %>">
+          </div>
+          <div class="field">
+            <label for="salesContactMobile">Sales mobile</label>
+            <input type="tel" id="salesContactMobile" name="salesContactMobile" value="<%= p.salesContactMobile || '' %>">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Project information</h2></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="overview">Overview</label>
+          <textarea id="overview" name="overview" maxlength="5000" rows="4"><%= p.overview || '' %></textarea>
+        </div>
+        <div class="field">
+          <label for="amenities">Amenities <span class="opt">comma separated</span></label>
+          <input type="text" id="amenities" name="amenities" data-list-input value="<%= (p.amenities || []).join(', ') %>">
+        </div>
+        <div class="field">
+          <label for="keyUsps">Key USPs <span class="opt">comma separated</span></label>
+          <input type="text" id="keyUsps" name="keyUsps" data-list-input value="<%= (p.keyUsps || []).join(', ') %>">
+        </div>
+        <div class="field">
+          <label for="highlights">Highlights <span class="opt">comma separated</span></label>
+          <input type="text" id="highlights" name="highlights" data-list-input value="<%= (p.highlights || []).join(', ') %>">
+        </div>
+        <div class="field">
+          <label for="bookingTerms">Booking terms</label>
+          <textarea id="bookingTerms" name="bookingTerms" maxlength="2000" rows="2"><%= p.bookingTerms || '' %></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-group mt-2">
+    <button class="btn btn-primary" type="submit"><%= project ? 'Save project' : 'Create project' %></button>
+  </div>
+</form>
+
+
+
+<%- include('../../partials/app-foot') %>
