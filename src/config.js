@@ -7,6 +7,13 @@ const config = {
   sessionSecret: process.env.SESSION_SECRET || 'dev-only-insecure-secret',
   sessionMaxAgeMs: Number(process.env.SESSION_MAX_AGE_MS || 12 * 60 * 60 * 1000),
   uploadDir: process.env.UPLOAD_DIR || 'public/uploads',
+  /**
+   * V2 §131/§344.23: KYC documents, payment proofs and (later) RERA and face
+   * images must never be reachable by URL. This directory sits OUTSIDE public/,
+   * so the static handler cannot serve it — every read goes through a
+   * permission-checked route (routes/files.js).
+   */
+  privateUploadDir: process.env.PRIVATE_UPLOAD_DIR || 'private-uploads',
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES || 10 * 1024 * 1024),
   appUrl: process.env.APP_URL || 'http://localhost:3000',
 };

@@ -81,6 +81,14 @@ function createApp() {
   app.use('/', require('./routes/visits'));
   app.use('/', require('./routes/projects'));
   app.use('/', require('./routes/deals'));
+  app.use('/', require('./routes/bookings'));
+  app.use('/', require('./routes/channel-partners'));
+  /**
+   * V2 §24: the partner portal is a separate identity layer. It is mounted
+   * after the internal routers and never shares their auth middleware.
+   */
+  app.use('/', require('./routes/cp-portal'));
+  app.use('/', require('./routes/files'));
   app.use('/', require('./routes/contacts'));
   app.use('/', require('./routes/campaigns'));
   app.use('/', require('./routes/reports'));

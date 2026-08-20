@@ -97,6 +97,24 @@ const leadSchema = new Schema({
   loanStatus: { type: String, enum: ['NOT_STARTED', 'EXPLORING', 'PRE_APPROVED', 'APPROVED'] },
   decisionMaker: { type: String, enum: ['SELF', 'SPOUSE', 'FAMILY', 'BUSINESS_PARTNER', 'OTHER'] },
 
+  /**
+   * V2 §33/§184/§324.7: channel-partner attribution.
+   *
+   * A SEPARATE dimension from the marketing source and from ownership. The
+   * partner referred the customer; the internal `ownerUserId` still works the
+   * lead, and `latestSourceId` still records how the inquiry arrived. A lead can
+   * carry "source = Google Ads" and "partner = ABC Realty" at the same time.
+   */
+  channelPartnerId: { type: Schema.Types.ObjectId, ref: 'ChannelPartner', default: null, index: true },
+  channelPartnerMemberId: { type: Schema.Types.ObjectId, ref: 'ChannelPartnerMember', default: null },
+  partnerLeadClaimId: { type: Schema.Types.ObjectId, ref: 'PartnerLeadClaim', default: null },
+  partnerAttributionStatus: {
+    type: String,
+    enum: ['NONE', 'PENDING', 'ACCEPTED', 'REJECTED', 'CONFLICT'],
+    default: 'NONE',
+    index: true,
+  },
+
   // V1.1 §9.1/§9.2: who sent them, when the source is a referral or a portal.
   referrerName: { type: String, maxlength: 120 },
   referrerMobile: { type: String, maxlength: 20 },

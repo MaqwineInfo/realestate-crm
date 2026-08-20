@@ -1,0 +1,20 @@
+<%- include('../../partials/head') %>
+<div class="auth-wrap">
+  <div class="card">
+    <div class="card-head"><h1 class="grow">Set your password</h1></div>
+    <div class="card-body">
+      <%- include('../../partials/flash') %>
+      <form method="post" action="/cp/activate/<%= token %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="password">Choose a password</label>
+          <input type="password" id="password" name="password" autocomplete="new-password" required minlength="8">
+          <span class="hint">At least 8 characters, with a letter and a number.</span>
+        </div>
+        <button class="btn btn-primary" type="submit">Set password and sign in</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>

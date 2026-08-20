@@ -1,0 +1,290 @@
+<%- include('../../partials/app-head') %>
+<%
+  const p = (registration && registration.profile) || {};
+  const isNew = !registration;
+  const steps = [
+    'Partner type & contact', 'Business details', 'GujRERA & compliance',
+    'Bank & invoice', 'Team', 'Project empanelment', 'Review & submit',
+  ];
+  const action = isNew
+    ? '/api/channel-partners/registrations'
+    : `/api/channel-partners/registrations/${registration._id}`;
+  const decided = registration && ['APPROVED', 'REJECTED'].includes(registration.status);
+  const val = (v) => (v === undefined || v === null ? '' : v);
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= isNew ? 'New channel partner' : (registration.registrationNumber || 'Application') %></h1>
+    <div class="sub">
+      <%= isNew ? 'Seven steps. Nothing is live until it is approved.' : (p.tradeName || p.legalName || p.primaryContactName || '') %>
+      <% if (registration) { %> · <span class="badge"><%= registration.status.toLowerCase().replace(/_/g,' ') %></span><% } %>
+    </div>
+  </div>
+  <a class="btn" href="/app/channel-partners/registrations">All applications</a>
+</div>
+
+<% if (registration) { %>
+  <%#
+    A numbered strip: the badge carries the number and its state, so the sequence
+    reads at a glance instead of being spelled out inside each link.
+  %>
+  <nav class="tabs numbered mb-2">
+    <% steps.forEach(function (label, i) {
+         const n = i + 1;
+         const done = (registration.completedSteps || []).includes(n);
+         const cls = [step === n ? 'active' : '', done && step !== n ? 'done' : ''].filter(Boolean).join(' '); %>
+      <a class="<%= cls %>" href="/app/channel-partners/registrations/<%= registration._id %>?step=<%= n %>">
+        <span class="n" aria-hidden="true"><%= done && step !== n ? '✓' : n %></span>
+        <span><%= label %></span>
+      </a>
+    <% }) %>
+  </nav>
+<% } %>
+
+<% if (registration && registration.status === 'CORRECTION_REQUIRED' && registration.correctionNote) { %>
+  <div class="flash flash-warn"><strong>Correction requested:</strong> <%= registration.correctionNote %></div>
+<% } %>
+<% if (registration && registration.channelPartnerId) { %>
+  <div class="flash flash-success">
+    Approved — <a href="/app/channel-partners/<%= registration.channelPartnerId._id || registration.channelPartnerId %>">open the partner workspace</a>.
+  </div>
+<% } %>
+
+<%# §216: possible duplicates are shown for a human to decide. Never auto-merged. %>
+<% if (typeof duplicates !== 'undefined' && duplicates && duplicates.length) { %>
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Possible duplicates</h2></div>
+    <div class="card-body">
+      <p class="small muted">
+        These records share a PAN, GSTIN or mobile number with this application. Nothing has been
+        merged — decide before approving.
+      </p>
+      <ul class="mb-0">
+        <% duplicates.forEach(function (d) { %>
+          <li>
+            <% if (d.channelPartnerId) { %>
+              <a href="/app/channel-partners/<%= d.channelPartnerId %>"><%= d.label %></a>
+            <% } else { %>
+              <a href="/app/channel-partners/registrations/<%= d.registrationId %>"><%= d.label %></a>
+            <% } %>
+            <span class="muted small">matched on <%= d.matchedOn.join(', ') %></span>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </div>
+<% } %>
+
+<div class="card">
+  <div class="card-body">
+    <% if (step === 3 && registration) { %>
+      <%# §18: GujRERA, with the certificate. %>
+      <form method="post" action="/api/channel-partners/registrations/<%= registration._id %>/rera" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <h2>GujRERA &amp; compliance</h2>
+        <% if (rera) { %>
+          <dl class="dl">
+            <dt>On file</dt>
+            <dd>
+              v<%= rera.version %> · <%= rera.registrationNumber %>
+              · <span class="badge"><%= rera.verificationStatus.toLowerCase() %></span>
+              <% if (rera.expiryDate) { %> · expires <%= h.date(rera.expiryDate) %><% } %>
+            </dd>
+          </dl>
+          <p class="small muted">Uploading again creates a new version. The current one is kept.</p>
+        <% } %>
+        <div class="field-row">
+          <div class="field">
+            <label for="authority">Authority</label>
+            <input type="text" id="authority" name="authority" value="<%= rera ? rera.authority : 'GujRERA' %>" maxlength="80">
+          </div>
+          <div class="field">
+            <label for="registrationNumber">RERA registration number</label>
+            <input type="text" id="registrationNumber" name="registrationNumber" maxlength="80" required
+                   value="<%= rera ? rera.registrationNumber : '' %>">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="reraName">Name on the certificate</label><input type="text" id="reraName" name="reraName" maxlength="200" value="<%= rera ? val(rera.reraName) : '' %>"></div>
+          <div class="field"><label for="reraType">RERA type</label><input type="text" id="reraType" name="reraType" maxlength="80" value="<%= rera ? val(rera.reraType) : '' %>"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="issueDate">Issued</label><input type="date" id="issueDate" name="issueDate" value="<%= rera && rera.issueDate ? h.dateInput(rera.issueDate) : '' %>"></div>
+          <div class="field"><label for="expiryDate">Expires</label><input type="date" id="expiryDate" name="expiryDate" required value="<%= rera && rera.expiryDate ? h.dateInput(rera.expiryDate) : '' %>"></div>
+        </div>
+        <div class="field">
+          <label for="certificate">Certificate</label>
+          <input type="file" id="certificate" name="certificate" accept="application/pdf,image/jpeg,image/png" <%= rera ? '' : 'required' %>>
+          <span class="hint">PDF preferred. Stored privately — never served by URL.</span>
+        </div>
+        <button class="btn btn-primary" type="submit">Save &amp; continue</button>
+      </form>
+
+    <% } else if (step === 7 && registration) { %>
+      <h2>Review &amp; submit</h2>
+      <dl class="dl">
+        <dt>Type</dt><dd><%= (p.partnerType || '').toLowerCase() %></dd>
+        <dt>Name</dt><dd><%= p.tradeName || p.legalName || p.primaryContactName || '—' %></dd>
+        <dt>Contact</dt><dd><%= p.primaryContactName || '—' %> · <%= p.mobile || '—' %> · <%= p.email || '—' %></dd>
+        <dt>PAN / GSTIN</dt><dd><%= p.pan || '—' %> / <%= p.gstin || '—' %></dd>
+        <dt>City</dt><dd><%= p.city || '—' %><%= p.state ? ', ' + p.state : '' %></dd>
+        <dt>RERA</dt>
+        <dd>
+          <% if (rera) { %><%= rera.registrationNumber %> · <%= rera.verificationStatus.toLowerCase() %>
+          <% } else { %><span class="badge b-red">missing</span><% } %>
+        </dd>
+        <dt>Bank</dt>
+        <dd>
+          <%= (p.bank && p.bank.bankName) || '—' %>
+          <%= (p.bank && p.bank.accountNumberMasked) ? ' · ' + p.bank.accountNumberMasked : '' %>
+        </dd>
+      </dl>
+
+      <% if (['DRAFT','CORRECTION_REQUIRED'].includes(registration.status)) { %>
+        <form method="post" action="/api/channel-partners/registrations/<%= registration._id %>/submit">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-primary" type="submit">Submit for review</button>
+        </form>
+      <% } %>
+
+      <%# §13/§308: the review decision, with approve-and-invite in one action. %>
+      <% if (canReview && ['SUBMITTED','UNDER_REVIEW'].includes(registration.status)) { %>
+        <hr>
+        <h3>Review decision</h3>
+        <form method="post" action="/api/channel-partners/registrations/<%= registration._id %>/review">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="decision">Decision</label>
+            <select id="decision" name="decision">
+              <option value="APPROVED">Approve — activate this partner</option>
+              <option value="CORRECTION_REQUIRED">Ask for a correction</option>
+              <option value="UNDER_REVIEW">Mark under review</option>
+              <option value="REJECTED">Reject</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="note">Note to the partner</label>
+            <textarea id="note" name="note" rows="2" maxlength="1000"></textarea>
+            <span class="hint">Required for anything except approval.</span>
+          </div>
+          <label class="check">
+            <input type="checkbox" name="invite" value="1" checked>
+            Also invite them to the partner portal
+          </label>
+          <button class="btn btn-primary" type="submit">Save decision</button>
+        </form>
+      <% } %>
+
+    <% } else { %>
+      <%# Steps 1, 2, 4 (and 5–6, which live on the partner workspace once approved). %>
+      <form method="post" action="<%= action %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="step" value="<%= step %>">
+        <input type="hidden" name="partnerType" value="<%= p.partnerType || '' %>">
+
+        <% if (step === 1 || isNew) { %>
+          <h2>Partner type &amp; contact</h2>
+          <div class="field">
+            <label for="partnerTypeSelect">Partner type</label>
+            <select id="partnerTypeSelect" name="partnerType" required>
+              <option value="INDIVIDUAL" <%= p.partnerType === 'INDIVIDUAL' ? 'selected' : '' %>>Individual</option>
+              <option value="COMPANY" <%= p.partnerType === 'COMPANY' ? 'selected' : '' %>>Company</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="primaryContactName">Primary contact name</label><input type="text" id="primaryContactName" name="primaryContactName" maxlength="150" required value="<%= val(p.primaryContactName) %>"></div>
+            <div class="field"><label for="mobile">Mobile</label><input type="tel" id="mobile" name="mobile" maxlength="20" required value="<%= val(p.mobile) %>"></div>
+            <div class="field"><label for="email">Email</label><input type="email" id="email" name="email" maxlength="150" required value="<%= val(p.email) %>"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="city">City</label><input type="text" id="city" name="city" maxlength="80" required value="<%= val(p.city) %>"></div>
+            <div class="field"><label for="state">State</label><input type="text" id="state" name="state" maxlength="80" required value="<%= val(p.state) %>"></div>
+            <div class="field"><label for="pincode">Pincode</label><input type="text" id="pincode" name="pincode" maxlength="12" value="<%= val(p.pincode) %>"></div>
+          </div>
+          <div class="field">
+            <label for="address">Address</label>
+            <textarea id="address" name="address" rows="2" maxlength="500"><%= val(p.address) %></textarea>
+          </div>
+        <% } %>
+
+        <% if (step === 2 && !isNew) { %>
+          <h2>Business details</h2>
+          <div class="field-row">
+            <div class="field"><label for="legalName">Legal name</label><input type="text" id="legalName" name="legalName" maxlength="200" value="<%= val(p.legalName) %>"></div>
+            <div class="field"><label for="tradeName">Trade / display name</label><input type="text" id="tradeName" name="tradeName" maxlength="200" value="<%= val(p.tradeName) %>"></div>
+            <div class="field">
+              <label for="constitutionType">Constitution</label>
+              <select id="constitutionType" name="constitutionType">
+                <option value="">—</option>
+                <% ['PROPRIETORSHIP','PARTNERSHIP','LLP','PRIVATE_LIMITED','PUBLIC_LIMITED','HUF','OTHER'].forEach(function (c) { %>
+                  <option value="<%= c %>" <%= p.constitutionType === c ? 'selected' : '' %>><%= c.toLowerCase().replace(/_/g,' ') %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="pan">PAN</label><input type="text" id="pan" name="pan" maxlength="12" value="<%= val(p.pan) %>"></div>
+            <div class="field"><label for="gstin">GSTIN <span class="opt">optional</span></label><input type="text" id="gstin" name="gstin" maxlength="20" value="<%= val(p.gstin) %>"></div>
+            <div class="field"><label for="companyRegistrationNumber">Registration no. <span class="opt">optional</span></label><input type="text" id="companyRegistrationNumber" name="companyRegistrationNumber" maxlength="40" value="<%= val(p.companyRegistrationNumber) %>"></div>
+          </div>
+          <div class="field"><label for="registeredAddress">Registered address</label><textarea id="registeredAddress" name="registeredAddress" rows="2" maxlength="500"><%= val(p.registeredAddress) %></textarea></div>
+          <div class="field"><label for="correspondenceAddress">Correspondence address</label><textarea id="correspondenceAddress" name="correspondenceAddress" rows="2" maxlength="500"><%= val(p.correspondenceAddress) %></textarea></div>
+          <div class="field-row">
+            <div class="field"><label for="website">Website</label><input type="text" id="website" name="website" maxlength="200" value="<%= val(p.website) %>"></div>
+            <div class="field"><label for="yearsInBusiness">Years in business</label><input type="number" id="yearsInBusiness" name="yearsInBusiness" min="0" max="200" value="<%= val(p.yearsInBusiness) %>"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="signatoryName">Authorised signatory</label><input type="text" id="signatoryName" name="signatoryName" maxlength="150" value="<%= val(p.signatoryName) %>"></div>
+            <div class="field"><label for="signatoryMobile">Signatory mobile</label><input type="tel" id="signatoryMobile" name="signatoryMobile" maxlength="20" value="<%= val(p.signatoryMobile) %>"></div>
+            <div class="field"><label for="signatoryEmail">Signatory email</label><input type="email" id="signatoryEmail" name="signatoryEmail" maxlength="150" value="<%= val(p.signatoryEmail) %>"></div>
+          </div>
+        <% } %>
+
+        <% if (step === 4 && !isNew) { %>
+          <h2>Bank &amp; invoice details</h2>
+          <%# §21: the account number is masked once saved and sealed at rest. %>
+          <div class="field-row">
+            <div class="field"><label for="accountHolderName">Account holder</label><input type="text" id="accountHolderName" name="accountHolderName" maxlength="150" value="<%= val(p.bank && p.bank.accountHolderName) %>"></div>
+            <div class="field"><label for="bankName">Bank</label><input type="text" id="bankName" name="bankName" maxlength="120" value="<%= val(p.bank && p.bank.bankName) %>"></div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="accountNumber">Account number</label>
+              <input type="text" id="accountNumber" name="accountNumber" maxlength="30"
+                     placeholder="<%= val(p.bank && p.bank.accountNumberMasked) || '' %>">
+              <% if (p.bank && p.bank.accountNumberMasked) { %>
+                <span class="hint">On file: <%= p.bank.accountNumberMasked %>. Leave blank to keep it.</span>
+              <% } %>
+            </div>
+            <div class="field"><label for="ifsc">IFSC</label><input type="text" id="ifsc" name="ifsc" maxlength="15" value="<%= val(p.bank && p.bank.ifsc) %>"></div>
+            <div class="field"><label for="branch">Branch</label><input type="text" id="branch" name="branch" maxlength="120" value="<%= val(p.bank && p.bank.branch) %>"></div>
+          </div>
+          <div class="field"><label for="billingAddress">Billing address</label><textarea id="billingAddress" name="billingAddress" rows="2" maxlength="500"><%= val(p.billingAddress) %></textarea></div>
+          <div class="field">
+            <label for="defaultInvoiceTaxMode">Default invoice tax mode</label>
+            <select id="defaultInvoiceTaxMode" name="defaultInvoiceTaxMode">
+              <% ['GST_EXCLUSIVE','GST_INCLUSIVE','NO_GST'].forEach(function (m) { %>
+                <option value="<%= m %>" <%= p.defaultInvoiceTaxMode === m ? 'selected' : '' %>><%= m.toLowerCase().replace(/_/g,' ') %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } %>
+
+        <% if ((step === 5 || step === 6) && !isNew) { %>
+          <h2><%= step === 5 ? 'Team' : 'Project empanelment' %></h2>
+          <p class="muted">
+            <%= step === 5
+              ? 'Team members and portal logins are managed on the partner workspace once the application is approved.'
+              : 'Project empanelment is set on the partner workspace once the application is approved — an approval decides which projects they may sell.' %>
+          </p>
+        <% } %>
+
+        <% if (!decided) { %>
+          <button class="btn btn-primary" type="submit"><%= isNew ? 'Start application' : 'Save & continue' %></button>
+        <% } %>
+      </form>
+    <% } %>
+  </div>
+</div>
+<%- include('../../partials/app-foot') %>

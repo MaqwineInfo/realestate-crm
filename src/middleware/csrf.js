@@ -12,7 +12,17 @@ const { forbidden } = require('../lib/errors');
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /** Routes that parse their own body and therefore verify their own token. */
-const DEFERRED = [/^\/api\/projects\/[a-f\d]{24}\/assets$/i];
+const DEFERRED = [
+  /^\/api\/projects\/[a-f\d]{24}\/assets$/i,
+  // V2: KYC documents and payment proofs arrive as multipart with their file.
+  /^\/api\/bookings\/[a-f\d]{24}\/kyc\/documents$/i,
+  /^\/api\/bookings\/[a-f\d]{24}\/receipts$/i,
+  // V2 Part A: RERA certificates and partner invoice PDFs, internal and portal.
+  /^\/api\/channel-partners\/registrations\/[a-f\d]{24}\/rera$/i,
+  /^\/api\/channel-partners\/[a-f\d]{24}\/rera$/i,
+  /^\/cp\/profile\/rera$/i,
+  /^\/cp\/invoices\/[a-f\d]{24}\/pdf$/i,
+];
 
 const tokensMatch = (sent, expected) => !!expected && !!sent
   && sent.length === expected.length

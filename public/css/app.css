@@ -120,6 +120,11 @@ p { margin: 0 0 10px; }
   box-shadow: var(--shadow);
 }
 .card + .card { margin-top: 16px; }
+/* Any two stacked blocks need the same gap. Without these, a card following a
+   grid or a tile row sat flush against it — the "sections touching" bug. */
+.grid + .card, .card + .grid, .grid + .grid,
+.grid + .tabs, .card + .tabs, .tabs + .card, .tabs + .grid,
+.filters + .card, .filters + .grid, .table-wrap + .card { margin-top: 16px; }
 .card-head {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
@@ -136,7 +141,13 @@ p { margin: 0 0 10px; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
 
 /* ---------- Work tiles (§8) ---------- */
-.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.tiles {
+  display: grid;
+  /* Auto-fit, because the tile count is per-screen: sales has 4, collections 6,
+     channel partners 8. A fixed column count leaves a ragged last row. */
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 12px; margin-bottom: 18px;
+}
 .tile {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -165,10 +176,11 @@ thead th {
   padding: 9px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
-tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--surface-2); }
-td.num, th.num { text-align: right; }
+/* Money and counts line up digit-for-digit, which is the whole point of a column. */
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .t-name { font-weight: 600; }
 .t-sub { color: var(--text-muted); font-size: 12.5px; }
 .row-actions { display: flex; gap: 6px; justify-content: flex-end; white-space: nowrap; }
@@ -234,15 +246,32 @@ textarea { min-height: 76px; resize: vertical; }
 .field { margin-bottom: 13px; }
 .field .hint { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
 .field .err { font-size: 12px; color: var(--danger); margin-top: 3px; }
-.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+/* A row adapts to however many fields it holds — two, three or four — instead of
+   forcing two and dropping the rest onto a ragged second line. */
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
 .field-row.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field-row .field { min-width: 0; }
 fieldset { border: 0; padding: 0; margin: 0 0 18px; }
 fieldset legend { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); font-weight: 600; padding: 0 0 8px; }
 .check { display: flex; align-items: center; gap: 8px; font-weight: 400; font-size: 13.5px; margin-bottom: 6px; }
 .check input { width: auto; margin: 0; }
 
-.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-.filters .field { margin-bottom: 0; min-width: 150px; }
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 10px; align-items: end;
+  margin-bottom: 16px;
+}
+.filters .field { margin-bottom: 0; min-width: 0; }
+/* The search box earns two cells where there is room; it holds the longest value. */
+.filters input[type=search] { grid-column: span 2; }
+.filters .btn { justify-self: start; white-space: nowrap; }
+.filters > label { align-self: end; }
+@media (max-width: 720px) {
+  .filters { grid-template-columns: minmax(0, 1fr); }
+  .filters input[type=search] { grid-column: auto; }
+  .filters .btn { justify-self: stretch; text-align: center; }
+}
 
 /* ---------- Flash & alerts ---------- */
 .flash { padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; font-size: 13.5px; border: 1px solid; }
@@ -292,7 +321,7 @@ fieldset legend { font-size: 12px; text-transform: uppercase; letter-spacing: .0
 }
 
 /* ---------- Detail lists ---------- */
-.dl { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 6px 12px; font-size: 13px; }
+.dl { display: grid; grid-template-columns: minmax(120px, 38%) minmax(0, 1fr); gap: 6px 14px; font-size: 13px; }
 .dl dt { color: var(--text-muted); }
 .dl dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 
@@ -590,3 +619,146 @@ table.mini td { padding: 3px 8px; font-size: 13px; border: 0; }
 .code.copied::after { content: 'copied ✓' !important; color: #6ee7b7 !important; }
 .drawer-body h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin: 16px 0 6px; }
 .drawer-body h3:first-child { margin-top: 0; }
+
+/* ======================================================================
+   V2 layout — the pieces the new screens needed and did not have
+   ====================================================================== */
+
+/* ---------- Tabs (booking workspace, partner workspace, stepper) ----------
+   These were used on three screens with no styling at all: a bare row of links
+   that wrapped into each other. A tab strip scrolls sideways rather than
+   stacking, so the sequence stays readable at any width. */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.tabs a {
+  flex: none;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.tabs a:hover { background: var(--surface); color: var(--text); text-decoration: none; }
+.tabs a.active {
+  background: var(--surface);
+  color: var(--brand-dark);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+/* A numbered stepper is a tab strip that states where you are in a sequence. */
+.tabs.numbered a { display: inline-flex; align-items: center; gap: 7px; }
+.tabs.numbered a .n {
+  display: inline-grid; place-items: center;
+  width: 19px; height: 19px; flex: none;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+}
+.tabs.numbered a.active .n { background: var(--brand); border-color: var(--brand); color: #fff; }
+.tabs.numbered a.done .n { background: var(--success); border-color: var(--success); color: #fff; }
+.tabs.numbered a.done { color: var(--text); }
+
+/* ---------- Wide tables ----------
+   The booking list has ten columns and the partner performance report has
+   seventeen. `table { width: 100% }` cannot shrink below its content, so without
+   a scroll container the table simply overflowed its card. */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap > table { min-width: 720px; }
+.table-wrap.wide > table { min-width: 1040px; }
+@media (max-width: 720px) {
+  /* The responsive card layout takes over, so the minimum width would only
+     reintroduce a scrollbar nobody needs. */
+  .table-wrap > table, .table-wrap.wide > table { min-width: 0; }
+}
+
+/* ---------- Numbered form sections ----------
+   Used where a form is a sequence of steps on one page (§15, §64): the number
+   belongs in the heading, so the reader can see 1..5 without counting cards. */
+.sections { display: flex; flex-direction: column; gap: 16px; }
+/* Inside a gapped stack the sibling margin would be added on top of the gap. */
+.sections > .card + .card, .stack > .card + .card { margin-top: 0; }
+
+.step-n {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 22px; flex: none;
+  border-radius: 50%;
+  background: var(--brand-soft); color: var(--brand-dark);
+  font-size: 12px; font-weight: 700;
+  margin-right: 9px;
+}
+.card-head h2 { display: flex; align-items: center; min-width: 0; }
+.card-head .opt-tag { font-size: 12px; color: var(--text-faint); font-weight: 400; white-space: nowrap; }
+
+/* ---------- Read-only summary rows inside cards ---------- */
+/* ---------- Post-booking progress strip (§113) ----------
+   An inline row of ticks with an inline style was fine at three steps and
+   crowded at five. A grid keeps the steps evenly spaced and wraps cleanly. */
+.progress-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 16px;
+  font-size: 13px;
+}
+.progress-strip .st { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.progress-strip .st .mark {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none;
+  border-radius: 50%; font-size: 11px; font-weight: 700;
+  background: var(--surface-2); color: var(--text-faint); border: 1px solid var(--border-strong);
+}
+.progress-strip .st.done { color: var(--text); font-weight: 500; }
+.progress-strip .st.done .mark { background: var(--success); border-color: var(--success); color: #fff; }
+.progress-strip .st.todo { color: var(--text-muted); }
+
+/* ---------- Stat cards ----------
+   Twelve screens hand-rolled these with an inline font-size, so they drifted
+   apart as soon as one label wrapped. One class, tabular digits, one baseline. */
+.stat-num {
+  font-size: 22px; font-weight: 700; line-height: 1.15;
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums;
+}
+.stat-lbl { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+
+.text-danger { color: var(--danger); }
+.break-all { word-break: break-all; }
+.w-amount { max-width: 130px; }
+.funnel-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-size: 13.5px; }
+
+/* ---------- Partner portal shell (§251: mobile first) ---------- */
+.cp-shell { min-height: 100vh; display: flex; flex-direction: column; background: var(--surface-2); }
+.cp-top {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.cp-brand { display: flex; flex-direction: column; line-height: 1.25; }
+.cp-brand small { color: var(--text-muted); font-size: 11.5px; }
+.cp-nav { display: flex; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: thin; }
+.cp-nav a {
+  padding: 7px 12px; font-size: 13px; font-weight: 500; color: var(--text-muted);
+  border-radius: var(--radius-sm); white-space: nowrap; text-decoration: none;
+}
+.cp-nav a:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.cp-nav a.active { background: var(--brand-soft); color: var(--brand-dark); font-weight: 600; }
+.cp-out { flex: none; }
+.cp-main { flex: 1; max-width: 1180px; width: 100%; margin: 0 auto; padding: 20px; }
+.cp-foot { padding: 14px 20px; text-align: center; border-top: 1px solid var(--border); background: var(--surface); }
+@media (max-width: 720px) {
+  .cp-top { padding: 10px 14px; }
+  .cp-main { padding: 14px; }
+  .cp-nav { order: 3; width: 100%; }
+}
+
+/* ---------- Auth wrapper for the portal login ---------- */
+.auth-wrap .card { width: 100%; max-width: 400px; }

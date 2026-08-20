@@ -10,6 +10,15 @@
       <% if (can('lead.view')) { %>
         <a href="/app/leads" class="<%= path.startsWith('/app/leads') ? 'active' : '' %>"><span class="ico">☎</span> Leads</a>
       <% } %>
+      <% if (can('booking.view') || can('collection.view')) { %>
+        <a href="/app/bookings" class="<%= path.startsWith('/app/bookings') ? 'active' : '' %>"><span class="ico">▣</span> Bookings</a>
+      <% } %>
+      <% if (can('collection.dashboard') || can('collection.view')) { %>
+        <a href="/app/collections" class="<%= path.startsWith('/app/collections') ? 'active' : '' %>"><span class="ico">₹</span> Collections</a>
+      <% } %>
+      <% if (can('cp.dashboard') || can('cp.partner.view')) { %>
+        <a href="/app/channel-partners/dashboard" class="<%= path.startsWith('/app/channel-partners') ? 'active' : '' %>"><span class="ico">◇</span> Channel partners</a>
+      <% } %>
       <% if (can('project.view')) { %>
         <a href="/app/projects" class="<%= path.startsWith('/app/projects') ? 'active' : '' %>"><span class="ico">▤</span> Projects</a>
       <% } %>

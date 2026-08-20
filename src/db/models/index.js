@@ -43,6 +43,31 @@ module.exports = {
   ResaleOpportunity: require('./ResaleOpportunity'),
   RentalOpportunity: require('./RentalOpportunity'),
 
+  // Post-booking & collections (V2 Part C)
+  BookingCustomerLink: require('./BookingCustomerLink'),
+  BookingApplicant: require('./BookingApplicant'),
+  KycDocumentType: require('./KycDocumentType'),
+  BookingKycDocument: require('./BookingKycDocument'),
+  BookingInstallment: require('./BookingInstallment'),
+  PaymentRequest: require('./PaymentRequest'),
+  BookingReceipt: require('./BookingReceipt'),
+  ReceiptAllocation: require('./ReceiptAllocation'),
+  CollectionFollowUp: require('./CollectionFollowUp'),
+  CollectionPromise: require('./CollectionPromise'),
+
+  // Channel partner (V2 Part A)
+  ChannelPartnerRegistration: require('./ChannelPartnerRegistration'),
+  ChannelPartner: require('./ChannelPartner'),
+  ChannelPartnerMember: require('./ChannelPartnerMember'),
+  PartnerPortalUser: require('./PartnerPortalUser'),
+  PartnerReraDocument: require('./PartnerReraDocument'),
+  PartnerProjectEmpanelment: require('./PartnerProjectEmpanelment'),
+  PartnerLeadClaim: require('./PartnerLeadClaim'),
+  PartnerCommissionRule: require('./PartnerCommissionRule'),
+  PartnerCommissionEntitlement: require('./PartnerCommissionEntitlement'),
+  PartnerInvoice: require('./PartnerInvoice'),
+  PartnerPayout: require('./PartnerPayout'),
+
   // Marketing
   SavedSegment: require('./SavedSegment'),
   CommunicationCampaign: require('./CommunicationCampaign'),

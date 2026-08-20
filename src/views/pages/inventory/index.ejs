@@ -103,7 +103,7 @@
         ctaHref: '/app/projects/' + project._id, ctaLabel: 'Project setup'
       }) %>
     <% } else { %>
-      <table class="responsive">
+      <div class="table-wrap"><table class="responsive">
         <thead>
           <tr>
             <th>Unit</th><th>Type</th><th>Floor</th><th>Area</th><th>Facing</th>
@@ -135,7 +135,7 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
+      </table></div>
       <%- include('../../partials/pagination') %>
     <% } %>
   </div>

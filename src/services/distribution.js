@@ -14,16 +14,30 @@ const notifications = require('./notifications');
  * Manual transfers deliberately do not touch the cursor (§14.2).
  */
 
+/**
+ * V2 §148: `poolType` keeps the lead rotation and the collection rotation in
+ * separate documents, so they cannot share a cursor. Pools created before V2
+ * have no `poolType` field at all, hence the $ne match rather than an equality
+ * one — a missing field means the original lead pool.
+ */
+const typeFilter = (poolType) => (poolType === 'COLLECTION'
+  ? { poolType: 'COLLECTION' }
+  : { poolType: { $ne: 'COLLECTION' } });
+
 /** Project pool if one is configured, otherwise the organization default. */
-async function resolvePool({ tenantId, projectId }) {
+async function resolvePool({ tenantId, projectId, poolType = 'LEAD' }) {
   if (projectId) {
-    const projectPool = await AssignmentPool.findOne({ tenantId, projectId, active: true }).lean();
+    const projectPool = await AssignmentPool.findOne({
+      tenantId, projectId, active: true, ...typeFilter(poolType),
+    }).lean();
     if (projectPool) return projectPool;
   }
-  return defaultPool({ tenantId });
+  return defaultPool({ tenantId, poolType });
 }
 
-const defaultPool = ({ tenantId }) => AssignmentPool.findOne({ tenantId, isDefault: true, active: true }).lean();
+const defaultPool = ({ tenantId, poolType = 'LEAD' }) => AssignmentPool.findOne({
+  tenantId, isDefault: true, active: true, ...typeFilter(poolType),
+}).lean();
 
 /** Active members only — suspended and inactive users are skipped (§14.2). */
 async function eligibleMembers({ tenantId, pool }) {
@@ -40,8 +54,8 @@ async function eligibleMembers({ tenantId, pool }) {
  * Picks the next owner. Returns null when nobody is eligible — the caller then
  * leaves the lead in the Unassigned queue rather than inventing an owner.
  */
-async function nextOwner({ tenantId, projectId, excludeUserIds = [] }) {
-  const pool = await resolvePool({ tenantId, projectId });
+async function nextOwner({ tenantId, projectId, excludeUserIds = [], poolType = 'LEAD' }) {
+  const pool = await resolvePool({ tenantId, projectId, poolType });
   if (!pool) return { pool: null, user: null };
 
   const picked = await pickFrom({ tenantId, pool, excludeUserIds });
@@ -54,7 +68,7 @@ async function nextOwner({ tenantId, projectId, excludeUserIds = [] }) {
    * Avenue lead" becomes unanswerable.
    */
   if (pool.projectId) {
-    const fallback = await defaultPool({ tenantId });
+    const fallback = await defaultPool({ tenantId, poolType });
     if (fallback && String(fallback._id) !== String(pool._id)) {
       const user = await pickFrom({ tenantId, pool: fallback, excludeUserIds });
       if (user) {

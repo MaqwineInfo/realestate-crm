@@ -1,0 +1,71 @@
+<%# V2 §172: the channel partner report family has its own filters (§51). %>
+<div class="page-head">
+  <div class="grow">
+    <h1><%= title %></h1>
+    <div class="sub">Accepted claims only. Accrued, eligible, invoiced and paid stay separate.</div>
+  </div>
+  <div class="btn-group">
+    <% if (can('report.view')) { %><a class="btn btn-sm" href="/app/reports/leads">Sales</a><% } %>
+    <% if (can('booking.report')) { %><a class="btn btn-sm" href="/app/reports/bookings">Bookings</a><% } %>
+    <% if (can('collection.report')) { %><a class="btn btn-sm" href="/app/reports/collections">Collections</a><% } %>
+    <a class="btn btn-sm <%= kind === 'channel-partners' ? 'btn-primary' : '' %>" href="/app/reports/channel-partners">Performance</a>
+    <a class="btn btn-sm <%= kind === 'cp-invoices' ? 'btn-primary' : '' %>" href="/app/reports/cp-invoices">Invoices</a>
+    <a class="btn btn-sm" href="/app/reports/<%= kind %>/export?<%= new URLSearchParams(query).toString() %>">Export CSV</a>
+  </div>
+</div>
+
+<form class="filters" method="get" action="/app/reports/<%= kind %>">
+  <div class="field"><label for="rc-from">From</label><input type="date" id="rc-from" name="from" value="<%= query.from || '' %>"></div>
+  <div class="field"><label for="rc-to">To</label><input type="date" id="rc-to" name="to" value="<%= query.to || '' %>"></div>
+  <div class="field">
+    <label for="rc-partner">Partner</label>
+    <select id="rc-partner" name="channelPartnerId">
+      <option value="">All partners</option>
+      <% partners.forEach(function (p) { %>
+        <option value="<%= p._id %>" <%= String(query.channelPartnerId) === String(p._id) ? 'selected' : '' %>>
+          <%= (p.profile || {}).tradeName || (p.profile || {}).legalName || p.partnerCode %>
+        </option>
+      <% }) %>
+    </select>
+  </div>
+  <% if (kind === 'channel-partners') { %>
+    <div class="field">
+      <label for="rc-project">Project</label>
+      <select id="rc-project" name="projectId">
+        <option value="">All projects</option>
+        <% projects.forEach(function (p) { %>
+          <option value="<%= p._id %>" <%= String(query.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="rc-type">Partner type</label>
+      <select id="rc-type" name="partnerType">
+        <option value="">Any</option>
+        <option value="COMPANY" <%= query.partnerType === 'COMPANY' ? 'selected' : '' %>>Company</option>
+        <option value="INDIVIDUAL" <%= query.partnerType === 'INDIVIDUAL' ? 'selected' : '' %>>Individual</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="rc-rera">RERA status</label>
+      <select id="rc-rera" name="reraStatus">
+        <option value="">Any</option>
+        <% ['VERIFIED','PENDING','EXPIRED','REJECTED','NONE'].forEach(function (s) { %>
+          <option value="<%= s %>" <%= query.reraStatus === s ? 'selected' : '' %>><%= s.toLowerCase() %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field"><label for="rc-city">City</label><input type="text" id="rc-city" name="city" value="<%= query.city || '' %>"></div>
+  <% } else { %>
+    <div class="field">
+      <label for="rc-status">Invoice status</label>
+      <select id="rc-status" name="status">
+        <option value="">Any</option>
+        <% ['DRAFT','SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED','APPROVED','REJECTED','PAYMENT_PROCESSING','PARTIALLY_PAID','PAID','CANCELLED'].forEach(function (s) { %>
+          <option value="<%= s %>" <%= query.status === s ? 'selected' : '' %>><%= s.toLowerCase().replace(/_/g,' ') %></option>
+        <% }) %>
+      </select>
+    </div>
+  <% } %>
+  <button class="btn" type="submit">Apply</button>
+</form>

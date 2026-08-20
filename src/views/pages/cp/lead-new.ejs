@@ -1,0 +1,81 @@
+<%- include('../../partials/cp-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Submit a lead</h1>
+    <div class="sub">Minimum detail, so this works from a phone at the site.</div>
+  </div>
+</div>
+
+<% if (reraBlock) { %>
+  <%# §19/§20: say exactly why, rather than failing at submit. %>
+  <div class="flash flash-error"><%= reraBlock %> Upload a renewed certificate on your profile.</div>
+<% } %>
+
+<% if (!projects.length) { %>
+  <%- include('../../partials/empty', { heading: 'No projects available', message: 'You are not empanelled on any project yet. The sales team can approve you for one.', ctaHref: '/cp/dashboard', ctaLabel: 'Back to dashboard' }) %>
+<% } else { %>
+  <div class="card">
+    <div class="card-body">
+      <form method="post" action="/cp/leads">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="projectId">Project</label>
+          <select id="projectId" name="projectId" required>
+            <option value="">Choose a project</option>
+            <% projects.forEach(function (p) { %><option value="<%= p._id %>"><%= p.name %></option><% }) %>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="name">Customer name</label>
+            <input type="text" id="name" name="name" maxlength="150" required>
+          </div>
+          <div class="field">
+            <label for="mobile">Mobile</label>
+            <input type="tel" id="mobile" name="mobile" maxlength="20" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="email">Email <span class="opt">optional</span></label>
+            <input type="email" id="email" name="email" maxlength="150">
+          </div>
+          <div class="field">
+            <label for="configuration">Configuration <span class="opt">optional</span></label>
+            <input type="text" id="configuration" name="configuration" maxlength="80" placeholder="3 BHK">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="budgetMin">Budget from <span class="opt">optional</span></label>
+            <input type="text" id="budgetMin" name="budgetMin" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="budgetMax">Budget to <span class="opt">optional</span></label>
+            <input type="text" id="budgetMax" name="budgetMax" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="preferredVisitDate">Preferred visit <span class="opt">optional</span></label>
+            <input type="date" id="preferredVisitDate" name="preferredVisitDate">
+          </div>
+        </div>
+        <div class="field">
+          <label for="requirement">Requirement <span class="opt">optional</span></label>
+          <input type="text" id="requirement" name="requirement" maxlength="500">
+        </div>
+        <div class="field">
+          <label for="note">Note <span class="opt">optional</span></label>
+          <textarea id="note" name="note" rows="2" maxlength="1000"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit" <%= reraBlock ? 'disabled' : '' %>>Submit lead</button>
+        <p class="small muted mt-1 mb-0">
+          You will get a reference immediately. If this customer is already with the developer or
+          another partner, the submission goes to the sales team for review before it is attributed.
+        </p>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../../partials/cp-foot') %>

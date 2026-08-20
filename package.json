@@ -4,13 +4,13 @@
   "description": "Real Estate CRM V1",
   "main": "src/server.js",
   "scripts": {
-    "test": "node --test",
+    "test": "node --test --test-concurrency=4",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/db/seed.js",
     "db:dump": "node scripts/db-snapshot.js dump",
     "db:restore": "node scripts/db-snapshot.js restore",
-    "test:watch": "node --test --watch",
+    "test:watch": "node --test --watch --test-concurrency=4",
     "smoke": "node scripts/smoke-screens.js && node scripts/smoke-wiring.js"
   },
   "keywords": [],

@@ -16,6 +16,32 @@ function register() {
   // §19: the nurture cadence subscribes to the same lifecycle events.
   require('./nurture').registerListeners();
 
+  /**
+   * V2 §43/§228: collection-driven commission. A receipt or a reversal changes
+   * the collected percentage, which is exactly what an ON_COLLECTION_PERCENT
+   * rule turns on — so the entitlement is re-evaluated whenever money moves.
+   * The `cp.commission_eligibility` job is the safety net behind this.
+   */
+  const reevaluateCommission = async ({ tenantId, bookingId }) => {
+    const { Booking, Tenant } = require('../db/models');
+    const booking = await Booking.findOne({ tenantId, _id: bookingId }).select('channelPartnerId').lean();
+    if (!booking?.channelPartnerId) return;
+    const tenant = await Tenant.findById(tenantId).lean();
+    await require('./commissions').evaluate({ tenantId, tenant, bookingId });
+  };
+  on(EVENTS.COLLECTION_PAYMENT_RECEIVED, reevaluateCommission);
+  on(EVENTS.COLLECTION_RECEIPT_REVERSED, reevaluateCommission);
+
+  /**
+   * V2 §38: a site visit on a partner-sourced lead carries the partner, so CP
+   * funnel reporting works off the existing visit record and no duplicate CP
+   * visit ever exists.
+   */
+  const stampVisitPartner = async ({ tenantId, visit, visitId }) => {
+    await require('./partnerLeads').stampVisit({ tenantId, visitId: visitId || visit?._id });
+  };
+  on(EVENTS.VISIT_CREATED, stampVisitPartner);
+
   on(EVENTS.LEAD_ASSIGNED, async ({ tenantId, lead, ownerUserId, contactName }) => {
     await notifications.notify({
       tenantId,

@@ -67,10 +67,15 @@
     <input type="hidden" name="intent" value="NEW_INQUIRY">
   <% } %>
 
-  <div class="grid cols-2">
+  <%#
+    §7–§13: five sections, one shape. They were previously a two-column grid, two
+    collapsibles and a full-width card, which read as three different things and
+    left section 3 sitting flush against the grid above it.
+  %>
+  <div class="sections">
     <%# ---------------------------- 1. Customer ---------------------------- %>
     <div class="card">
-      <div class="card-head"><h2 class="grow">1 · Customer</h2></div>
+      <div class="card-head"><h2 class="grow"><span class="step-n">1</span> Customer</h2></div>
       <div class="card-body">
         <%# Mobile first: it is what decides whether this is a new person at all. %>
         <div class="field">
@@ -119,7 +124,7 @@
 
     <%# ------------------------ 2. Inquiry & source ------------------------ %>
     <div class="card">
-      <div class="card-head"><h2 class="grow">2 · Inquiry &amp; source</h2></div>
+      <div class="card-head"><h2 class="grow"><span class="step-n">2</span> Inquiry &amp; source</h2></div>
       <div class="card-body">
         <div class="field">
           <label for="sourceId">Lead source</label>
@@ -202,11 +207,12 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <%# --------------------- 3. Requirement (collapsible) --------------------- %>
-  <details class="card section" <%= v.budgetMinMinor || v.preferredConfigurations ? 'open' : '' %>>
-    <summary class="card-head"><h2 class="grow">3 · Property requirement</h2><span class="muted small">optional</span></summary>
+    <%# --------------------- 3. Requirement (collapsible) --------------------- %>
+    <details class="card section" <%= v.budgetMinMinor || v.preferredConfigurations ? 'open' : '' %>>
+      <summary class="card-head">
+        <h2 class="grow"><span class="step-n">3</span> Property requirement</h2>
+        <span class="opt-tag">optional</span>
+      </summary>
     <div class="card-body">
       <div class="field-row">
         <div class="field">
@@ -272,9 +278,12 @@
     </div>
   </details>
 
-  <%# ------------------ 4. Qualification (collapsible, §10.1) --------------- %>
-  <details class="card section">
-    <summary class="card-head"><h2 class="grow">4 · Qualification</h2><span class="muted small">optional</span></summary>
+    <%# ------------------ 4. Qualification (collapsible, §10.1) --------------- %>
+    <details class="card section">
+      <summary class="card-head">
+        <h2 class="grow"><span class="step-n">4</span> Qualification</h2>
+        <span class="opt-tag">optional</span>
+      </summary>
     <div class="card-body">
       <div class="field-row">
         <div class="field">
@@ -317,13 +326,14 @@
     </div>
   </details>
 
-  <%# ------------------------------ 5. Notes ------------------------------ %>
-  <div class="card">
-    <div class="card-head"><h2 class="grow">5 · Notes</h2></div>
-    <div class="card-body">
-      <div class="field">
-        <label for="requirementNote">What did the customer ask for? <span class="opt">optional</span></label>
-        <textarea id="requirementNote" name="requirementNote" maxlength="2000" rows="3"><%= val('requirementNote') %></textarea>
+    <%# ------------------------------ 5. Notes ------------------------------ %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow"><span class="step-n">5</span> Notes</h2></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="requirementNote">What did the customer ask for? <span class="opt">optional</span></label>
+          <textarea id="requirementNote" name="requirementNote" maxlength="2000" rows="3"><%= val('requirementNote') %></textarea>
+        </div>
       </div>
     </div>
   </div>

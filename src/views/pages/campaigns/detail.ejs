@@ -25,10 +25,10 @@
 </div>
 
 <div class="grid cols-4 mb-2">
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= campaign.recipientCount %></div><div class="lbl muted small">Recipients</div></div></div>
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= counters.sent %></div><div class="lbl muted small">Sent</div></div></div>
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= counters.skipped %></div><div class="lbl muted small">Excluded (opt-out)</div></div></div>
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= counters.failed %></div><div class="lbl muted small">Failed</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= campaign.recipientCount %></div><div class="stat-lbl">Recipients</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= counters.sent %></div><div class="stat-lbl">Sent</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= counters.skipped %></div><div class="stat-lbl">Excluded (opt-out)</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= counters.failed %></div><div class="stat-lbl">Failed</div></div></div>
 </div>
 
 <div class="card">

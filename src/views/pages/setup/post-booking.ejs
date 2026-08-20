@@ -1,0 +1,162 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Post-booking</h1>
+    <div class="sub">The customer link, the KYC checklist, payment reminders and receipts.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Customer link &amp; receipts</h2></div>
+    <div class="card-body">
+      <form method="post" action="/api/setup/post-booking/settings">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="field-row">
+          <div class="field">
+            <label for="expiry">Customer link valid for (days)</label>
+            <input type="number" id="expiry" name="bookingLinkExpiryDays" min="1" max="90"
+                   value="<%= settings.bookingLinkExpiryDays || 7 %>">
+          </div>
+          <div class="field">
+            <label for="paylink">Payment link valid for (days)</label>
+            <input type="number" id="paylink" name="paymentLinkExpiryDays" min="1" max="30"
+                   value="<%= settings.paymentLinkExpiryDays || 3 %>">
+          </div>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" name="bookingLinkRequireOtp" value="1" <%= settings.bookingLinkRequireOtp ? 'checked' : '' %>>
+          Ask the customer for an OTP before opening their booking form
+        </label>
+        <p class="hint">
+          Verified against the mobile number on the booking. Off by default — the link token is
+          already long and unguessable, and it expires.
+        </p>
+
+        <label class="check">
+          <input type="checkbox" name="collectionAllowPartialPaymentLink" value="1" <%= settings.collectionAllowPartialPaymentLink !== false ? 'checked' : '' %>>
+          Allow payment links for less than the full outstanding amount
+        </label>
+        <label class="check">
+          <input type="checkbox" name="collectionAllowCash" value="1" <%= settings.collectionAllowCash !== false ? 'checked' : '' %>>
+          Allow cash receipts
+        </label>
+        <label class="check">
+          <input type="checkbox" name="receiptAcknowledgementEnabled" value="1" <%= settings.receiptAcknowledgementEnabled !== false ? 'checked' : '' %>>
+          Send a payment acknowledgement after every confirmed payment
+        </label>
+        <p class="hint">Labelled "Payment Acknowledgement", never a tax receipt.</p>
+
+        <h3>Payment reminders</h3>
+        <label class="check">
+          <input type="checkbox" name="collectionReminderEnabled" value="1" <%= settings.collectionReminderEnabled ? 'checked' : '' %>>
+          Send automated payment reminders to customers
+        </label>
+        <div class="field-row">
+          <div class="field">
+            <label for="before">Days before due</label>
+            <input type="text" id="before" name="collectionReminderDaysBefore"
+                   value="<%= (settings.collectionReminderDaysBefore || [7,3,1]).join(', ') %>">
+          </div>
+          <div class="field">
+            <label for="after">Days after due</label>
+            <input type="text" id="after" name="collectionReminderDaysAfter"
+                   value="<%= (settings.collectionReminderDaysAfter || [1,7]).join(', ') %>">
+          </div>
+          <div class="field">
+            <label for="channel">Channel</label>
+            <select id="channel" name="collectionReminderChannel">
+              <% ['WHATSAPP','SMS','EMAIL'].forEach(function (c) { %>
+                <option value="<%= c %>" <%= (settings.collectionReminderChannel || 'WHATSAPP') === c ? 'selected' : '' %>><%= c.toLowerCase() %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <p class="hint">A reminder is sent once per installment per band, and never for a paid installment.</p>
+
+        <button class="btn btn-primary" type="submit">Save settings</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Payment gateway</h2></div>
+    <div class="card-body">
+      <% if (gateway) { %>
+        <dl class="dl">
+          <dt>Provider</dt><dd><%= gateway.provider %></dd>
+          <dt>Status</dt><dd><span class="badge"><%= gateway.status.replace(/_/g,' ').toLowerCase() %></span></dd>
+          <dt>Callback URL</dt><dd class="small"><code>/api/webhooks/payments/<%= gateway.webhookKey %></code></dd>
+        </dl>
+      <% } else { %>
+        <p class="muted">No payment gateway connected.</p>
+        <p class="small">
+          Payment links still work: they open a page on this application showing the amount and status,
+          and the payment is recorded by your collections team. Connect a gateway to collect online.
+        </p>
+      <% } %>
+      <a class="btn btn-sm" href="/app/setup/integrations">Integrations</a>
+    </div>
+  </div>
+</div>
+
+<%# §125: the KYC checklist itself. %>
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">KYC document types</h2>
+    <span class="muted small"><%= types.filter(function (t) { return t.active; }).length %> active</span>
+  </div>
+  <div class="table-wrap"><table class="responsive">
+    <thead>
+      <tr><th>Document</th><th>Code</th><th>Applies to</th><th>Mandatory</th><th>Needs</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% types.forEach(function (t) { %>
+        <tr>
+          <td data-label="Document"><%= t.name %></td>
+          <td data-label="Code"><code class="small"><%= t.code %></code></td>
+          <td data-label="Applies to"><%= t.appliesTo.toLowerCase() %></td>
+          <td data-label="Mandatory"><%= t.mandatory ? 'Yes' : 'No' %></td>
+          <td data-label="Needs">
+            <%= [t.numberRequired ? 'number' : null, t.expiryRequired ? 'expiry' : null].filter(Boolean).join(', ') || '—' %>
+          </td>
+          <td data-label="Status"><span class="badge <%= t.active ? 'b-green' : 'b-slate' %>"><%= t.active ? 'Active' : 'Inactive' %></span></td>
+          <td data-label="">
+            <form method="post" action="/api/setup/post-booking/kyc-types/<%= t._id %>/toggle">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm" type="submit"><%= t.active ? 'Deactivate' : 'Activate' %></button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <div class="card-body">
+    <form method="post" action="/api/setup/post-booking/kyc-types">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field-row">
+        <div class="field"><label for="t-name">Document name</label><input type="text" id="t-name" name="name" maxlength="100" required></div>
+        <div class="field"><label for="t-code">Code</label><input type="text" id="t-code" name="code" maxlength="40" required></div>
+        <div class="field">
+          <label for="t-applies">Applies to</label>
+          <select id="t-applies" name="appliesTo">
+            <option value="BOTH">Both</option>
+            <option value="INDIVIDUAL">Individual</option>
+            <option value="COMPANY">Company</option>
+          </select>
+        </div>
+        <div class="field"><label for="t-order">Order</label><input type="number" id="t-order" name="displayOrder" value="50"></div>
+      </div>
+      <label class="check"><input type="checkbox" name="mandatory" value="1"> Mandatory</label>
+      <label class="check"><input type="checkbox" name="numberRequired" value="1"> Ask for the document number</label>
+      <label class="check"><input type="checkbox" name="expiryRequired" value="1"> Ask for an expiry date</label>
+      <button class="btn mt-1" type="submit">Add document type</button>
+    </form>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

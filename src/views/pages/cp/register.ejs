@@ -1,0 +1,58 @@
+<%- include('../../partials/head') %>
+<div class="public-wrap">
+  <div class="public-hero">
+    <h1>Become a channel partner</h1>
+    <p class="muted"><%= tenant.name %></p>
+  </div>
+
+  <% if (submitted) { %>
+    <div class="card"><div class="card-body">
+      <h2>Thank you</h2>
+      <p class="muted mb-0">
+        Your application has been received and is with the channel partner team. They will contact you
+        about RERA and project approvals. Every application is reviewed before it is activated.
+      </p>
+    </div></div>
+  <% } else { %>
+    <div class="card">
+      <div class="card-body">
+        <%- include('../../partials/flash') %>
+        <form method="post" action="/cp/register">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="partnerType">I am registering as</label>
+            <select id="partnerType" name="partnerType" required>
+              <option value="INDIVIDUAL">An individual partner</option>
+              <option value="COMPANY">A company</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="primaryContactName">Your name</label><input type="text" id="primaryContactName" name="primaryContactName" maxlength="150" required></div>
+            <div class="field"><label for="mobile">Mobile</label><input type="tel" id="mobile" name="mobile" maxlength="20" required></div>
+            <div class="field"><label for="email">Email</label><input type="email" id="email" name="email" maxlength="150" required></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="legalName">Company legal name <span class="opt">if a company</span></label><input type="text" id="legalName" name="legalName" maxlength="200"></div>
+            <div class="field"><label for="pan">PAN</label><input type="text" id="pan" name="pan" maxlength="12"></div>
+            <div class="field"><label for="gstin">GSTIN <span class="opt">optional</span></label><input type="text" id="gstin" name="gstin" maxlength="20"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="city">City</label><input type="text" id="city" name="city" maxlength="80" required></div>
+            <div class="field"><label for="state">State</label><input type="text" id="state" name="state" maxlength="80"></div>
+          </div>
+          <div class="field">
+            <label for="address">Address</label>
+            <textarea id="address" name="address" rows="2" maxlength="500"></textarea>
+          </div>
+          <button class="btn btn-primary" type="submit">Submit application</button>
+          <p class="small muted mb-0 mt-1">
+            The channel partner team will ask for your GujRERA certificate and bank details before
+            activating your account.
+          </p>
+        </form>
+      </div>
+    </div>
+  <% } %>
+</div>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<%- include('../../partials/app-head') %>
+<% const t = data.tiles; %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Channel partners</h1>
+    <div class="sub">Who is selling for us, what they brought in, and what we owe them.</div>
+  </div>
+  <div class="btn-group">
+    <% if (can('cp.registration.view')) { %><a class="btn" href="/app/channel-partners/registrations">Registrations</a><% } %>
+    <% if (can('cp.claim.view')) { %><a class="btn" href="/app/channel-partners/claims">Claims</a><% } %>
+    <% if (can('cp.invoice.view')) { %><a class="btn" href="/app/channel-partners/invoices">Invoices</a><% } %>
+    <% if (can('cp.partner.create')) { %><a class="btn btn-primary" href="/app/channel-partners/registrations/new">Add partner</a><% } %>
+  </div>
+</div>
+
+<form class="filters" method="get" action="/app/channel-partners/dashboard">
+  <div class="field"><label for="d-from">From</label><input type="date" id="d-from" name="from" value="<%= query.from || '' %>"></div>
+  <div class="field"><label for="d-to">To</label><input type="date" id="d-to" name="to" value="<%= query.to || '' %>"></div>
+  <div class="field">
+    <label for="d-project">Project</label>
+    <select id="d-project" name="projectId">
+      <option value="">All projects</option>
+      <% projects.forEach(function (p) { %>
+        <option value="<%= p._id %>" <%= String(query.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="d-type">Partner type</label>
+    <select id="d-type" name="partnerType">
+      <option value="">Company and individual</option>
+      <option value="COMPANY" <%= query.partnerType === 'COMPANY' ? 'selected' : '' %>>Company</option>
+      <option value="INDIVIDUAL" <%= query.partnerType === 'INDIVIDUAL' ? 'selected' : '' %>>Individual</option>
+    </select>
+  </div>
+  <button class="btn" type="submit">Apply</button>
+</form>
+
+<%# §9: the tiles, and each one is a question a CP manager actually asks. %>
+<div class="tiles">
+  <a class="tile" href="/app/channel-partners"><div class="num"><%= t.totalPartners %></div><div class="lbl">Registered partners</div></a>
+  <a class="tile" href="/app/channel-partners?partnerType=COMPANY&status=ACTIVE"><div class="num"><%= t.activeCompany %></div><div class="lbl">Active companies</div></a>
+  <a class="tile" href="/app/channel-partners?partnerType=INDIVIDUAL&status=ACTIVE"><div class="num"><%= t.activeIndividual %></div><div class="lbl">Active individuals</div></a>
+  <a class="tile warn" href="/app/channel-partners/registrations?status=SUBMITTED"><div class="num"><%= t.pendingRegistrations %></div><div class="lbl">Pending registrations</div></a>
+  <a class="tile warn" href="/app/channel-partners?expiringDays=60"><div class="num"><%= t.reraExpiringSoon %></div><div class="lbl">RERA expiring soon</div></a>
+  <a class="tile bad" href="/app/channel-partners?reraStatus=EXPIRED"><div class="num"><%= t.reraExpired %></div><div class="lbl">RERA expired</div></a>
+  <a class="tile warn" href="/app/channel-partners/invoices?status=SUBMITTED"><div class="num"><%= t.invoicesPendingApproval %></div><div class="lbl">Invoices to review</div></a>
+  <a class="tile" href="/app/channel-partners/claims"><div class="num"><%= t.leadsSubmitted %></div><div class="lbl">Leads submitted</div></a>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= t.bookings %></div>
+    <div class="stat-lbl">Bookings</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(t.bookingValueMinor) %></div>
+    <div class="stat-lbl">Booking value</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(t.commissionEligibleMinor) %></div>
+    <div class="stat-lbl">Commission eligible</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(t.payoutPendingMinor) %></div>
+    <div class="stat-lbl">Payout pending</div></div></div>
+</div>
+
+<div class="grid cols-2">
+  <%# §11: the funnel, in the order it happens. %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Partner funnel</h2></div>
+    <div class="card-body">
+      <div class="table-wrap"><table class="responsive">
+        <tbody>
+          <tr><td>Partner leads</td><td class="num"><%= data.funnel.leads %></td></tr>
+          <tr><td>Connected</td><td class="num"><%= data.funnel.connected %></td></tr>
+          <tr><td>Site visits</td><td class="num"><%= data.funnel.visits %></td></tr>
+          <tr><td>Blocks</td><td class="num"><%= data.funnel.blocks %></td></tr>
+          <tr><td>Bookings</td><td class="num"><%= data.funnel.bookings %></td></tr>
+          <tr><td><strong>Booking value</strong></td><td class="num"><strong><%= h.money(data.funnel.bookingValueMinor) %></strong></td></tr>
+        </tbody>
+      </table></div>
+      <p class="small muted mb-0">Accepted claims only — a rejected or disputed submission is not a partner lead.</p>
+    </div>
+  </div>
+
+  <%# §206: four figures, never collapsed into one. %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Commission</h2></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Accrued</dt><dd><%= h.money(data.commission.accruedMinor) %></dd>
+        <dt>Eligible</dt><dd><%= h.money(data.commission.eligibleMinor) %></dd>
+        <dt>Invoiced</dt><dd><%= h.money(data.commission.invoicedMinor) %></dd>
+        <dt>Paid</dt><dd><%= h.money(data.commission.paidMinor) %></dd>
+        <dt>Paid in range</dt><dd><%= h.money(data.payoutsInRangeMinor) %></dd>
+      </dl>
+      <p class="small muted mb-0">Accrued is what was earned. Only eligible is payable.</p>
+    </div>
+  </div>
+</div>
+
+<%# §10: ranked by a column the user chose, not by a mystery score. %>
+<div class="card mt-2">
+  <div class="card-head">
+    <h2 class="grow">Top performers</h2>
+    <div class="btn-group">
+      <% [['bookings','Bookings'],['value','Value'],['leads','Leads'],['visits','Visits'],['conversion','Conversion']].forEach(function (opt) { %>
+        <a class="btn btn-sm <%= rankBy === opt[0] ? 'btn-primary' : '' %>"
+           href="/app/channel-partners/dashboard?<%= new URLSearchParams(Object.assign({}, query, { rankBy: opt[0] })).toString() %>"><%= opt[1] %></a>
+      <% }) %>
+    </div>
+  </div>
+  <% if (!performers.length) { %>
+    <%- include('../../partials/empty', { heading: 'No partner activity yet', message: 'Once partners submit leads, their performance appears here.', ctaHref: '/app/channel-partners', ctaLabel: 'All partners' }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead>
+        <tr><th>#</th><th>Partner</th><th>Type</th><th class="num">Leads</th><th class="num">Visits</th>
+        <th class="num">Bookings</th><th class="num">Booking value</th><th class="num">Lead→booking</th></tr>
+      </thead>
+      <tbody>
+        <% performers.forEach(function (r, i) { %>
+          <tr>
+            <td data-label="#"><%= i + 1 %></td>
+            <td data-label="Partner"><a href="/app/channel-partners/<%= r.partner._id %>"><%= r.name %></a></td>
+            <td data-label="Type"><%= (r.partnerType || '').toLowerCase() %></td>
+            <td data-label="Leads" class="num"><%= r.leads %></td>
+            <td data-label="Visits" class="num"><%= r.visits %></td>
+            <td data-label="Bookings" class="num"><%= r.bookings %></td>
+            <td data-label="Booking value" class="num"><%= h.moneyShort(r.bookingValueMinor) %></td>
+            <td data-label="Lead→booking" class="num"><%= r.leadToBooking %>%</td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

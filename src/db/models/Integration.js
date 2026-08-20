@@ -9,6 +9,8 @@ const tenantGuard = require('../tenantGuard');
 const CATEGORIES = [
   'META_LEAD_ADS', 'GOOGLE_ADS', 'LINKEDIN_ADS', 'PROPERTY_PORTAL', 'WEBSITE_WEBHOOK',
   'WHATSAPP', 'SMS', 'EMAIL', 'TELEPHONY', 'AI',
+  // V2 §139: provider-agnostic payment gateway.
+  'PAYMENT_GATEWAY',
 ];
 
 const integrationSchema = new Schema({

@@ -36,6 +36,38 @@ const EVENTS = {
 
   BOOKING_CREATED: 'booking.created',
 
+  // V2 §187 — post-booking & collections.
+  BOOKING_POST_INITIALIZED: 'booking.post_initialized',
+  COLLECTION_INSTALLMENT_DUE: 'collection.installment_due',
+  COLLECTION_INSTALLMENT_OVERDUE: 'collection.installment_overdue',
+  COLLECTION_FOLLOWUP_DUE: 'collection.followup_due',
+  COLLECTION_PROMISE_CREATED: 'collection.promise_created',
+  COLLECTION_PROMISE_MISSED: 'collection.promise_missed',
+  COLLECTION_PAYMENT_RECEIVED: 'collection.payment_received',
+  COLLECTION_BOOKING_FULLY_PAID: 'collection.booking_fully_paid',
+  BOOKING_CUSTOMER_LINK_CREATED: 'booking.customer_link_created',
+  BOOKING_FORM_SUBMITTED: 'booking.form_submitted',
+  BOOKING_KYC_SUBMITTED: 'booking.kyc_submitted',
+  BOOKING_KYC_VERIFIED: 'booking.kyc_verified',
+  BOOKING_KYC_CORRECTION_REQUIRED: 'booking.kyc_correction_required',
+  COLLECTION_PAYMENT_LINK_CREATED: 'collection.payment_link_created',
+  COLLECTION_RECEIPT_REVERSED: 'collection.receipt_reversed',
+
+  // V2 §187 — channel partner.
+  CP_REGISTRATION_SUBMITTED: 'cp.registration_submitted',
+  CP_REGISTRATION_APPROVED: 'cp.registration_approved',
+  CP_REGISTRATION_REJECTED: 'cp.registration_rejected',
+  CP_RERA_EXPIRING: 'cp.rera_expiring',
+  CP_RERA_EXPIRED: 'cp.rera_expired',
+  CP_LEAD_SUBMITTED: 'cp.lead_submitted',
+  CP_CLAIM_CONFLICT: 'cp.claim_conflict',
+  CP_CLAIM_ACCEPTED: 'cp.claim_accepted',
+  CP_BOOKING_CREATED: 'cp.booking_created',
+  CP_COMMISSION_ELIGIBLE: 'cp.commission_eligible',
+  CP_INVOICE_SUBMITTED: 'cp.invoice_submitted',
+  CP_INVOICE_APPROVED: 'cp.invoice_approved',
+  CP_INVOICE_PAID: 'cp.invoice_paid',
+
   CAMPAIGN_SENT: 'campaign.sent',
   CAMPAIGN_DELIVERY_UPDATED: 'campaign.delivery_updated',
 

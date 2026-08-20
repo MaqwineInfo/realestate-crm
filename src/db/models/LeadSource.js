@@ -4,7 +4,12 @@ const tenantGuard = require('../tenantGuard');
 /** Spec §12.1: tenant-maintained source names over fixed system categories. */
 const CATEGORIES = [
   'META', 'GOOGLE', 'LINKEDIN', 'PROPERTY_PORTAL', 'WEBSITE', 'LANDING_PAGE',
-  'IVR', 'WHATSAPP', 'CHATBOT', 'QR', 'WALK_IN', 'REFERRAL', 'MANUAL', 'API', 'OTHER',
+  'IVR', 'WHATSAPP', 'CHATBOT', 'QR', 'WALK_IN', 'REFERRAL', 'MANUAL', 'API',
+  // V2 §33: how the inquiry arrived when a channel partner submitted it. This is
+  // the marketing-source dimension; the partner itself is recorded separately on
+  // the lead, because a lead can have both a campaign and a partner.
+  'CHANNEL_PARTNER',
+  'OTHER',
 ];
 
 const leadSourceSchema = new Schema({

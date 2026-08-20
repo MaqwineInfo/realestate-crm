@@ -16,8 +16,17 @@ const distribution = require('./distribution');
  */
 const METHODS = ['ROUND_ROBIN'];
 
+/**
+ * V2 §148: the same screens and rules now manage two rotations — leads and
+ * collections — kept apart by `poolType`. Pools created before V2 have no
+ * `poolType` field, so "the lead pools" means "not the collection ones".
+ */
+const typeFilter = (poolType) => (poolType === 'COLLECTION'
+  ? { poolType: 'COLLECTION' }
+  : { poolType: { $ne: 'COLLECTION' } });
+
 /** §76: everything that has to be true before a pool can go live. */
-async function validate({ tenantId, data, poolId = null }) {
+async function validate({ tenantId, data, poolId = null, poolType = 'LEAD' }) {
   const name = String(data.name || '').trim();
   if (!name) throw badRequest('Name this pool.');
   if (data.method && !METHODS.includes(data.method)) {
@@ -36,30 +45,45 @@ async function validate({ tenantId, data, poolId = null }) {
     if (!project) throw badRequest('Choose a project in this organization.');
     projectId = project._id;
 
-    // §76: one active pool per project, so "which rule applied" is never ambiguous.
+    // §76: one active pool per project per type, so "which rule applied" is
+    // never ambiguous — and a project may have both a lead and a collection rule.
     const clash = await AssignmentPool.findOne({
-      tenantId, projectId, active: true, ...(poolId ? { _id: { $ne: poolId } } : {}),
+      tenantId, projectId, active: true, ...typeFilter(poolType), ...(poolId ? { _id: { $ne: poolId } } : {}),
     }).lean();
     if (clash) throw badRequest(`${project.name} already has an active allocation rule.`);
   }
 
   if (memberIds.length) {
-    const active = await User.find({ tenantId, _id: { $in: memberIds }, status: 'ACTIVE' }).select('_id').lean();
+    const active = await User.find({ tenantId, _id: { $in: memberIds }, status: 'ACTIVE' })
+      .select('_id name').populate('roleId').lean();
     if (active.length !== memberIds.length) {
       throw badRequest('Every member must be an active user in this organization.');
+    }
+    // §149: a collection pool member who cannot work collections is a silent
+    // black hole — the booking would be assigned to someone with no queue.
+    if (poolType === 'COLLECTION') {
+      const { can } = require('../lib/access');
+      const unable = active.filter((u) => {
+        const asUser = { ...u, role: u.roleId };
+        return !can(asUser, 'collection.followup') && !can(asUser, 'collection.view');
+      });
+      if (unable.length) {
+        throw badRequest(`${unable.map((u) => u.name).join(', ')} cannot work collections. Grant collection permission in Setup → Roles first.`);
+      }
     }
   }
   return { name, projectId, memberIds, escalationUserIds: [...new Set((data.escalationUserIds || []).map(String))] };
 }
 
-async function create({ tenantId, actor, data }) {
-  const clean = await validate({ tenantId, data });
+async function create({ tenantId, actor, data, poolType = 'LEAD' }) {
+  const clean = await validate({ tenantId, data, poolType });
   if (!clean.memberIds.length) throw badRequest('Add at least one member before creating a pool.');
 
   const pool = await AssignmentPool.create({
     tenantId,
     name: clean.name,
     projectId: clean.projectId,
+    poolType,
     isDefault: false,
     memberIds: clean.memberIds,
     escalationUserIds: clean.escalationUserIds,
@@ -79,7 +103,9 @@ async function update({ tenantId, actor, poolId, data }) {
   // The default pool is the organization's safety net — it cannot become
   // project-scoped, and it cannot be left without anyone in it (§72).
   const scopeType = pool.isDefault ? 'DEFAULT' : data.scopeType;
-  const clean = await validate({ tenantId, data: { ...data, scopeType }, poolId: pool._id });
+  const clean = await validate({
+    tenantId, data: { ...data, scopeType }, poolId: pool._id, poolType: pool.poolType || 'LEAD',
+  });
   if (pool.isDefault && !clean.memberIds.length) {
     throw badRequest('The default pool must keep at least one member — it is the fallback for every project.');
   }
@@ -136,8 +162,8 @@ async function reorder({ tenantId, actor, poolId, memberUserIds }) {
 }
 
 /** Everything the setup screen needs, including the read-only next-up preview. */
-async function overview({ tenantId }) {
-  const pools = await AssignmentPool.find({ tenantId })
+async function overview({ tenantId, poolType = 'LEAD' }) {
+  const pools = await AssignmentPool.find({ tenantId, ...typeFilter(poolType) })
     .sort({ isDefault: -1, name: 1 })
     .populate('projectId', 'name')
     .populate('memberIds', 'name email status')
@@ -153,4 +179,4 @@ async function overview({ tenantId }) {
   })));
 }
 
-module.exports = { METHODS, validate, create, update, toggle, reorder, overview };
+module.exports = { METHODS, validate, create, update, toggle, reorder, overview, typeFilter };

@@ -1,0 +1,64 @@
+<%- include('../../partials/head') %>
+<%
+  const project = booking.projectId || {};
+  const unit = booking.unitId || {};
+  const active = ['CREATED', 'SENT', 'OPEN'].includes(paymentRequest.status);
+%>
+<div class="public-wrap">
+  <div class="public-hero">
+    <h1><%= h.money(paymentRequest.amountMinor) %></h1>
+    <p class="muted">
+      <%= project.name %><%= unit.unitNumber ? ' · Unit ' + unit.unitNumber : '' %>
+      <% if (installment) { %> · <%= installment.milestone %><% } %>
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <% if (paid || paymentRequest.status === 'PAID') { %>
+        <h2>Payment received</h2>
+        <p class="muted">Thank you. Your payment acknowledgement has been sent to you.</p>
+      <% } else if (!active) { %>
+        <h2>This payment link is closed</h2>
+        <p class="muted">
+          Status: <%= paymentRequest.status.toLowerCase() %>.
+          Contact your sales representative for a new link.
+        </p>
+      <% } else { %>
+        <dl class="dl">
+          <dt>Amount</dt><dd><strong><%= h.money(paymentRequest.amountMinor) %></strong></dd>
+          <% if (installment) { %><dt>Towards</dt><dd><%= installment.milestone %></dd><% } %>
+          <% if (paymentRequest.expiresAt) { %>
+            <dt>Valid until</dt><dd><%= h.date(paymentRequest.expiresAt) %></dd>
+          <% } %>
+        </dl>
+
+        <% if (paymentRequest.driver === 'mock') { %>
+          <%#
+            No payment gateway is connected for this organization yet, so there is
+            nothing here that can actually take money. Saying so plainly beats a
+            Pay button that quietly does nothing.
+          %>
+          <div class="flash flash-info">
+            Online payment is not yet enabled for this organization. Please pay by the
+            method your sales representative shared, and it will be recorded against
+            this booking.
+          </div>
+          <% if (!isProduction) { %>
+            <form method="post" action="/pay/<%= token %>/simulate">
+              <button class="btn" type="submit">Simulate a successful payment (test install)</button>
+            </form>
+          <% } %>
+        <% } else { %>
+          <a class="btn btn-primary" href="<%= paymentRequest.paymentUrl %>">Pay <%= h.money(paymentRequest.amountMinor) %></a>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+
+  <p class="muted small">
+    <%= tenant ? tenant.name : '' %>
+  </p>
+</div>
+</body>
+</html>

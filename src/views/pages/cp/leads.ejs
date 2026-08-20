@@ -1,0 +1,76 @@
+<%- include('../../partials/cp-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>My leads</h1>
+    <div class="sub">What you submitted, and where each one stands.</div>
+  </div>
+  <% if (!partnerReadOnly) { %><a class="btn btn-primary" href="/cp/leads/new">Submit a lead</a><% } %>
+</div>
+
+<form class="filters" method="get" action="/cp/leads">
+  <div class="field">
+    <label for="l-status">Claim status</label>
+    <select id="l-status" name="status">
+      <option value="">Any</option>
+      <% ['ACCEPTED','PENDING','CONFLICT','REJECTED'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= query.status === s ? 'selected' : '' %>><%= s.toLowerCase() %></option>
+      <% }) %>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Leads</h2>
+    <span class="muted small"><%= total %> submitted</span>
+  </div>
+  <% if (!rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No leads yet', message: 'Submit your first customer and it will appear here with its live status.', ctaHref: partnerReadOnly ? null : '/cp/leads/new', ctaLabel: 'Submit a lead' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr><th>Reference</th><th>Customer</th><th>Project</th><th>Submitted</th><th>Claim</th><th>Stage</th><th>Visit</th><th>Booking</th></tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(function (row) { const v = row.visible; %>
+          <tr>
+            <td data-label="Reference"><%= row.claim.claimNumber %></td>
+            <td data-label="Customer">
+              <%= v.customerName %>
+              <% if (row.claim.channelPartnerMemberId) { %>
+                <div class="small muted">by <%= row.claim.channelPartnerMemberId.name %></div>
+              <% } %>
+            </td>
+            <td data-label="Project"><%= v.project || '—' %></td>
+            <td data-label="Submitted"><%= h.date(row.claim.submittedAt) %></td>
+            <td data-label="Claim">
+              <span class="badge <%= row.claim.status === 'ACCEPTED' ? 'b-green' : (row.claim.status === 'CONFLICT' ? 'b-amber' : (row.claim.status === 'REJECTED' ? 'b-red' : '')) %>">
+                <%= row.claim.status.toLowerCase().replace('_',' ') %>
+              </span>
+              <%# §309: never promise attribution while a conflict is open. %>
+              <% if (row.claim.status === 'CONFLICT') { %>
+                <div class="small muted">Under review by the sales team.</div>
+              <% } else if (row.claim.status === 'REJECTED' && row.claim.reviewNote) { %>
+                <div class="small muted"><%= row.claim.reviewNote %></div>
+              <% } %>
+            </td>
+            <td data-label="Stage"><%= v.stage || '—' %></td>
+            <td data-label="Visit">
+              <%= v.visitStatus === 'NONE' ? '—' : v.visitStatus.toLowerCase() %>
+              <% if (v.visitAt) { %><div class="small muted"><%= h.date(v.visitAt) %></div><% } %>
+            </td>
+            <td data-label="Booking">
+              <%= v.bookingStatus === 'NONE' ? '—' : v.bookingStatus.toLowerCase() %>
+              <% if (v.bookingNumber) { %><div class="small muted"><%= v.bookingNumber %></div><% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination') %>
+  <% } %>
+</div>
+
+<%- include('../../partials/cp-foot') %>

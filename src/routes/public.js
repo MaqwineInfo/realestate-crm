@@ -326,6 +326,196 @@ router.get('/share/cost-sheet/:token', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/* ============ V2 §116/§164: the customer booking form (public) ============= */
+
+/**
+ * No session, no login: the unguessable token IS the credential (§117), so
+ * every route here is rate limited (§192), carries no-index headers, and shows
+ * the customer only what `bookingForm.customerView` assembles — a view model
+ * that never loads internal notes, aging or promises (§269).
+ */
+const bookingForm = require('../services/bookingForm');
+const payments = require('../services/payments');
+
+const noIndex = (res) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('Cache-Control', 'private, no-store');
+};
+
+const publicLimit = (req, res, next) => req.app.locals.limiters.public(req, res, next);
+
+/** Friendly page for an expired, revoked or unknown link (§192). */
+function linkProblem(res, err) {
+  const status = err.status === 404 ? 404 : 410;
+  return res.status(status).render('pages/public/booking-form-closed', {
+    title: 'Booking link',
+    message: err.expose ? err.message : 'This booking link is not valid.',
+  });
+}
+
+router.get('/booking-form/:token', publicLimit, async (req, res, next) => {
+  noIndex(res);
+  try {
+    const link = await bookingForm.resolveToken({ token: req.params.token });
+    const view = await bookingForm.customerView({ link });
+    await require('../db/models').BookingCustomerLink.updateOne(
+      { tenantId: link.tenantId, _id: link._id },
+      { $set: { lastOpenedAt: new Date() }, $inc: { openCount: 1 } },
+    );
+    res.render('pages/public/booking-form', {
+      title: 'Your booking',
+      token: req.params.token,
+      ...view,
+      // OTP gate: the form itself is not rendered until the code is verified.
+      otpPending: !!link.otpRequired && !link.otpVerifiedAt,
+      sent: req.query.sent === '1',
+    });
+  } catch (err) {
+    if (err.status === 404 || err.status === 403) return linkProblem(res, err);
+    next(err);
+  }
+});
+
+router.post('/booking-form/:token/otp', publicLimit, async (req, res, next) => {
+  noIndex(res);
+  try {
+    if (req.body.code) {
+      await bookingForm.verifyOtp({ token: req.params.token, code: req.body.code });
+      return res.redirect(`/booking-form/${req.params.token}`);
+    }
+    await bookingForm.sendOtp({ token: req.params.token });
+    return res.redirect(`/booking-form/${req.params.token}?sent=1`);
+  } catch (err) {
+    if (err.status === 404 || err.status === 403) return linkProblem(res, err);
+    next(err);
+  }
+});
+
+/**
+ * §119–§124. The customer's declared data. `submit()` reads only from its own
+ * allowlist of applicant fields, so no amount of extra form input can reach a
+ * commercial field (§118/§324.2).
+ */
+router.post('/booking-form/:token', publicLimit, async (req, res, next) => {
+  noIndex(res);
+  try {
+    const body = {
+      declaration: req.body.declaration === '1',
+      primary: req.body.primary || {},
+      coApplicants: Object.values(req.body.co || {}),
+    };
+    await bookingForm.submit({
+      token: req.params.token,
+      body,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    res.redirect(`/booking-form/${req.params.token}?submitted=1`);
+  } catch (err) {
+    if (err.status === 404 || err.status === 403) return linkProblem(res, err);
+    next(err);
+  }
+});
+
+/** §126: the customer uploads their own documents, straight into private storage. */
+const multer = require('multer');
+const config = require('../config');
+const customerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: config.maxUploadBytes } });
+
+router.post('/booking-form/:token/kyc', publicLimit, (req, res, next) => {
+  customerUpload.single('file')(req, res, (err) => {
+    if (err) return next(require('../lib/errors').badRequest('That file could not be read. Try a smaller file.'));
+    next();
+  });
+}, async (req, res, next) => {
+  noIndex(res);
+  try {
+    const link = await bookingForm.resolveToken({ token: req.params.token });
+    if (link.otpRequired && !link.otpVerifiedAt) {
+      throw require('../lib/errors').forbidden('Verify the code sent to your mobile first.');
+    }
+    // A submitted form still accepts document replacement — that is the whole
+    // point of the correction flow (§128) — but nothing else.
+    const kyc = require('../services/kyc');
+    await kyc.upload({
+      tenantId: link.tenantId,
+      bookingId: link.bookingId,
+      applicantId: req.body.applicantId,
+      documentTypeId: req.body.documentTypeId,
+      file: req.file,
+      documentNumber: req.body.documentNumber,
+      expiryDate: req.body.expiryDate || undefined,
+      uploadedByType: 'CUSTOMER',
+    });
+    res.redirect(`/booking-form/${req.params.token}?uploaded=1`);
+  } catch (err) {
+    if (err.status === 404 || err.status === 403) return linkProblem(res, err);
+    next(err);
+  }
+});
+
+/** §118: "these details look wrong" becomes an internal note, never an edit. */
+router.post('/booking-form/:token/issue', publicLimit, async (req, res, next) => {
+  noIndex(res);
+  try {
+    await bookingForm.reportIssue({ token: req.params.token, message: req.body.message });
+    res.redirect(`/booking-form/${req.params.token}?reported=1`);
+  } catch (err) {
+    if (err.status === 404 || err.status === 403) return linkProblem(res, err);
+    next(err);
+  }
+});
+
+/* ==================== V2 §138–§142: payment link pages ==================== */
+
+router.get('/pay/:token', publicLimit, async (req, res, next) => {
+  noIndex(res);
+  try {
+    const view = await payments.resolveToken({ token: req.params.token });
+    res.render('pages/public/payment', {
+      title: 'Payment',
+      token: req.params.token,
+      ...view,
+      paid: req.query.paid === '1',
+      // The simulate button is a development affordance, never a production one.
+      isProduction: config.env === 'production',
+    });
+  } catch (err) {
+    if (err.status === 404) return linkProblem(res, err);
+    next(err);
+  }
+});
+
+/**
+ * The mock driver's stand-in for the customer paying, so the whole
+ * link → callback → receipt path is exercisable before a real gateway exists.
+ * `simulatePayment` refuses any link that a real provider issued.
+ */
+router.post('/pay/:token/simulate', publicLimit, async (req, res, next) => {
+  noIndex(res);
+  try {
+    await payments.simulatePayment({ token: req.params.token });
+    res.redirect(`/pay/${req.params.token}?paid=1`);
+  } catch (err) {
+    if (err.status === 404) return linkProblem(res, err);
+    next(err);
+  }
+});
+
+/**
+ * §142: the gateway callback. Signature verified, raw delivery stored before
+ * processing, idempotent on the provider's payment id — a replayed callback
+ * cannot create a second receipt.
+ */
+router.post('/api/webhooks/payments/:webhookKey', (req, res, next) => {
+  req.app.locals.limiters.public(req, res, async () => {
+    try {
+      const result = await payments.handleWebhook({ webhookKey: req.params.webhookKey, req });
+      res.status(result.status).json(result.body);
+    } catch (err) { next(err); }
+  });
+});
+
 /**
  * §63: optional shared-secret verification. A provider that signs its payloads
  * gets checked; one that cannot is admitted on the unguessable key alone.

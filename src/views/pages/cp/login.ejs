@@ -1,0 +1,28 @@
+<%- include('../../partials/head') %>
+<div class="auth-wrap">
+  <div class="card">
+    <div class="card-head"><h1 class="grow">Partner portal</h1></div>
+    <div class="card-body">
+      <%- include('../../partials/flash') %>
+      <form method="post" action="/cp/login">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% if (next) { %><input type="hidden" name="next" value="<%= next %>"><% } %>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="username" required autofocus>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-primary" type="submit">Sign in</button>
+      </form>
+      <p class="small muted mt-2 mb-0">
+        Access is created by the developer's channel partner team. If you have an invitation email,
+        use the link in it to set your password.
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -6,6 +6,11 @@ const opportunities = require('../services/opportunities');
 const campaigns = require('../services/campaigns');
 const nurture = require('../services/nurture');
 const temperature = require('../services/temperature');
+const postBooking = require('../services/postBooking');
+const collections = require('../services/collections');
+const collectionFollowups = require('../services/collectionFollowups');
+const paymentReminders = require('../services/paymentReminders');
+const payments = require('../services/payments');
 
 /**
  * Spec §107: the timed automation. One tick per minute, each job independent,
@@ -27,6 +32,25 @@ const JOBS = [
   // V1.1 §14.7: inactivity decay. Nothing happens to a neglected lead to fire an
   // event, so the cooling has to be swept for.
   { name: 'temperature.decay', run: () => temperature.sweep() },
+
+  /**
+   * V2 §188. Post-booking and collections all turn on the passage of time:
+   * nothing happens on the day a payment falls due to fire an event, so each of
+   * these is a sweep. All idempotent (§188), all independently retryable.
+   */
+  { name: 'booking.post_initialize', run: () => postBooking.retrySweep() },
+  { name: 'collection.overdue_refresh', run: () => collections.overdueRefresh() },
+  { name: 'collection.followups_missed', run: () => collectionFollowups.markMissed() },
+  { name: 'collection.promise_missed', run: () => collectionFollowups.promiseSweep() },
+  { name: 'booking.payment_reminders', run: () => paymentReminders.sweep() },
+  { name: 'payments.expire_links', run: () => payments.expireSweep() },
+
+  /**
+   * V2 §53/§188 — channel partner. RERA lapses with the calendar and collection
+   * thresholds are crossed by receipts, so both need a sweep behind the events.
+   */
+  { name: 'cp.rera_expiry', run: () => require('../services/rera').expirySweep() },
+  { name: 'cp.commission_eligibility', run: () => require('../services/commissions').eligibilitySweep() },
 ];
 
 const TICK_MS = Number(process.env.SCHEDULER_TICK_MS || 60000);

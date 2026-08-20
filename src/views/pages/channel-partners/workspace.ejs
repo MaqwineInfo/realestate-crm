@@ -1,0 +1,650 @@
+<%- include('../../partials/app-head') %>
+<%
+  const p = partner.profile || {};
+  const name = p.tradeName || p.legalName || p.primaryContactName;
+  const bank = p.bank || {};
+  const tabHref = (t) => `/app/channel-partners/${partner._id}?tab=${t}`;
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= name %></h1>
+    <%# §27: the header states the compliance position, not just the name. %>
+    <div class="sub">
+      <%= p.partnerType === 'COMPANY' ? 'Company' : 'Individual' %> channel partner
+      · <%= partner.partnerCode %>
+      · <span class="badge <%= partner.status === 'ACTIVE' ? 'b-green' : 'b-amber' %>"><%= partner.status.toLowerCase() %></span>
+      <% if (partner.reraNumber) { %>
+        · GujRERA <%= partner.reraNumber %>
+        <% if (partner.reraExpiryDate) { %> · valid until <%= h.date(partner.reraExpiryDate) %><% } %>
+      <% } %>
+    </div>
+  </div>
+  <div class="btn-group">
+    <% if (can('cp.partner.edit')) { %>
+      <button type="button" class="btn" data-drawer="drawer-status">Change status</button>
+    <% } %>
+    <% if (can('cp.team.manage')) { %>
+      <button type="button" class="btn" data-drawer="drawer-invite">Invite to portal</button>
+    <% } %>
+  </div>
+</div>
+
+<%# §20: the RERA banner, in the exact words the spec asks for. %>
+<% if (reraBanner) { %>
+  <div class="flash flash-<%= reraBanner.tone === 'bad' ? 'error' : 'warn' %>"><%= reraBanner.message %></div>
+<% } %>
+<% if (freshInvite) { %>
+  <div class="flash flash-success">
+    <div class="grow">
+      <div><strong>Activation link for <%= freshInvite.email %> — shown once.</strong></div>
+      <code class="small break-all"><%= freshInvite.url %></code>
+    </div>
+  </div>
+<% } %>
+<% if (partner.status === 'SUSPENDED' && partner.suspensionReason) { %>
+  <div class="flash flash-warn">Suspended: <%= partner.suspensionReason %>. Historical leads and bookings are unchanged.</div>
+<% } %>
+
+<nav class="tabs mb-2">
+  <% tabs.forEach(function (t) { %>
+    <a class="<%= tab === t ? 'active' : '' %>" href="<%= tabHref(t) %>"><%= t.charAt(0).toUpperCase() + t.slice(1) %></a>
+  <% }) %>
+</nav>
+
+<% if (tab === 'overview') { %>
+  <%# §28: the cards a CP manager asks for, in order. %>
+  <div class="grid cols-4 mb-2">
+    <div class="card"><div class="card-body">
+      <div class="stat-num"><%= funnel.leads %></div>
+      <div class="stat-lbl">Accepted leads</div></div></div>
+    <div class="card"><div class="card-body">
+      <div class="stat-num"><%= funnel.visits %></div>
+      <div class="stat-lbl">Visits completed</div></div></div>
+    <div class="card"><div class="card-body">
+      <div class="stat-num"><%= funnel.bookings %></div>
+      <div class="stat-lbl">Bookings</div></div></div>
+    <div class="card"><div class="card-body">
+      <div class="stat-num"><%= h.moneyShort(funnel.bookingValueMinor) %></div>
+      <div class="stat-lbl">Booking value</div></div></div>
+  </div>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Registration &amp; compliance</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Contact</dt><dd><%= p.primaryContactName || '—' %></dd>
+          <dt>Mobile</dt><dd><%= h.mobile(p.mobile) %></dd>
+          <dt>Email</dt><dd><%= p.email || '—' %></dd>
+          <dt>City</dt><dd><%= p.city || '—' %><%= p.state ? ', ' + p.state : '' %></dd>
+          <dt>PAN / GSTIN</dt><dd><%= p.pan || '—' %> / <%= p.gstin || '—' %></dd>
+          <dt>Constitution</dt><dd><%= (p.constitutionType || '—').toLowerCase().replace(/_/g,' ') %></dd>
+          <dt>RERA</dt>
+          <dd>
+            <%= partner.reraNumber || '—' %>
+            <span class="badge <%= partner.reraStatus === 'VERIFIED' ? 'b-green' : 'b-amber' %>"><%= (partner.reraStatus || '').toLowerCase() %></span>
+          </dd>
+          <dt>Activated</dt><dd><%= partner.activatedAt ? h.date(partner.activatedAt) : '—' %></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Commercial</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Active projects</dt><dd><%= empanelments.filter(function (e) { return e.status === 'APPROVED'; }).length %></dd>
+          <dt>Team size</dt><dd><%= members.filter(function (m) { return m.active; }).length %></dd>
+          <dt>Portal logins</dt><dd><%= portalUsers.filter(function (u) { return u.status === 'ACTIVE'; }).length %></dd>
+          <dt>Commission accrued</dt><dd><%= h.money(summary.accruedMinor) %></dd>
+          <dt>Commission eligible</dt><dd><%= h.money(summary.uninvoicedEligibleMinor) %></dd>
+          <dt>Invoiced</dt><dd><%= h.money(summary.invoicedMinor) %></dd>
+          <dt>Paid</dt><dd><%= h.money(summary.paidMinor) %></dd>
+        </dl>
+
+        <% if (showBank) { %>
+          <h3>Bank</h3>
+          <dl class="dl">
+            <dt>Holder</dt><dd><%= bank.accountHolderName || '—' %></dd>
+            <dt>Bank</dt><dd><%= bank.bankName || '—' %></dd>
+            <dt>Account</dt><dd><%= bank.accountNumberMasked || '—' %></dd>
+            <dt>IFSC</dt><dd><%= bank.ifsc || '—' %></dd>
+          </dl>
+          <%# §21: the full number is a separate, audited action. %>
+          <% if (bank.accountNumberSealed) { %>
+            <form method="post" action="/api/channel-partners/<%= partner._id %>/reveal-bank"
+                  data-confirm="Reveal the full account number? This is recorded in the audit log.">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm" type="submit">Reveal full account number</button>
+            </form>
+          <% } %>
+        <% } else { %>
+          <p class="small muted mb-0">Bank details need the partner-bank permission.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-2">
+    <div class="card-head"><h2 class="grow">Funnel</h2></div>
+    <div class="card-body">
+      <div class="funnel-inline">
+        <span><strong><%= funnel.leads %></strong> leads</span>
+        <span class="muted">→</span>
+        <span><strong><%= funnel.connected %></strong> connected</span>
+        <span class="muted">→</span>
+        <span><strong><%= funnel.visits %></strong> visits</span>
+        <span class="muted">→</span>
+        <span><strong><%= funnel.blocks %></strong> blocks</span>
+        <span class="muted">→</span>
+        <span><strong><%= funnel.bookings %></strong> bookings</span>
+        <span class="muted">·</span>
+        <span><strong><%= h.money(funnel.bookingValueMinor) %></strong></span>
+      </div>
+      <p class="small muted mb-0 mt-1">
+        Lead→visit <%= conversions.leadToVisit %>% · visit→booking <%= conversions.visitToBooking %>%
+        · lead→booking <%= conversions.leadToBooking %>%
+      </p>
+    </div>
+  </div>
+<% } %>
+
+<% if (tab === 'team') { %>
+  <div class="card mb-2">
+    <div class="card-head">
+      <h2 class="grow">Team</h2>
+      <span class="muted small"><%= members.filter(function (m) { return m.active; }).length %> active</span>
+    </div>
+    <% if (!members.length) { %>
+      <%- include('../../partials/empty', { heading: 'No team members', message: 'A company partner can have many members, each with their own portal access.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead>
+          <tr><th>Member</th><th>Contact</th><th>Designation</th><th>Portal role</th>
+          <th>Can</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% members.forEach(function (m) { %>
+            <tr>
+              <td data-label="Member"><%= m.name %><% if (m.reraNumber) { %><div class="small muted">RERA <%= m.reraNumber %></div><% } %></td>
+              <td data-label="Contact"><%= h.mobile(m.mobile) %><div class="small muted"><%= m.email || '' %></div></td>
+              <td data-label="Designation"><%= m.designation || '—' %></td>
+              <td data-label="Portal role"><%= m.portalRole.toLowerCase().replace('_',' ') %></td>
+              <td data-label="Can" class="small">
+                <%= [m.canSubmitLeads ? 'submit leads' : null, m.canViewCompanyLeads ? 'see company leads' : null,
+                     m.canCreateInvoice ? 'invoice' : null].filter(Boolean).join(', ') || '—' %>
+              </td>
+              <td data-label="Status">
+                <span class="badge <%= m.active ? 'b-green' : 'b-slate' %>"><%= m.active ? 'active' : 'inactive' %></span>
+                <% if (!m.active) { %><div class="small muted">History kept</div><% } %>
+              </td>
+              <td data-label="">
+                <% if (can('cp.team.manage')) { %>
+                  <div class="btn-group">
+                    <form method="post" action="/api/channel-partners/<%= partner._id %>/team/<%= m._id %>/toggle">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input type="hidden" name="returnTo" value="<%= returnTo %>">
+                      <button class="btn btn-sm" type="submit"><%= m.active ? 'Deactivate' : 'Reactivate' %></button>
+                    </form>
+                  </div>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <% if (can('cp.team.manage')) { %>
+    <div class="card mb-2">
+      <div class="card-head"><h2 class="grow">Add or update a member</h2></div>
+      <div class="card-body">
+        <form method="post" action="/api/channel-partners/<%= partner._id %>/team">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="returnTo" value="<%= returnTo %>">
+          <div class="field-row">
+            <div class="field">
+              <label for="memberId">Existing member <span class="opt">leave blank to add</span></label>
+              <select id="memberId" name="memberId">
+                <option value="">— add a new member —</option>
+                <% members.forEach(function (m) { %><option value="<%= m._id %>"><%= m.name %></option><% }) %>
+              </select>
+            </div>
+            <div class="field"><label for="name">Name</label><input type="text" id="name" name="name" maxlength="150" required></div>
+            <div class="field"><label for="mobile">Mobile</label><input type="tel" id="mobile" name="mobile" maxlength="20"></div>
+            <div class="field"><label for="email">Email</label><input type="email" id="email" name="email" maxlength="150"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="designation">Designation</label><input type="text" id="designation" name="designation" maxlength="120"></div>
+            <div class="field">
+              <label for="portalRole">Portal role</label>
+              <select id="portalRole" name="portalRole">
+                <option value="SALES_MEMBER">Sales member</option>
+                <option value="COMPANY_ADMIN">Company admin</option>
+              </select>
+            </div>
+            <div class="field"><label for="reraNumber">RERA number <span class="opt">optional</span></label><input type="text" id="reraNumber" name="reraNumber" maxlength="60"></div>
+          </div>
+          <label class="check"><input type="checkbox" name="canSubmitLeads" value="1" checked> May submit leads</label>
+          <label class="check"><input type="checkbox" name="canViewCompanyLeads" value="1"> May see all company leads</label>
+          <label class="check"><input type="checkbox" name="canCreateInvoice" value="1"> May create invoices</label>
+          <button class="btn btn-primary" type="submit">Save member</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Portal logins</h2></div>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th></tr></thead>
+      <tbody>
+        <% portalUsers.forEach(function (u) { %>
+          <tr>
+            <td data-label="Name"><%= u.name %></td>
+            <td data-label="Email"><%= u.email %></td>
+            <td data-label="Role"><%= u.role.toLowerCase().replace('_',' ') %></td>
+            <td data-label="Status"><span class="badge <%= u.status === 'ACTIVE' ? 'b-green' : 'b-amber' %>"><%= u.status.toLowerCase() %></span></td>
+            <td data-label="Last login"><%= u.lastLoginAt ? h.dateTime(u.lastLoginAt) : '—' %></td>
+          </tr>
+        <% }) %>
+        <% if (!portalUsers.length) { %><tr><td colspan="5" class="muted small">No portal access yet.</td></tr><% } %>
+      </tbody>
+    </table></div>
+  </div>
+<% } %>
+
+<% if (tab === 'projects') { %>
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Project empanelment</h2></div>
+    <% if (!empanelments.length) { %>
+      <%- include('../../partials/empty', { heading: 'Not empanelled anywhere', message: 'A partner is not automatically approved for every project — approve them per project.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Project</th><th>Status</th><th>From</th><th>To</th><th>Commission rule</th><th>Notes</th></tr></thead>
+        <tbody>
+          <% empanelments.forEach(function (e) { %>
+            <tr>
+              <td data-label="Project"><%= (e.projectId || {}).name || '—' %></td>
+              <td data-label="Status">
+                <span class="badge <%= e.status === 'APPROVED' ? 'b-green' : (e.status === 'PENDING' ? 'b-amber' : '') %>"><%= e.status.toLowerCase() %></span>
+              </td>
+              <td data-label="From"><%= e.effectiveFrom ? h.date(e.effectiveFrom) : '—' %></td>
+              <td data-label="To"><%= e.effectiveTo ? h.date(e.effectiveTo) : '—' %></td>
+              <td data-label="Commission rule"><%= (e.commissionRuleId || {}).name || 'default' %></td>
+              <td data-label="Notes" class="small"><%= e.notes || '' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <% if (can('cp.project_empanelment.manage')) { %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Empanel for a project</h2></div>
+      <div class="card-body">
+        <form method="post" action="/api/channel-partners/<%= partner._id %>/empanelments">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="returnTo" value="<%= returnTo %>">
+          <div class="field-row">
+            <div class="field">
+              <label for="projectId">Project</label>
+              <select id="projectId" name="projectId" required>
+                <option value="">Choose a project</option>
+                <% projects.forEach(function (pr) { %><option value="<%= pr._id %>"><%= pr.name %></option><% }) %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="status">Status</label>
+              <select id="status" name="status">
+                <option value="APPROVED">Approved</option>
+                <option value="PENDING">Pending</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="EXPIRED">Expired</option>
+              </select>
+            </div>
+            <div class="field"><label for="effectiveFrom">From</label><input type="date" id="effectiveFrom" name="effectiveFrom"></div>
+            <div class="field"><label for="effectiveTo">To</label><input type="date" id="effectiveTo" name="effectiveTo"></div>
+          </div>
+          <div class="field">
+            <label for="commissionRuleId">Commission rule <span class="opt">optional — otherwise the best matching rule applies</span></label>
+            <select id="commissionRuleId" name="commissionRuleId">
+              <option value="">Use the matching rule</option>
+              <% rules.filter(function (r) { return r.active; }).forEach(function (r) { %>
+                <option value="<%= r._id %>"><%= r.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field"><label for="notes">Notes</label><input type="text" id="notes" name="notes" maxlength="1000"></div>
+          <button class="btn btn-primary" type="submit">Save empanelment</button>
+          <p class="small muted mb-0 mt-1">
+            After the end date, new lead submissions for that project stop. Existing leads, bookings
+            and commission continue under the historical agreement.
+          </p>
+        </form>
+      </div>
+    </div>
+  <% } %>
+<% } %>
+
+<% if (tab === 'leads') { %>
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">Submitted leads</h2>
+      <span class="muted small"><%= claims.length %> claim<%= claims.length === 1 ? '' : 's' %></span>
+    </div>
+    <% if (!claims.length) { %>
+      <%- include('../../partials/empty', { heading: 'No submissions yet', message: 'Leads this partner submits appear here with their claim decision.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Claim</th><th>Customer</th><th>Project</th><th>Submitted</th><th>Status</th><th>Protected until</th><th></th></tr></thead>
+        <tbody>
+          <% claims.forEach(function (c) { %>
+            <tr>
+              <td data-label="Claim"><%= c.claimNumber %></td>
+              <td data-label="Customer"><%= c.submittedName %><div class="small muted"><%= h.mobile(c.submittedMobile) %></div></td>
+              <td data-label="Project"><%= (c.projectId || {}).name || '—' %></td>
+              <td data-label="Submitted"><%= h.date(c.submittedAt) %></td>
+              <td data-label="Status">
+                <span class="badge <%= c.status === 'ACCEPTED' ? 'b-green' : (c.status === 'CONFLICT' ? 'b-amber' : (c.status === 'REJECTED' ? 'b-red' : '')) %>">
+                  <%= c.status.toLowerCase() %>
+                </span>
+                <% if (c.conflictNote) { %><div class="small muted"><%= c.conflictNote %></div><% } %>
+              </td>
+              <td data-label="Protected until"><%= c.protectionUntil ? h.date(c.protectionUntil) : '—' %></td>
+              <td data-label="">
+                <% if (c.leadId) { %><a class="btn btn-sm" href="/app/leads/<%= c.leadId._id || c.leadId %>">Lead</a><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (tab === 'bookings' || tab === 'commission') { %>
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow"><%= tab === 'bookings' ? 'Bookings' : 'Commission' %></h2>
+      <span class="muted small"><%= entitlements.length %> booking<%= entitlements.length === 1 ? '' : 's' %></span>
+    </div>
+    <% if (!entitlements.length) { %>
+      <%- include('../../partials/empty', { heading: 'No bookings yet', message: 'When a partner-sourced lead books, its commission is accrued here against the rule that was in force.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead>
+          <tr><th>Booking</th><th>Project</th><th class="num">Booking value</th><th class="num">Collected</th>
+          <th>Rule</th><th class="num">Accrued</th><th class="num">Eligible</th>
+          <th class="num">Invoiced</th><th class="num">Paid</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <% entitlements.forEach(function (e) {
+               const b = e.bookingId || {};
+               const basis = b.scheduledTotalMinor || b.finalPriceMinor || 0;
+               const pct = basis ? Math.round(((b.totalReceivedMinor || 0) / basis) * 100) : 0; %>
+            <tr>
+              <td data-label="Booking"><a href="/app/bookings/<%= b._id %>"><%= b.bookingNumber || '—' %></a></td>
+              <td data-label="Project"><%= (e.projectId || {}).name || '—' %></td>
+              <td data-label="Booking value" class="num"><%= h.moneyShort(b.finalPriceMinor || 0) %></td>
+              <td data-label="Collected" class="num"><%= pct %>%</td>
+              <td data-label="Rule" class="small"><%= (e.commissionRuleSnapshot || {}).description || '—' %></td>
+              <td data-label="Accrued" class="num"><%= h.money(e.calculatedCommissionMinor) %></td>
+              <td data-label="Eligible" class="num"><%= h.money(e.eligibleAmountMinor || 0) %></td>
+              <td data-label="Invoiced" class="num"><%= h.money(e.invoicedAmountMinor || 0) %></td>
+              <td data-label="Paid" class="num"><%= h.money(e.paidAmountMinor || 0) %></td>
+              <td data-label="Status">
+                <span class="badge <%= ['PAID','INVOICED','ELIGIBLE'].includes(e.status) ? 'b-green' : (e.status === 'REVIEW_REQUIRED' ? 'b-red' : '') %>">
+                  <%= e.status.toLowerCase().replace(/_/g,' ') %>
+                </span>
+                <% if (e.reviewReason) { %><div class="small muted"><%= e.reviewReason %></div><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+      <div class="card-body">
+        <p class="small muted mb-0">
+          Accrued <%= h.money(summary.accruedMinor) %> · eligible <%= h.money(summary.eligibleMinor) %>
+          · invoiced <%= h.money(summary.invoicedMinor) %> · paid <%= h.money(summary.paidMinor) %>.
+          Only eligible commission is payable.
+        </p>
+      </div>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (tab === 'invoices') { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Invoices</h2></div>
+    <% if (!invoices.length) { %>
+      <%- include('../../partials/empty', { heading: 'No invoices', message: 'The partner raises invoices from their portal once commission becomes eligible.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Invoice</th><th>Date</th><th class="num">Total</th><th class="num">Paid</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <% invoices.forEach(function (i) { %>
+            <tr>
+              <td data-label="Invoice"><%= i.invoiceNumber || i.invoiceRef %></td>
+              <td data-label="Date"><%= i.invoiceDate ? h.date(i.invoiceDate) : '—' %></td>
+              <td data-label="Total" class="num"><%= h.money(i.invoiceTotalMinor) %></td>
+              <td data-label="Paid" class="num"><%= h.money(i.paidAmountMinor || 0) %></td>
+              <td data-label="Status"><span class="badge"><%= i.status.toLowerCase().replace(/_/g,' ') %></span></td>
+              <td data-label=""><a class="btn btn-sm" href="/app/channel-partners/invoices/<%= i._id %>">Open</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (tab === 'documents') { %>
+  <%# §217/§324.11: every version, because RERA history is compliance history. %>
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">RERA certificates</h2></div>
+    <% if (!reraHistory.length) { %>
+      <div class="card-body"><p class="muted mb-0">No certificate on file.</p></div>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Version</th><th>Number</th><th>Issued</th><th>Expires</th><th>Status</th><th>Verified by</th><th></th></tr></thead>
+        <tbody>
+          <% reraHistory.forEach(function (d) { %>
+            <tr>
+              <td data-label="Version">v<%= d.version %><% if (d.active) { %> <span class="badge b-blue">current</span><% } %></td>
+              <td data-label="Number"><%= d.registrationNumber %></td>
+              <td data-label="Issued"><%= d.issueDate ? h.date(d.issueDate) : '—' %></td>
+              <td data-label="Expires"><%= d.expiryDate ? h.date(d.expiryDate) : '—' %></td>
+              <td data-label="Status">
+                <span class="badge <%= d.verificationStatus === 'VERIFIED' ? 'b-green' : (['REJECTED','EXPIRED'].includes(d.verificationStatus) ? 'b-red' : 'b-amber') %>">
+                  <%= d.verificationStatus.toLowerCase() %>
+                </span>
+                <% if (d.verificationNote) { %><div class="small muted"><%= d.verificationNote %></div><% } %>
+              </td>
+              <td data-label="Verified by"><%= (d.verifiedBy || {}).name || '—' %></td>
+              <td data-label="">
+                <div class="btn-group">
+                  <% if (d.certificate && d.certificate.storageKey) { %>
+                    <a class="btn btn-sm" href="/app/files/rera-certificate/<%= d._id %>" target="_blank" rel="noopener">Open</a>
+                  <% } %>
+                  <% if (d.verificationStatus === 'PENDING' && can('cp.partner.edit')) { %>
+                    <button type="button" class="btn btn-sm btn-primary" data-drawer="drawer-verify-<%= d._id %>">Verify</button>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <% if (can('cp.partner.edit')) { %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Record a renewal</h2></div>
+      <div class="card-body">
+        <form method="post" action="/api/channel-partners/<%= partner._id %>/rera" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field-row">
+            <div class="field"><label for="registrationNumber">RERA number</label><input type="text" id="registrationNumber" name="registrationNumber" maxlength="80" required value="<%= partner.reraNumber || '' %>"></div>
+            <div class="field"><label for="issueDate">Issued</label><input type="date" id="issueDate" name="issueDate"></div>
+            <div class="field"><label for="expiryDate">Expires</label><input type="date" id="expiryDate" name="expiryDate" required></div>
+          </div>
+          <div class="field">
+            <label for="certificate">Certificate</label>
+            <input type="file" id="certificate" name="certificate" accept="application/pdf,image/jpeg,image/png" required>
+          </div>
+          <button class="btn btn-primary" type="submit">Save new version</button>
+          <p class="small muted mb-0 mt-1">The current certificate is kept as history, not replaced.</p>
+        </form>
+      </div>
+    </div>
+  <% } %>
+<% } %>
+
+<% if (tab === 'audit') { %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Partner timeline</h2></div>
+    <div class="card-body">
+      <% if (!events.length) { %>
+        <p class="muted small mb-0">Nothing recorded yet.</p>
+      <% } else { %>
+        <ul class="timeline">
+          <% events.forEach(function (e) { %>
+            <li>
+              <div class="t-head">
+                <strong><%= e.title %></strong>
+                <span class="muted small"><%= h.dateTime(e.at) %> · <%= (e.actorUserId || {}).name || e.actorLabel || 'System' %></span>
+              </div>
+              <% if (e.body) { %><div class="small"><%= e.body %></div><% } %>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%# ------------------------------ drawers ------------------------------ %>
+<% if (can('cp.partner.edit')) { %>
+  <div class="drawer-backdrop" id="drawer-status" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Change partner status">
+      <form method="post" action="/api/channel-partners/<%= partner._id %>/status">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <div class="drawer-head">
+          <h2 class="grow">Change status</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <p class="small muted">
+            Suspending stops new lead submissions and makes the portal read-only. Historical leads,
+            bookings and attribution are never removed.
+          </p>
+          <div class="field">
+            <label for="status-select">Status</label>
+            <select id="status-select" name="status">
+              <% ['ACTIVE','SUSPENDED','INACTIVE','EXPIRED'].forEach(function (s) { %>
+                <option value="<%= s %>" <%= partner.status === s ? 'selected' : '' %>><%= s.toLowerCase() %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="status-reason">Reason</label>
+            <textarea id="status-reason" name="reason" rows="2" maxlength="500"></textarea>
+          </div>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save status</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <% reraHistory.filter(function (d) { return d.verificationStatus === 'PENDING'; }).forEach(function (d) { %>
+    <div class="drawer-backdrop" id="drawer-verify-<%= d._id %>" hidden>
+      <div class="drawer" role="dialog" aria-modal="true" aria-label="Verify certificate">
+        <form method="post" action="/api/channel-partners/<%= partner._id %>/rera/<%= d._id %>/verify">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="returnTo" value="<%= returnTo %>">
+          <div class="drawer-head">
+            <h2 class="grow">Verify v<%= d.version %></h2>
+            <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+          </div>
+          <div class="drawer-body">
+            <p class="small muted"><%= d.registrationNumber %><%= d.expiryDate ? ' · expires ' + h.date(d.expiryDate) : '' %></p>
+            <% if (d.certificate && d.certificate.storageKey) { %>
+              <a class="btn btn-sm mb-2" href="/app/files/rera-certificate/<%= d._id %>" target="_blank" rel="noopener">Open the certificate</a>
+            <% } %>
+            <div class="field">
+              <label for="verify-<%= d._id %>">Decision</label>
+              <select id="verify-<%= d._id %>" name="decision">
+                <option value="VERIFIED">Verified</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="vnote-<%= d._id %>">Note</label>
+              <textarea id="vnote-<%= d._id %>" name="note" rows="2" maxlength="500"></textarea>
+              <span class="hint">Required when rejecting.</span>
+            </div>
+          </div>
+          <div class="drawer-foot">
+            <button type="button" class="btn" data-drawer-close>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save decision</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <% }) %>
+<% } %>
+
+<% if (can('cp.team.manage')) { %>
+  <div class="drawer-backdrop" id="drawer-invite" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Invite to the portal">
+      <form method="post" action="/api/channel-partners/<%= partner._id %>/portal-invite">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <div class="drawer-head">
+          <h2 class="grow">Invite to the partner portal</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <div class="field">
+            <label for="invite-member">Team member <span class="opt">optional</span></label>
+            <select id="invite-member" name="memberId">
+              <option value="">— the partner themselves —</option>
+              <% members.filter(function (m) { return m.active; }).forEach(function (m) { %>
+                <option value="<%= m._id %>"><%= m.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field"><label for="invite-name">Name</label><input type="text" id="invite-name" name="name" maxlength="150" value="<%= p.primaryContactName || '' %>"></div>
+          <div class="field"><label for="invite-email">Email</label><input type="email" id="invite-email" name="email" maxlength="150" required value="<%= p.email || '' %>"></div>
+          <div class="field"><label for="invite-mobile">Mobile</label><input type="tel" id="invite-mobile" name="mobile" maxlength="20" value="<%= p.mobile || '' %>"></div>
+          <div class="field">
+            <label for="invite-role">Portal role</label>
+            <select id="invite-role" name="role">
+              <option value="COMPANY_ADMIN" <%= p.partnerType === 'COMPANY' ? 'selected' : '' %>>Company admin</option>
+              <option value="SALES_MEMBER" <%= p.partnerType !== 'COMPANY' ? 'selected' : '' %>>Sales member</option>
+            </select>
+          </div>
+          <p class="small muted mb-0">
+            They receive an activation link by email and set their own password. Portal accounts have
+            no access to this application.
+          </p>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Send invitation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+<%- include('../../partials/app-foot') %>

@@ -47,7 +47,7 @@ const DEFAULT_SOURCES = [
   ['Housing', 'PROPERTY_PORTAL'], ['MagicBricks', 'PROPERTY_PORTAL'], ['99acres', 'PROPERTY_PORTAL'],
   ['Website', 'WEBSITE'], ['Landing Page', 'LANDING_PAGE'], ['IVR Call', 'IVR'], ['WhatsApp', 'WHATSAPP'],
   ['Chatbot', 'CHATBOT'], ['Project QR / Walk-in', 'QR'], ['Walk-in', 'WALK_IN'], ['Referral', 'REFERRAL'],
-  ['Manual Entry', 'MANUAL'], ['API', 'API'],
+  ['Manual Entry', 'MANUAL'], ['API', 'API'], ['Channel Partner', 'CHANNEL_PARTNER'],
 ];
 
 const DEFAULT_TAGS = ['Investor', 'Member', 'Channel Partner', 'Past Customer', 'NRI', 'High Intent'];
@@ -81,7 +81,61 @@ async function seedTenantDefaults(tenantId) {
     await upsert(Tag, { tenantId, nameLower: name.toLowerCase() }, { tenantId, name });
   }
   await seedCommunicationDefaults(tenantId);
+  await seedPostBookingDefaults(tenantId);
   return stageDocs;
+}
+
+/**
+ * V2 §125/§231: the KYC checklist and the customer-facing message templates a
+ * new tenant starts with. Both are editable — the point is that the first
+ * booking does not arrive with nothing to ask the customer for.
+ */
+async function seedPostBookingDefaults(tenantId) {
+  await require('../services/kyc').seedDefaultTypes({ tenantId });
+
+  const templates = [
+    // §233: partner-facing messages.
+    ['Partner portal invitation', 'CP_PORTAL_INVITE', 'EMAIL',
+      'Hello {{partner.name}}, your channel partner portal access is ready. Set your password here: '
+      + '{{partner.portal_url}}'],
+    ['Partner RERA expiry', 'CP_RERA_EXPIRY', 'WHATSAPP',
+      'Hello {{partner.name}}, your GujRERA certificate {{partner.rera_number}} expires on '
+      + '{{partner.rera_expiry}}. Please upload the renewed certificate on the partner portal.'],
+    ['Partner commission eligible', 'CP_COMMISSION_ELIGIBLE', 'WHATSAPP',
+      'Hello {{partner.name}}, commission of {{commission.eligible_amount}} on booking '
+      + '{{booking.number}} is now eligible. You can raise an invoice from the partner portal.'],
+    ['Partner invoice status', 'CP_INVOICE_STATUS', 'EMAIL',
+      'Hello {{partner.name}}, the status of invoice {{invoice.number}} has changed. '
+      + 'Please check the partner portal for details.'],
+    ['Booking form request', 'BOOKING_FORM_REQUEST', 'WHATSAPP',
+      'Hi {{contact.first_name}}, congratulations on booking {{unit.number}} at {{project.name}}. '
+      + 'Please complete your booking form and upload your documents here: {{booking.customer_form_url}}'],
+    ['KYC correction request', 'KYC_CORRECTION', 'WHATSAPP',
+      'Hi {{contact.first_name}}, one of your documents for {{project.name}} {{unit.number}} needs to be '
+      + 'replaced. Please upload it again here: {{booking.customer_form_url}}'],
+    ['Payment upcoming', 'PAYMENT_UPCOMING', 'WHATSAPP',
+      'Hi {{contact.first_name}}, a payment of {{payment.amount}} for {{project.name}} {{unit.number}} '
+      + 'is due on {{payment.due_date}}.{{payment.link_line}}'],
+    ['Payment due today', 'PAYMENT_DUE', 'WHATSAPP',
+      'Hi {{contact.first_name}}, your payment of {{payment.amount}} for {{project.name}} {{unit.number}} '
+      + 'is due today.{{payment.link_line}}'],
+    ['Payment overdue', 'PAYMENT_OVERDUE', 'WHATSAPP',
+      'Hi {{contact.first_name}}, a payment of {{payment.amount}} for {{project.name}} {{unit.number}} '
+      + 'was due on {{payment.due_date}} and is still outstanding.{{payment.link_line}}'],
+    ['Payment link', 'PAYMENT_LINK', 'WHATSAPP',
+      'Hi {{contact.first_name}}, here is your payment link for {{project.name}} {{unit.number}} — '
+      + '{{payment.amount}}: {{payment.url}}'],
+    // §297: an acknowledgement, deliberately never called a tax receipt.
+    ['Payment acknowledgement', 'RECEIPT_ACK', 'WHATSAPP',
+      'Payment Acknowledgement — we have received {{payment.amount}} on {{payment.date}} for '
+      + '{{project.name}} {{unit.number}}. Remaining outstanding: {{payment.outstanding}}. '
+      + 'This is not a tax receipt.'],
+  ];
+  for (const [name, purpose, channel, body] of templates) {
+    await upsert(Template, { tenantId, name }, {
+      tenantId, name, channel, purpose, isSystem: true, body,
+    });
+  }
 }
 
 /**
@@ -194,6 +248,17 @@ async function createOrganization({ name, adminName, adminEmail, adminMobile, ad
     tenantId: tenant._id,
     name: 'Default sales pool',
     isDefault: true,
+    poolType: 'LEAD',
+    memberIds: [admin._id],
+    escalationUserIds: [admin._id],
+  });
+
+  // V2 §148: collections rotate through their own pool, with its own cursor.
+  await AssignmentPool.create({
+    tenantId: tenant._id,
+    name: 'Default collection pool',
+    isDefault: true,
+    poolType: 'COLLECTION',
     memberIds: [admin._id],
     escalationUserIds: [admin._id],
   });
@@ -266,9 +331,38 @@ async function seedDemoWorkload({ tenant, admin, users }) {
     { tenantId, projectId: project._id, name: 'GST', kind: 'TAX', calcType: 'PERCENTAGE', percentage: 5, displayOrder: 9 },
     { tenantId, projectId: project._id, name: 'Stamp duty', kind: 'STAMP_DUTY', calcType: 'PERCENTAGE', percentage: 4.9, displayOrder: 10 },
   ]);
+  /**
+   * V1.1 §35 milestones, filled in for real: the demo booking's payment schedule
+   * (V2 §132) is generated from these rows, so an empty plan would leave a fresh
+   * install with nothing in Collections to look at.
+   */
   const plan = await PaymentPlan.create({
     tenantId, projectId: project._id, name: 'Construction linked', type: 'CONSTRUCTION_LINKED',
     description: '10% on booking, 80% linked to construction, 10% on possession.',
+    milestones: [
+      { sequence: 1, label: 'On booking', percentage: 10, dueRule: 'ON_BOOKING', displayOrder: 1 },
+      { sequence: 2, label: 'Within 30 days', percentage: 20, dueRule: 'DAYS_AFTER_BOOKING', dueOffsetDays: 30, displayOrder: 2 },
+      { sequence: 3, label: 'On plinth', percentage: 20, dueRule: 'CONSTRUCTION', displayOrder: 3 },
+      { sequence: 4, label: 'On slab casting', percentage: 20, dueRule: 'CONSTRUCTION', displayOrder: 4 },
+      { sequence: 5, label: 'On brickwork', percentage: 20, dueRule: 'CONSTRUCTION', displayOrder: 5 },
+      { sequence: 6, label: 'On possession', percentage: 10, dueRule: 'ON_POSSESSION', displayOrder: 6 },
+    ],
+  });
+
+  /**
+   * V2 §41: one demo commission rule — 2% once 20% has been collected — so a
+   * fresh install can walk the whole partner journey through to an invoice.
+   */
+  const { PartnerCommissionRule } = require('./models');
+  await upsert(PartnerCommissionRule, { tenantId, name: '2% after 20% collection' }, {
+    tenantId,
+    name: '2% after 20% collection',
+    basis: 'FINAL_BOOKING_PRICE',
+    rateType: 'PERCENTAGE',
+    rate: 2,
+    eligibilityTrigger: 'ON_COLLECTION_PERCENT',
+    collectionThresholdPct: 20,
+    active: true,
   });
 
   const metaCampaign = await MarketingCampaign.create({
@@ -449,7 +543,11 @@ async function seedDemo() {
 
   const salesUsers = await User.find({ tenantId: tenant._id, status: 'ACTIVE' }).select('_id').lean();
   await AssignmentPool.updateOne(
-    { tenantId: tenant._id, isDefault: true },
+    { tenantId: tenant._id, isDefault: true, poolType: 'LEAD' },
+    { $set: { memberIds: salesUsers.map((u) => u._id), escalationUserIds: [manager._id, admin._id] } },
+  );
+  await AssignmentPool.updateOne(
+    { tenantId: tenant._id, isDefault: true, poolType: 'COLLECTION' },
     { $set: { memberIds: salesUsers.map((u) => u._id), escalationUserIds: [manager._id, admin._id] } },
   );
 

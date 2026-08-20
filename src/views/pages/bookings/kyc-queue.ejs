@@ -1,0 +1,89 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>KYC review</h1>
+    <div class="sub">What each customer still owes us, and what is waiting on a reviewer.</div>
+  </div>
+  <div class="btn-group"><a class="btn" href="/app/bookings">All bookings</a></div>
+</div>
+
+<%# §129: tiles by status; each one filters this same list. %>
+<div class="tiles">
+  <% tiles.forEach(function (t) { %>
+    <a class="tile <%= t.status === 'CORRECTION_REQUIRED' ? 'bad' : (t.status === 'VERIFIED' ? '' : 'warn') %> <%= activeStatus === t.status ? 'active' : '' %>"
+       href="/app/bookings/kyc?kycStatus=<%= t.status %>">
+      <div class="num"><%= t.count %></div>
+      <div class="lbl"><%= t.label %></div>
+    </a>
+  <% }) %>
+</div>
+
+<form class="filters" method="get" action="/app/bookings/kyc">
+  <input type="hidden" name="kycStatus" value="<%= query.kycStatus || '' %>">
+  <div class="field">
+    <label for="k-project">Project</label>
+    <select id="k-project" name="projectId">
+      <option value="">All projects</option>
+      <% projects.forEach(function (p) { %>
+        <option value="<%= p._id %>" <%= String(query.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+  <% if (activeStatus) { %><a class="btn btn-ghost" href="/app/bookings/kyc">Clear status</a><% } %>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow"><%= activeStatus ? activeStatus.replace(/_/g,' ').toLowerCase() : 'All bookings' %></h2>
+    <span class="muted small"><%= total %> record<%= total === 1 ? '' : 's' %></span>
+  </div>
+
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing here', message: 'No booking is in this KYC state.', ctaHref: '/app/bookings', ctaLabel: 'All bookings' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Customer</th><th>Project / unit</th><th>Booked</th><th>KYC</th>
+          <th>Missing documents</th><th>Submitted</th><th>Collection owner</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach(function (b) { const contact = b.contactId || {}; %>
+          <tr>
+            <td data-label="Customer">
+              <a href="/app/bookings/<%= b._id %>?tab=customer"><strong><%= contact.displayName || 'Customer' %></strong></a>
+              <div class="small muted"><%= h.mobile(contact.primaryMobile) %></div>
+            </td>
+            <td data-label="Project / unit">
+              <%= (b.projectId || {}).name || '—' %>
+              <div class="small muted"><%= (b.unitId || {}).unitNumber || '' %></div>
+            </td>
+            <td data-label="Booked"><%= h.date(b.bookingDate) %></td>
+            <td data-label="KYC">
+              <span class="badge <%= b.kycStatus === 'VERIFIED' ? 'b-green' : (b.kycStatus === 'CORRECTION_REQUIRED' ? 'b-red' : '') %>">
+                <%= (b.kycStatus || '').replace(/_/g,' ').toLowerCase() %>
+              </span>
+              <div class="small muted"><%= b.completionPct %>% of mandatory approved</div>
+            </td>
+            <td data-label="Missing documents">
+              <% if (!b.missingMandatory.length) { %>
+                <span class="muted small">None</span>
+              <% } else { %>
+                <span class="small"><%= b.missingMandatory.join(', ') %></span>
+              <% } %>
+            </td>
+            <td data-label="Submitted"><%= b.customerFormSubmittedAt ? h.date(b.customerFormSubmittedAt) : '—' %></td>
+            <td data-label="Collection owner"><%= (b.collectionOwnerUserId || {}).name || '—' %></td>
+            <td data-label=""><a class="btn btn-sm" href="/app/bookings/<%= b._id %>?tab=customer">Review</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination') %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

@@ -11,6 +11,12 @@ const tenantGuard = require('../tenantGuard');
  */
 const assignmentPoolSchema = new Schema({
   name: { type: String, required: true, trim: true, maxlength: 80 },
+  /**
+   * V2 §148: collections rotate through their own pool. A separate document per
+   * type is what keeps the two cursors apart — a lead assignment must never
+   * advance the collection rotation, or vice versa.
+   */
+  poolType: { type: String, enum: ['LEAD', 'COLLECTION'], default: 'LEAD', index: true },
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', default: null, index: true },
   isDefault: { type: Boolean, default: false },
   memberIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
@@ -21,7 +27,7 @@ const assignmentPoolSchema = new Schema({
 }, { timestamps: true });
 
 assignmentPoolSchema.plugin(tenantGuard);
-assignmentPoolSchema.index({ tenantId: 1, projectId: 1 });
-assignmentPoolSchema.index({ tenantId: 1, isDefault: 1 });
+assignmentPoolSchema.index({ tenantId: 1, poolType: 1, projectId: 1 });
+assignmentPoolSchema.index({ tenantId: 1, poolType: 1, isDefault: 1 });
 
 module.exports = model('AssignmentPool', assignmentPoolSchema);

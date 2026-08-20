@@ -29,6 +29,194 @@ async function commonFilters(req) {
 
 router.get('/app/reports', requirePermission('report.view'), (req, res) => res.redirect('/app/reports/leads'));
 
+/* ------------------- V2 §168–§170: post-booking reports ------------------- */
+
+/**
+ * These sit on their own permissions (`booking.report` / `collection.report`)
+ * rather than on `report.view`, because a collections user needs the money
+ * reports without being handed the whole sales pipeline (§276).
+ */
+/** V2 §51/§260: the channel partner report family. */
+const CP_REPORTS = {
+  'channel-partners': { title: 'Channel partner performance', run: 'performanceReport' },
+  'cp-invoices': { title: 'Channel partner invoices', run: 'invoiceReport' },
+};
+
+for (const [kind, meta] of Object.entries(CP_REPORTS)) {
+  router.get(`/app/reports/${kind}`, requirePermission('cp.report.view'), async (req, res, next) => {
+    try {
+      const partnerReports = require('../services/partnerReports');
+      const { ChannelPartner } = require('../db/models');
+      const [data, projects, partners] = await Promise.all([
+        partnerReports[meta.run]({ tenantId: req.tenantId, query: req.query, zone: res.locals.zone }),
+        Project.find({ tenantId: req.tenantId, archived: { $ne: true } }).select('name').sort({ name: 1 }).lean(),
+        ChannelPartner.find({ tenantId: req.tenantId }).select('profile partnerCode').lean(),
+      ]);
+      res.render(`pages/reports/${kind}`, { title: `${meta.title} report`, kind, data, projects, partners });
+    } catch (err) { next(err); }
+  });
+
+  router.get(`/app/reports/${kind}/export`, requirePermission('cp.report.view'), async (req, res, next) => {
+    try {
+      const partnerReports = require('../services/partnerReports');
+      const data = await partnerReports[meta.run]({
+        tenantId: req.tenantId, query: req.query, zone: res.locals.zone,
+      });
+      const fmt = (minor) => (minor == null ? '' : money.toMajor(minor));
+      const csv = kind === 'channel-partners'
+        ? reports.toCsv(data.rows, [
+          { label: 'Partner', value: (r) => r.name },
+          { label: 'Type', value: (r) => r.partnerType },
+          { label: 'City', value: (r) => r.city },
+          { label: 'Status', value: (r) => r.status },
+          { label: 'RERA status', value: (r) => r.reraStatus },
+          { label: 'RERA expiry', value: (r) => (r.reraExpiryDate ? tz.formatDate(r.reraExpiryDate, res.locals.zone) : '') },
+          { label: 'Leads', value: (r) => r.leads },
+          { label: 'Connected', value: (r) => r.connected },
+          { label: 'Visits', value: (r) => r.visits },
+          { label: 'Blocks', value: (r) => r.blocks },
+          { label: 'Bookings', value: (r) => r.bookings },
+          { label: 'Booking value', value: (r) => fmt(r.bookingValueMinor) },
+          { label: 'Lead to visit %', value: (r) => r.leadToVisit },
+          { label: 'Visit to booking %', value: (r) => r.visitToBooking },
+          { label: 'Lead to booking %', value: (r) => r.leadToBooking },
+          // §206: four columns, never one.
+          { label: 'Commission accrued', value: (r) => fmt(r.accruedMinor) },
+          { label: 'Commission eligible', value: (r) => fmt(r.eligibleMinor) },
+          { label: 'Commission invoiced', value: (r) => fmt(r.invoicedMinor) },
+          { label: 'Commission paid', value: (r) => fmt(r.paidMinor) },
+        ])
+        : reports.toCsv(data.rows, [
+          { label: 'Invoice ref', value: (r) => r.invoiceRef },
+          { label: 'Invoice number', value: (r) => r.invoiceNumber },
+          { label: 'Partner', value: (r) => r.partnerName },
+          { label: 'Invoice date', value: (r) => (r.invoiceDate ? tz.formatDate(r.invoiceDate, res.locals.zone) : '') },
+          { label: 'Submitted', value: (r) => (r.submittedAt ? tz.formatDate(r.submittedAt, res.locals.zone) : '') },
+          { label: 'Taxable value', value: (r) => fmt(r.taxableValueMinor) },
+          { label: 'GST', value: (r) => fmt(r.gstAmountMinor) },
+          { label: 'Total', value: (r) => fmt(r.invoiceTotalMinor) },
+          { label: 'Paid', value: (r) => fmt(r.paidAmountMinor) },
+          { label: 'Outstanding', value: (r) => fmt(r.outstandingMinor) },
+          { label: 'Status', value: (r) => r.status },
+        ]);
+
+      await audit.record({
+        tenantId: req.tenantId, actor: req.user, entity: 'Report', action: 'EXPORT',
+        after: { kind, filters: req.query, rows: data.rows.length }, req,
+      });
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${kind}-report.csv"`);
+      res.send(csv);
+    } catch (err) { next(err); }
+  });
+}
+
+const POST_BOOKING_REPORTS = {
+  bookings: { permission: 'booking.report', title: 'Bookings & KYC', run: 'bookingReport' },
+  collections: { permission: 'collection.report', title: 'Collections', run: 'collectionReport' },
+  'collection-performance': { permission: 'collection.report', title: 'Collection performance', run: 'collectionPerformanceReport' },
+};
+
+async function postBookingArgs(req, res) {
+  const postBookingReports = require('../services/postBookingReports');
+  const scope = await postBookingReports.scopeFor({ user: req.user });
+  if (!scope) throw forbidden('You do not have permission to view this report.');
+  return {
+    args: { tenantId: req.tenantId, query: req.query, zone: res.locals.zone, scope },
+    postBookingReports,
+  };
+}
+
+for (const [kind, meta] of Object.entries(POST_BOOKING_REPORTS)) {
+  router.get(`/app/reports/${kind}`, requirePermission(meta.permission), async (req, res, next) => {
+    try {
+      const { args, postBookingReports } = await postBookingArgs(req, res);
+      const data = await postBookingReports[meta.run](args);
+      const [projects, users] = await Promise.all([
+        Project.find({ tenantId: req.tenantId, archived: { $ne: true } }).select('name').sort({ name: 1 }).lean(),
+        User.find({ tenantId: req.tenantId }).select('name').sort({ name: 1 }).lean(),
+      ]);
+      res.render(`pages/reports/${kind}`, {
+        title: `${meta.title} report`, kind, data, projects, users,
+      });
+    } catch (err) { next(err); }
+  });
+
+  /** §321/§76: exports carry the same filters, the same scope, and an audit row. */
+  router.get(`/app/reports/${kind}/export`, requirePermission(meta.permission), async (req, res, next) => {
+    try {
+      const { args, postBookingReports } = await postBookingArgs(req, res);
+      const data = await postBookingReports[meta.run](args);
+      const fmt = (minor) => (minor == null ? '' : money.toMajor(minor));
+      const date = (value) => (value ? tz.formatDate(value, res.locals.zone) : '');
+      let csv;
+
+      if (kind === 'bookings') {
+        csv = reports.toCsv(data.rows, [
+          { label: 'Booking no.', value: (r) => r.bookingNumber },
+          { label: 'Customer', value: (r) => r.contactId?.displayName },
+          { label: 'Mobile', value: (r) => r.contactId?.primaryMobile },
+          { label: 'Project', value: (r) => r.projectId?.name },
+          { label: 'Unit', value: (r) => r.unitId?.unitNumber },
+          { label: 'Booking date', value: (r) => date(r.bookingDate) },
+          { label: 'Booking value', value: (r) => fmt(r.finalPriceMinor) },
+          { label: 'Quotation', value: (r) => r.costSheetId?.quotationNumber },
+          { label: 'Payment plan', value: (r) => r.paymentPlanName },
+          // §321: a KYC *status* may be exported; a KYC document never can.
+          { label: 'KYC status', value: (r) => r.kycStatus },
+          { label: 'Collected', value: (r) => fmt(r.totalReceivedMinor) },
+          { label: 'Outstanding', value: (r) => fmt(r.outstandingMinor) },
+          { label: 'Next due', value: (r) => date(r.nextDueAt) },
+          { label: 'Overdue', value: (r) => fmt(r.overdueMinor) },
+          { label: 'Salesperson', value: (r) => r.salespersonId?.name },
+          { label: 'Collection owner', value: (r) => r.collectionOwnerUserId?.name },
+        ]);
+      } else if (kind === 'collections') {
+        csv = reports.toCsv(data.rows, [
+          { label: 'Booking no.', value: (r) => r.booking?.bookingNumber },
+          { label: 'Customer', value: (r) => r.booking?.contactId?.displayName },
+          { label: 'Project', value: (r) => r.booking?.projectId?.name },
+          { label: 'Unit', value: (r) => r.booking?.unitId?.unitNumber },
+          { label: 'Seq', value: (r) => r.sequence },
+          { label: 'Milestone', value: (r) => r.milestone },
+          { label: 'Scheduled', value: (r) => fmt(r.scheduledAmountMinor) },
+          { label: 'Due date', value: (r) => (r.dueDate ? date(r.dueDate) : 'TBD') },
+          { label: 'Received', value: (r) => fmt(r.amountReceivedMinor) },
+          { label: 'Outstanding', value: (r) => fmt(r.outstandingMinor) },
+          { label: 'Status', value: (r) => r.status },
+          { label: 'Overdue days', value: (r) => r.overdueDays },
+          { label: 'Aging', value: (r) => r.aging },
+          { label: 'Collection owner', value: (r) => r.booking?.collectionOwnerUserId?.name },
+        ]);
+      } else {
+        csv = reports.toCsv(data.rows, [
+          { label: 'Collection owner', value: (r) => r.owner },
+          { label: 'Bookings', value: (r) => r.bookings },
+          { label: 'Scheduled', value: (r) => fmt(r.scheduledMinor) },
+          { label: 'Received', value: (r) => fmt(r.receivedMinor) },
+          { label: 'Collection %', value: (r) => r.collectionPct },
+          { label: 'Outstanding', value: (r) => fmt(r.outstandingMinor) },
+          { label: 'Overdue', value: (r) => fmt(r.overdueMinor) },
+          { label: 'Received in range', value: (r) => fmt(r.receiptsInRangeMinor) },
+          { label: 'Follow-ups completed', value: (r) => r.followupsCompleted },
+          { label: 'Follow-ups missed', value: (r) => r.followupsMissed },
+          { label: 'Promises', value: (r) => r.promises },
+          { label: 'Promises kept %', value: (r) => r.ptpFulfilledPct },
+          { label: 'Payment links', value: (r) => r.paymentLinks },
+        ]);
+      }
+
+      await audit.record({
+        tenantId: req.tenantId, actor: req.user, entity: 'Report', action: 'EXPORT',
+        after: { kind, filters: req.query, rows: data.rows.length }, req,
+      });
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${kind}-report.csv"`);
+      res.send(csv);
+    } catch (err) { next(err); }
+  });
+}
+
 router.get('/app/reports/:kind', requirePermission('report.view'), async (req, res, next) => {
   try {
     const kind = req.params.kind;

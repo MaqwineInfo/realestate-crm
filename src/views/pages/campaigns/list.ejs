@@ -20,7 +20,7 @@
       ctaLabel: 'New campaign'
     }) %>
   <% } else { %>
-    <table class="responsive">
+    <div class="table-wrap"><table class="responsive">
       <thead><tr><th>Campaign</th><th>Channel</th><th>Status</th><th class="num">Sent</th><th class="num">Excluded</th><th class="num">Failed</th><th>When</th></tr></thead>
       <tbody>
         <% campaigns.forEach(function (c) { %>
@@ -38,7 +38,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

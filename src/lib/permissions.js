@@ -81,6 +81,52 @@ const CATALOG = {
     { key: 'campaign.edit_spend', label: 'Edit spend' },
     { key: 'campaign.export', label: 'Export campaign analytics' },
   ],
+  /**
+   * V2 §180: bookings and collections. `booking.view` and `collection.view` are
+   * scoped because §183 keeps collection ownership separate from sales credit —
+   * a salesperson may own the sale and someone else the money.
+   */
+  Bookings: [
+    { key: 'booking.view', label: 'View bookings', scoped: true },
+    { key: 'booking.edit', label: 'Edit booking operational data' },
+    { key: 'booking.report', label: 'View booking reports' },
+    // §130: seeing that KYC is done is not the same as seeing the documents.
+    { key: 'booking.customer_link.create', label: 'Create customer booking link' },
+    { key: 'booking.kyc.view', label: 'View KYC status and documents' },
+    { key: 'booking.kyc.edit', label: 'Upload KYC documents' },
+    { key: 'booking.kyc.review', label: 'Review and verify KYC' },
+  ],
+  Collections: [
+    { key: 'collection.dashboard', label: 'View collection dashboard' },
+    { key: 'collection.view', label: 'View collections', scoped: true },
+    { key: 'collection.assign', label: 'Assign / transfer collection owner' },
+    { key: 'collection.followup', label: 'Log collection follow-up' },
+    { key: 'collection.payment_link', label: 'Create and send payment links' },
+    { key: 'collection.record_payment', label: 'Record a payment received' },
+    { key: 'collection.reverse_receipt', label: 'Reverse a receipt' },
+    { key: 'collection.adjust_due_date', label: 'Change an installment due date' },
+    { key: 'collection.report', label: 'View collection reports' },
+  ],
+  /** V2 §178: channel partner. Bank and invoice access is separated on purpose. */
+  'Channel partners': [
+    { key: 'cp.dashboard', label: 'View channel partner dashboard' },
+    { key: 'cp.registration.view', label: 'View partner registrations' },
+    { key: 'cp.registration.review', label: 'Review partner registrations' },
+    { key: 'cp.partner.view', label: 'View channel partners' },
+    { key: 'cp.partner.create', label: 'Add channel partner' },
+    { key: 'cp.partner.edit', label: 'Edit channel partner' },
+    { key: 'cp.partner.view_bank', label: 'View partner bank details' },
+    { key: 'cp.team.manage', label: 'Manage partner team and portal access' },
+    { key: 'cp.project_empanelment.manage', label: 'Manage project empanelment' },
+    { key: 'cp.claim.view', label: 'View partner lead claims' },
+    { key: 'cp.claim.review', label: 'Review partner lead claims' },
+    { key: 'cp.commission.view', label: 'View partner commission' },
+    { key: 'cp.commission.manage_rules', label: 'Manage commission rules' },
+    { key: 'cp.invoice.view', label: 'View partner invoices' },
+    { key: 'cp.invoice.review', label: 'Review partner invoices' },
+    { key: 'cp.invoice.mark_paid', label: 'Record partner payouts' },
+    { key: 'cp.report.view', label: 'View channel partner reports' },
+  ],
   Reports: [
     { key: 'report.view', label: 'View reports', scoped: true },
     { key: 'report.export', label: 'Export reports' },
@@ -103,6 +149,9 @@ const CATALOG = {
     { key: 'setup.tags', label: 'Manage contact tags' },
     { key: 'setup.nurture', label: 'Manage nurture sequences' },
     { key: 'setup.organization', label: 'Manage organization' },
+    // V2 §148: the collection pool is configured separately from lead allocation.
+    { key: 'setup.collection_allocation', label: 'Manage collection allocation' },
+    { key: 'setup.post_booking', label: 'Manage post-booking settings and KYC types' },
   ],
 };
 
@@ -137,6 +186,16 @@ const DEFAULT_ROLES = [
       'costsheet.create': true, 'discount.apply': true, 'discount.request_approval': true, 'discount.approve': true,
       'contact.view': 'team', 'contact.create': true, 'contact.edit': true, 'contact.manage_tags': true,
       'campaign.view': true, 'campaign.view_performance': true,
+      'booking.view': 'team', 'booking.edit': true, 'booking.report': true,
+      'booking.customer_link.create': true, 'booking.kyc.view': true, 'booking.kyc.edit': true,
+      'booking.kyc.review': true,
+      // A sales manager works with partners but does not approve their money.
+      'cp.dashboard': true, 'cp.registration.view': true, 'cp.partner.view': true,
+      'cp.claim.view': true, 'cp.claim.review': true, 'cp.commission.view': true,
+      'cp.report.view': true,
+      'collection.dashboard': true, 'collection.view': 'team', 'collection.assign': true,
+      'collection.followup': true, 'collection.payment_link': true, 'collection.record_payment': true,
+      'collection.reverse_receipt': true, 'collection.adjust_due_date': true, 'collection.report': true,
       'report.view': 'team', 'report.export': true,
     },
   },
@@ -157,6 +216,11 @@ const DEFAULT_ROLES = [
       'unit.book': true,
       'costsheet.create': true, 'discount.apply': true, 'discount.request_approval': true,
       'contact.view': 'own', 'contact.create': true, 'contact.edit': true,
+      // §221: the salesperson chases their own booking's money by default.
+      'booking.view': 'own', 'booking.customer_link.create': true,
+      // §130: they can see whether KYC is done without opening the documents.
+      'collection.dashboard': true, 'collection.view': 'own', 'collection.followup': true,
+      'collection.payment_link': true,
       'report.view': 'own',
     },
   },
@@ -184,7 +248,69 @@ const DEFAULT_ROLES = [
       'visit.view_team': true, 'project.view': true,
       'inventory.view': true, 'inventory.view_prices': true,
       'contact.view': 'all', 'campaign.view': true, 'campaign.view_performance': true,
+      'booking.view': 'all', 'booking.report': true,
+      'collection.view': 'all', 'collection.report': true,
+      'cp.dashboard': true, 'cp.partner.view': true, 'cp.commission.view': true,
+      'cp.invoice.view': true, 'cp.report.view': true,
       'report.view': 'all', 'report.export': true,
+    },
+  },
+  /**
+   * V2 §181: collections as a job of its own, for organizations that separate
+   * it from sales. Tenants that do not can simply grant the collection
+   * permissions to their existing sales roles instead (§221).
+   */
+  /** §181: channel partner operations as a job of its own. */
+  {
+    name: 'Channel Partner Manager',
+    description: 'Runs channel partners: registration, compliance, claims, commission and payouts.',
+    permissions: {
+      'dashboard.own': true, 'dashboard.team': true,
+      'lead.view': 'all', 'lead.view_source': true, 'lead.view_contact_details': true,
+      'project.view': true, 'inventory.view': true, 'inventory.view_prices': true,
+      'contact.view': 'all',
+      'booking.view': 'all', 'booking.report': true,
+      'cp.dashboard': true,
+      'cp.registration.view': true, 'cp.registration.review': true,
+      'cp.partner.view': true, 'cp.partner.create': true, 'cp.partner.edit': true,
+      'cp.partner.view_bank': true, 'cp.team.manage': true,
+      'cp.project_empanelment.manage': true,
+      'cp.claim.view': true, 'cp.claim.review': true,
+      'cp.commission.view': true, 'cp.commission.manage_rules': true,
+      'cp.invoice.view': true, 'cp.invoice.review': true, 'cp.invoice.mark_paid': true,
+      'cp.report.view': true,
+      'report.view': 'all', 'report.export': true,
+    },
+  },
+  {
+    name: 'Collection Manager',
+    description: 'Runs collections across projects: assignment, exceptions and recovery.',
+    permissions: {
+      'dashboard.own': true, 'dashboard.team': true,
+      'lead.view': 'team', 'lead.view_contact_details': true,
+      'project.view': true, 'inventory.view': true, 'inventory.view_prices': true,
+      'contact.view': 'team',
+      'booking.view': 'all', 'booking.edit': true, 'booking.report': true,
+      'booking.customer_link.create': true, 'booking.kyc.view': true, 'booking.kyc.review': true,
+      'collection.dashboard': true, 'collection.view': 'all', 'collection.assign': true,
+      'collection.followup': true, 'collection.payment_link': true, 'collection.record_payment': true,
+      'collection.reverse_receipt': true, 'collection.adjust_due_date': true, 'collection.report': true,
+      'report.view': 'team', 'report.export': true,
+      'setup.collection_allocation': true, 'setup.post_booking': true,
+    },
+  },
+  {
+    name: 'Collection Executive',
+    description: 'Works their own collection queue: follow-ups, promises and recovery.',
+    permissions: {
+      'dashboard.own': true,
+      'lead.view_contact_details': true,
+      'project.view': true, 'inventory.view': true,
+      'contact.view': 'own',
+      'booking.view': 'own', 'booking.customer_link.create': true, 'booking.kyc.view': true,
+      'collection.dashboard': true, 'collection.view': 'own', 'collection.followup': true,
+      'collection.payment_link': true, 'collection.record_payment': true,
+      'report.view': 'own',
     },
   },
 ];

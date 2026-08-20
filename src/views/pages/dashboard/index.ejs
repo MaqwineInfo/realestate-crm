@@ -18,6 +18,11 @@
       <a class="btn <%= isTeamView ? '' : 'btn-primary' %>" href="/app/dashboard">My work</a>
       <a class="btn <%= isTeamView ? 'btn-primary' : '' %>" href="/app/dashboard?view=team">Team</a>
     <% } %>
+    <%# V2 §4: the view switch. One user can be both a sales and a collection
+        user without a second account, so the switch is a link, not a role. %>
+    <% if (can('collection.dashboard') || can('collection.view')) { %>
+      <a class="btn" href="/app/collections">Collections</a>
+    <% } %>
     <% if (can('lead.create')) { %><a class="btn btn-primary" href="/app/leads/new">New lead</a><% } %>
   </div>
 </div>
@@ -45,10 +50,10 @@
 
 <% if (isTeamView && snapshot) { %>
   <div class="grid cols-4 mb-2">
-    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.receivedToday %></div><div class="lbl muted small">Leads received today</div></div></div>
-    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.connectedToday %></div><div class="lbl muted small">Responded today</div></div></div>
-    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.breachedToday %></div><div class="lbl muted small">SLA breaches today</div></div></div>
-    <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= snapshot.atRiskLeads.length %></div><div class="lbl muted small">Close to breaching</div></div></div>
+    <div class="card"><div class="card-body"><div class="stat-num"><%= snapshot.receivedToday %></div><div class="stat-lbl">Leads received today</div></div></div>
+    <div class="card"><div class="card-body"><div class="stat-num"><%= snapshot.connectedToday %></div><div class="stat-lbl">Responded today</div></div></div>
+    <div class="card"><div class="card-body"><div class="stat-num"><%= snapshot.breachedToday %></div><div class="stat-lbl">SLA breaches today</div></div></div>
+    <div class="card"><div class="card-body"><div class="stat-num"><%= snapshot.atRiskLeads.length %></div><div class="stat-lbl">Close to breaching</div></div></div>
   </div>
 <% } %>
 
@@ -74,7 +79,7 @@
     <% } %>
 
   <% } else if (queue.kind === 'LEADS') { %>
-    <table class="responsive" data-queue="leads">
+    <div class="table-wrap"><table class="responsive" data-queue="leads">
       <thead>
         <tr>
           <th>Customer</th><th>Project</th><th>Stage</th><th>Waiting</th>
@@ -119,10 +124,10 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
 
   <% } else if (queue.kind === 'VISITS') { %>
-    <table class="responsive" data-queue="visits">
+    <div class="table-wrap"><table class="responsive" data-queue="visits">
       <thead>
         <tr>
           <th>Customer</th><th>Project</th><th>Time</th><th>Visiting with</th>
@@ -160,7 +165,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
 
   <% } else { %>
     <table class="responsive" data-queue="followups">

@@ -1,0 +1,335 @@
+<%- include('../../partials/head') %>
+<%
+  const c = commercial;
+  const project = c.project || {};
+  const unit = c.unit || {};
+  const canEditApplicants = editable && sections.includes('APPLICANTS');
+  const canEditKyc = (editable || submitted) && sections.includes('KYC');
+  const primary = applicants.find(function (a) { return a.applicantRole === 'PRIMARY'; }) || {};
+  const coApplicants = applicants.filter(function (a) { return a.applicantRole === 'CO_APPLICANT'; });
+  const val = (v) => (v === undefined || v === null ? '' : v);
+%>
+<div class="public-wrap">
+  <div class="public-hero">
+    <h1><%= project.name || 'Your booking' %></h1>
+    <p class="muted">
+      <%= contact ? contact.displayName : '' %>
+      <% if (unit.unitNumber) { %> · Unit <%= unit.unitNumber %><% } %>
+      <% if (c.bookingNumber) { %> · <%= c.bookingNumber %><% } %>
+    </p>
+  </div>
+
+  <% if (otpPending) { %>
+    <%# §117: the form is not rendered at all until the code is verified. %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Verify it is you</h2></div>
+      <div class="card-body">
+        <% if (sent) { %><div class="flash flash-info">We have sent a 6-digit code to your registered mobile number.</div><% } %>
+        <form method="post" action="/booking-form/<%= token %>/otp" class="mb-2">
+          <div class="field">
+            <label for="code">Verification code</label>
+            <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+          </div>
+          <button class="btn btn-primary" type="submit">Verify</button>
+        </form>
+        <form method="post" action="/booking-form/<%= token %>/otp">
+          <button class="btn btn-ghost btn-sm" type="submit">Send me a code</button>
+        </form>
+      </div>
+    </div>
+  <% } else { %>
+
+    <% if (query.submitted === '1') { %>
+      <div class="flash flash-success">
+        Thank you — your details have been submitted. You can still upload or replace documents below.
+      </div>
+    <% } %>
+    <% if (query.uploaded === '1') { %><div class="flash flash-success">Document uploaded.</div><% } %>
+    <% if (query.reported === '1') { %><div class="flash flash-success">Thank you — we have passed this to your sales contact.</div><% } %>
+
+    <%# ------------------- 1. Booking summary (§118, read-only) ------------------ %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Your booking</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Project</dt><dd><%= project.name || '—' %></dd>
+          <dt>Unit</dt><dd><%= unit.unitNumber || '—' %><%= unit.saleableArea ? ' · ' + unit.saleableArea + ' sq ft' : '' %></dd>
+          <dt>Booking date</dt><dd><%= h.date(c.bookingDate) %></dd>
+          <dt>Booking value</dt><dd><strong><%= h.money(c.finalPriceMinor) %></strong></dd>
+          <dt>Initial booking amount</dt><dd><%= h.money(c.bookingAmountMinor) %></dd>
+          <dt>Payment plan</dt><dd><%= c.paymentPlanName || '—' %></dd>
+          <% if (c.quotation) { %>
+            <dt>Quotation</dt>
+            <dd>
+              <%= c.quotation.quotationNumber || '—' %>
+              <% if (c.quotation.shareToken) { %>
+                · <a href="/share/cost-sheet/<%= c.quotation.shareToken %>">View quotation</a>
+              <% } %>
+            </dd>
+          <% } %>
+          <% if (c.salesContact) { %>
+            <dt>Sales contact</dt><dd><%= c.salesContact.name %><%= c.salesContact.mobile ? ' · ' + c.salesContact.mobile : '' %></dd>
+          <% } %>
+        </dl>
+        <p class="muted small">
+          These details come from your booking and cannot be edited here.
+          If something looks wrong, tell us below and your sales contact will correct it.
+        </p>
+        <details>
+          <summary>Report an issue with these details</summary>
+          <form method="post" action="/booking-form/<%= token %>/issue" class="mt-1">
+            <div class="field">
+              <label for="issue">What looks wrong?</label>
+              <textarea id="issue" name="message" rows="3" maxlength="2000" required></textarea>
+            </div>
+            <button class="btn" type="submit">Send to my sales contact</button>
+          </form>
+        </details>
+      </div>
+    </div>
+
+    <%# ------------------------- 2. Applicant details (§120–§122) ---------------- %>
+    <div class="card">
+      <div class="card-head">
+        <h2 class="grow">Applicant details</h2>
+        <% if (submitted) { %><span class="badge b-green">Submitted</span><% } %>
+      </div>
+      <div class="card-body">
+        <% if (!canEditApplicants) { %>
+          <dl class="dl">
+            <dt>Name</dt><dd><%= val(primary.name) || '—' %></dd>
+            <dt>Mobile</dt><dd><%= val(primary.mobile) || '—' %></dd>
+            <dt>Email</dt><dd><%= val(primary.email) || '—' %></dd>
+            <dt>PAN</dt><dd><%= val(primary.panMasked) || '—' %></dd>
+          </dl>
+          <% coApplicants.forEach(function (co, i) { %>
+            <dl class="dl">
+              <dt>Co-applicant <%= i + 1 %></dt><dd><%= co.name %><%= co.relationship ? ' · ' + co.relationship : '' %></dd>
+            </dl>
+          <% }) %>
+          <p class="muted small mb-0">Your details are with us. Contact your sales representative to change them.</p>
+        <% } else { %>
+          <form method="post" action="/booking-form/<%= token %>" id="applicant-form">
+            <div class="field">
+              <label for="p-type">Applicant type</label>
+              <select id="p-type" name="primary[type]">
+                <option value="INDIVIDUAL" <%= primary.type !== 'COMPANY' ? 'selected' : '' %>>Individual</option>
+                <option value="COMPANY" <%= primary.type === 'COMPANY' ? 'selected' : '' %>>Company</option>
+              </select>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="p-name">Full name <span class="req">*</span></label>
+                <input type="text" id="p-name" name="primary[name]" value="<%= val(primary.name) %>" maxlength="150" required>
+              </div>
+              <div class="field">
+                <label for="p-mobile">Mobile <span class="req">*</span></label>
+                <input type="tel" id="p-mobile" name="primary[mobile]" value="<%= val(primary.mobile) %>" maxlength="20" required>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="p-email">Email</label>
+                <input type="email" id="p-email" name="primary[email]" value="<%= val(primary.email) %>" maxlength="150">
+              </div>
+              <div class="field">
+                <label for="p-dob">Date of birth</label>
+                <input type="date" id="p-dob" name="primary[dateOfBirth]" value="<%= primary.dateOfBirth ? h.dateInput(primary.dateOfBirth) : '' %>">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="p-pan">PAN</label>
+                <input type="text" id="p-pan" name="primary[pan]" maxlength="12" placeholder="<%= val(primary.panMasked) || 'ABCDE1234F' %>">
+                <% if (primary.panMasked) { %><span class="hint">On file: <%= primary.panMasked %>. Leave blank to keep it.</span><% } %>
+              </div>
+              <div class="field">
+                <label for="p-occupation">Occupation</label>
+                <input type="text" id="p-occupation" name="primary[occupation]" value="<%= val(primary.occupation) %>" maxlength="120">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="p-employer">Employer / business name</label>
+                <input type="text" id="p-employer" name="primary[employerName]" value="<%= val(primary.employerName) %>" maxlength="150">
+              </div>
+              <div class="field">
+                <label for="p-funding">How are you funding this purchase?</label>
+                <select id="p-funding" name="primary[fundingType]">
+                  <option value="">Prefer not to say</option>
+                  <% ['SELF_FUNDED','HOME_LOAN','MIXED'].forEach(function (ft) { %>
+                    <option value="<%= ft %>" <%= primary.fundingType === ft ? 'selected' : '' %>><%= ft.replace(/_/g,' ').toLowerCase() %></option>
+                  <% }) %>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="p-permanent">Permanent address</label>
+              <textarea id="p-permanent" name="primary[permanentAddress]" rows="2" maxlength="500"><%= val(primary.permanentAddress) %></textarea>
+            </div>
+            <div class="field">
+              <label for="p-correspondence">Correspondence address</label>
+              <textarea id="p-correspondence" name="primary[correspondenceAddress]" rows="2" maxlength="500"><%= val(primary.correspondenceAddress) %></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="p-city">City</label><input type="text" id="p-city" name="primary[city]" value="<%= val(primary.city) %>" maxlength="80"></div>
+              <div class="field"><label for="p-state">State</label><input type="text" id="p-state" name="primary[state]" value="<%= val(primary.state) %>" maxlength="80"></div>
+              <div class="field"><label for="p-pin">Pincode</label><input type="text" id="p-pin" name="primary[pincode]" value="<%= val(primary.pincode) %>" maxlength="12"></div>
+            </div>
+
+            <fieldset data-company-fields>
+              <legend>Company details</legend>
+              <div class="field-row">
+                <div class="field"><label for="p-company">Company legal name</label><input type="text" id="p-company" name="primary[companyLegalName]" value="<%= val(primary.companyLegalName) %>" maxlength="200"></div>
+                <div class="field"><label for="p-gstin">GSTIN</label><input type="text" id="p-gstin" name="primary[gstin]" value="<%= val(primary.gstin) %>" maxlength="20"></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label for="p-signatory">Authorised signatory</label><input type="text" id="p-signatory" name="primary[signatoryName]" value="<%= val(primary.signatoryName) %>" maxlength="150"></div>
+                <div class="field"><label for="p-sig-mobile">Signatory mobile</label><input type="tel" id="p-sig-mobile" name="primary[signatoryMobile]" value="<%= val(primary.signatoryMobile) %>" maxlength="20"></div>
+              </div>
+            </fieldset>
+
+            <%# §122: co-applicants. Two slots up front; more only if needed. %>
+            <h3>Co-applicants <span class="opt">optional</span></h3>
+            <% [0, 1].forEach(function (i) { const co = coApplicants[i] || {}; %>
+              <div class="field-row">
+                <div class="field">
+                  <label for="co-<%= i %>-name">Name</label>
+                  <input type="text" id="co-<%= i %>-name" name="co[<%= i %>][name]" value="<%= val(co.name) %>" maxlength="150">
+                </div>
+                <div class="field">
+                  <label for="co-<%= i %>-rel">Relationship</label>
+                  <input type="text" id="co-<%= i %>-rel" name="co[<%= i %>][relationship]" value="<%= val(co.relationship) %>" maxlength="60">
+                </div>
+                <div class="field">
+                  <label for="co-<%= i %>-mobile">Mobile</label>
+                  <input type="tel" id="co-<%= i %>-mobile" name="co[<%= i %>][mobile]" value="<%= val(co.mobile) %>" maxlength="20">
+                </div>
+                <div class="field">
+                  <label for="co-<%= i %>-pan">PAN</label>
+                  <input type="text" id="co-<%= i %>-pan" name="co[<%= i %>][pan]" maxlength="12" placeholder="<%= val(co.panMasked) %>">
+                </div>
+              </div>
+            <% }) %>
+
+            <%# §124: the declaration. A data confirmation, not an e-signature. %>
+            <label class="check">
+              <input type="checkbox" name="declaration" value="1" required>
+              I confirm the information submitted is correct.
+            </label>
+            <div class="mt-2">
+              <button class="btn btn-primary" type="submit">Submit my details</button>
+            </div>
+          </form>
+        <% } %>
+      </div>
+    </div>
+
+    <%# --------------------------- 3. KYC documents (§290) ---------------------- %>
+    <div class="card">
+      <div class="card-head">
+        <h2 class="grow">Documents</h2>
+        <span class="badge"><%= kycStatus.replace(/_/g,' ').toLowerCase() %></span>
+      </div>
+      <div class="card-body">
+        <% if (checklist.resubmissions.length) { %>
+          <div class="flash flash-warn">
+            <%= checklist.resubmissions.length %> document<%= checklist.resubmissions.length === 1 ? '' : 's' %>
+            need<%= checklist.resubmissions.length === 1 ? 's' : '' %> to be replaced. See the notes below.
+          </div>
+        <% } %>
+
+        <% checklist.applicants.forEach(function (row) { %>
+          <h3><%= row.applicant.name %> <span class="muted small">(<%= row.applicant.applicantRole.replace(/_/g,' ').toLowerCase() %>)</span></h3>
+          <table class="responsive">
+            <tbody>
+              <% row.items.forEach(function (item) { %>
+                <tr>
+                  <td data-label="Document">
+                    <%= item.type.name %>
+                    <% if (item.mandatory) { %><span class="req">*</span><% } %>
+                    <% if (item.document && item.document.reviewNote && item.status !== 'APPROVED') { %>
+                      <div class="small text-danger"><%= item.document.reviewNote %></div>
+                    <% } %>
+                  </td>
+                  <td data-label="Status">
+                    <span class="badge <%= item.status === 'APPROVED' ? 'b-green' : (item.status === 'RESUBMISSION_REQUIRED' ? 'b-red' : '') %>">
+                      <%= item.status === 'MISSING' ? 'not uploaded' : item.status.replace(/_/g,' ').toLowerCase() %>
+                    </span>
+                  </td>
+                  <td data-label="">
+                    <% if (canEditKyc && item.status !== 'APPROVED') { %>
+                      <form method="post" action="/booking-form/<%= token %>/kyc" enctype="multipart/form-data" class="inline">
+                        <input type="hidden" name="applicantId" value="<%= row.applicant._id %>">
+                        <input type="hidden" name="documentTypeId" value="<%= item.type._id %>">
+                        <input type="file" name="file" required accept="image/jpeg,image/png,image/webp,application/pdf">
+                        <% if (item.type.numberRequired) { %>
+                          <input type="text" name="documentNumber" placeholder="Document number" maxlength="30" required>
+                        <% } %>
+                        <% if (item.type.expiryRequired) { %>
+                          <input type="date" name="expiryDate" required>
+                        <% } %>
+                        <button class="btn btn-sm" type="submit"><%= item.status === 'MISSING' ? 'Upload' : 'Replace' %></button>
+                      </form>
+                    <% } else if (item.status === 'APPROVED') { %>
+                      <span class="muted small">Verified</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% }) %>
+        <% if (!checklist.applicants.length) { %>
+          <p class="muted mb-0">Submit your details above and your document checklist will appear here.</p>
+        <% } %>
+        <p class="muted small">
+          Documents are stored privately and are visible only to the team handling your booking.
+          Accepted formats: JPG, PNG, WEBP or PDF.
+        </p>
+      </div>
+    </div>
+
+    <%# ------------------- 4. Payment plan & status (§138, §269) ---------------- %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Payment plan</h2></div>
+      <div class="card-body">
+        <div class="grid cols-3 mb-2">
+          <div><div class="lbl muted small">Booking value</div><strong><%= h.money(c.finalPriceMinor) %></strong></div>
+          <div><div class="lbl muted small">Paid</div><strong><%= h.money(payment.totalReceivedMinor) %></strong></div>
+          <div><div class="lbl muted small">Outstanding</div><strong><%= h.money(payment.outstandingMinor) %></strong></div>
+        </div>
+        <% if (payment.nextDueAt) { %>
+          <p>Next due: <strong><%= h.money(payment.nextDueAmountMinor) %></strong> on <%= h.date(payment.nextDueAt) %></p>
+        <% } %>
+
+        <table class="responsive">
+          <thead><tr><th>Milestone</th><th>Due</th><th class="num">Amount</th><th class="num">Paid</th><th></th></tr></thead>
+          <tbody>
+            <% payment.installments.forEach(function (i) { %>
+              <tr>
+                <td data-label="Milestone"><%= i.milestone %></td>
+                <td data-label="Due"><%= i.dueDate ? h.date(i.dueDate) : 'To be confirmed' %></td>
+                <td data-label="Amount" class="num"><%= h.money(i.scheduledAmountMinor) %></td>
+                <td data-label="Paid" class="num"><%= h.money(i.amountReceivedMinor || 0) %></td>
+                <td data-label="">
+                  <% if (i.paymentUrl && i.outstandingMinor > 0) { %>
+                    <a class="btn btn-sm btn-primary" href="<%= i.paymentUrl %>">Pay <%= h.moneyShort(i.paymentAmountMinor) %></a>
+                  <% } else if (i.status === 'PAID') { %>
+                    <span class="muted small">Paid</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+
+  <p class="muted small"><%= tenant ? tenant.name : '' %></p>
+</div>
+<script src="/js/app.js"></script>
+</body>
+</html>

@@ -4,9 +4,13 @@ const { Notification, User } = require('../db/models');
  * Spec §45: V1 delivers in-app notifications. Email/WhatsApp delivery is opt-in
  * per user and routed through the messaging adapters when those are configured.
  */
-async function notify({ tenantId, userId, type, title, body, link, leadId, severity = 'INFO' }) {
+async function notify({
+  tenantId, userId, type, title, body, link, leadId, bookingId, severity = 'INFO', domain = 'SALES',
+}) {
   if (!userId) return null;
-  return Notification.create({ tenantId, userId, type, title, body, link, leadId, severity, at: new Date() });
+  return Notification.create({
+    tenantId, userId, type, title, body, link, leadId, bookingId, domain, severity, at: new Date(),
+  });
 }
 
 async function notifyMany({ tenantId, userIds = [], ...rest }) {

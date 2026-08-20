@@ -10,7 +10,12 @@ const tenantGuard = require('../tenantGuard');
 const webhookEventSchema = new Schema({
   integrationId: { type: Schema.Types.ObjectId, ref: 'Integration', index: true },
   provider: { type: String },
+  // V2 §142: the same raw-store + idempotency machinery now also carries
+  // payment callbacks, which is exactly why it was built generic.
   kind: { type: String, default: 'LEAD' },
+  processedAt: { type: Date },
+  result: { type: Schema.Types.Mixed },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
   idempotencyKey: { type: String, required: true },
   payload: { type: Schema.Types.Mixed },
   headers: { type: Schema.Types.Mixed },

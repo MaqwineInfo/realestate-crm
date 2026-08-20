@@ -1,0 +1,53 @@
+<%- include('../../partials/cp-head') %>
+<div class="page-head"><div class="grow"><h1>My bookings</h1>
+  <div class="sub">Bookings that came from your leads, and what each one earns.</div></div></div>
+
+<div class="card">
+  <% if (!rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No bookings yet', message: 'When one of your customers books, it appears here with its commission position.', ctaHref: '/cp/leads', ctaLabel: 'My leads' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr><th>Booking</th><th>Customer</th><th>Project / unit</th><th>Booked</th>
+        <th class="num">Booking value</th><th>Commission</th></tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Booking"><%= r.bookingNumber || '—' %></td>
+            <td data-label="Customer"><%= r.customerName || '—' %></td>
+            <td data-label="Project / unit"><%= r.project %> <span class="muted small"><%= r.unit || '' %></span></td>
+            <td data-label="Booked"><%= h.date(r.bookingDate) %></td>
+            <td data-label="Booking value" class="num"><%= h.moneyShort(r.bookingValueMinor) %></td>
+            <td data-label="Commission">
+              <% if (!r.commission) { %>
+                <span class="muted small">Not set</span>
+              <% } else { %>
+                <div><%= h.money(r.commission.calculatedMinor) %>
+                  <span class="badge <%= ['ELIGIBLE','INVOICED','PAID','PARTIALLY_PAID'].includes(r.commission.status) ? 'b-green' : '' %>">
+                    <%= r.commission.status.toLowerCase().replace(/_/g,' ') %>
+                  </span>
+                </div>
+                <% if (r.commission.rule) { %><div class="small muted"><%= r.commission.rule %></div><% } %>
+                <%#
+                  §271: the collection figure is shown ONLY when this partner's own
+                  commission depends on it — never the receipt history behind it.
+                %>
+                <% if (r.commission.progress) { %>
+                  <div class="small">
+                    Eligibility progress: <%= r.commission.progress.collectedPct %>% collected
+                    / <%= r.commission.progress.requiredPct %>% required
+                  </div>
+                <% } %>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <div class="card-body">
+      <p class="small muted mb-0">Customer documents and payment details stay with the developer.</p>
+    </div>
+  <% } %>
+</div>
+<%- include('../../partials/cp-foot') %>

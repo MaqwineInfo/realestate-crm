@@ -1,0 +1,43 @@
+<%- include('head') %>
+<%#
+  V2 §251: the partner portal is mobile-first — a partner submits a lead from a
+  phone at a site, not from a desk. Deliberately its own shell: no internal
+  navigation, no internal search, nothing that hints at the CRM behind it.
+%>
+<div class="cp-shell">
+  <header class="cp-top">
+    <div class="cp-brand">
+      <strong><%= tenant ? tenant.name : 'Partner portal' %></strong>
+      <small>Channel partner portal</small>
+    </div>
+    <% if (typeof partner !== 'undefined' && partner) { %>
+      <nav class="cp-nav">
+        <a href="/cp/dashboard" class="<%= path === '/cp/dashboard' ? 'active' : '' %>">Dashboard</a>
+        <a href="/cp/leads" class="<%= path.startsWith('/cp/leads') ? 'active' : '' %>">Leads</a>
+        <a href="/cp/visits" class="<%= path.startsWith('/cp/visits') ? 'active' : '' %>">Visits</a>
+        <a href="/cp/bookings" class="<%= path.startsWith('/cp/bookings') ? 'active' : '' %>">Bookings</a>
+        <% if (typeof isCompanyAdmin !== 'undefined' && isCompanyAdmin) { %>
+          <a href="/cp/team" class="<%= path.startsWith('/cp/team') ? 'active' : '' %>">Team</a>
+        <% } %>
+        <a href="/cp/invoices" class="<%= path.startsWith('/cp/invoices') ? 'active' : '' %>">Invoices</a>
+        <a href="/cp/profile" class="<%= path.startsWith('/cp/profile') ? 'active' : '' %>">Profile</a>
+      </nav>
+      <form method="post" action="/cp/logout" class="cp-out">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="btn btn-ghost btn-sm" type="submit">Sign out</button>
+      </form>
+    <% } %>
+  </header>
+
+  <main class="cp-main">
+    <%- include('flash') %>
+    <% if (typeof partnerReadOnly !== 'undefined' && partnerReadOnly) { %>
+      <%# §218: suspended means read-only, and says so rather than failing silently. %>
+      <div class="flash flash-warn">
+        Your account is read-only at the moment. You can see your history, but not submit new work.
+        Contact the sales team.
+      </div>
+    <% } %>
+    <% if (typeof reraBanner !== 'undefined' && reraBanner) { %>
+      <div class="flash flash-<%= reraBanner.tone === 'bad' ? 'error' : 'warn' %>"><%= reraBanner.message %></div>
+    <% } %>

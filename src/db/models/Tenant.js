@@ -26,6 +26,47 @@ const settingsSchema = new Schema({
   autoStageOnVisit: { type: Boolean, default: true },
   // §25.1: is channel-partner mobile mandatory on the QR walk-in form?
   qrRequireCpMobile: { type: Boolean, default: false },
+
+  /* ---------------------- V2 §264: post-booking settings -------------------- */
+
+  // §117: how long a customer booking-form link stays usable.
+  bookingLinkExpiryDays: { type: Number, default: 7 },
+  // §117: ask the customer for an OTP on the booking mobile before opening it.
+  bookingLinkRequireOtp: { type: Boolean, default: false },
+  // §163: automated payment reminders, off until a tenant turns them on.
+  collectionReminderEnabled: { type: Boolean, default: false },
+  collectionReminderDaysBefore: { type: [Number], default: [7, 3, 1] },
+  collectionReminderDaysAfter: { type: [Number], default: [1, 7] },
+  collectionReminderChannel: { type: String, enum: ['WHATSAPP', 'SMS', 'EMAIL'], default: 'WHATSAPP' },
+  // §141: may a payment link be raised for less than the outstanding amount?
+  collectionAllowPartialPaymentLink: { type: Boolean, default: true },
+  // §143: a tenant may forbid cash receipts outright.
+  collectionAllowCash: { type: Boolean, default: true },
+  // §297: send a payment acknowledgement (never called a tax receipt).
+  receiptAcknowledgementEnabled: { type: Boolean, default: true },
+  // §140: how long a payment link stays valid.
+  paymentLinkExpiryDays: { type: Number, default: 3 },
+
+  /* --------------------- V2 §264: channel partner settings ------------------ */
+
+  // §14: may a partner start their own application from a public page?
+  cpPublicRegistrationEnabled: { type: Boolean, default: false },
+  // §19: RERA policy. Requiring it and requiring it *verified* are different bars.
+  cpRequireRera: { type: Boolean, default: true },
+  cpRequireVerifiedReraForActivation: { type: Boolean, default: false },
+  cpRequireValidReraForLeadSubmission: { type: Boolean, default: true },
+  cpReraExpiryReminderDays: { type: [Number], default: [90, 60, 30, 7] },
+  // §35: how long an accepted partner association is protected.
+  cpLeadProtectionDays: { type: Number, default: 90 },
+  // §35: what happens when a partner claims a customer who is already ours.
+  cpClaimConflictMode: {
+    type: String,
+    enum: ['AUTO_REJECT', 'REVIEW', 'ACCEPT_IF_INACTIVE_FOR_N_DAYS'],
+    default: 'REVIEW',
+  },
+  cpClaimInactiveDays: { type: Number, default: 30 },
+  // §26: must a partner be empanelled on the project before submitting?
+  cpRequireProjectEmpanelment: { type: Boolean, default: true },
 }, { _id: false });
 
 const tenantSchema = new Schema({

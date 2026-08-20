@@ -1,0 +1,128 @@
+<%- include('../../partials/cp-head') %>
+<div class="page-head">
+  <div class="grow">
+    <h1>Invoices</h1>
+    <div class="sub">Raise an invoice against commission that has become eligible.</div>
+  </div>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(summary.accruedMinor) %></div>
+    <div class="stat-lbl">Accrued</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(summary.uninvoicedEligibleMinor) %></div>
+    <div class="stat-lbl">Eligible to invoice</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(summary.invoicedMinor) %></div>
+    <div class="stat-lbl">Invoiced</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(summary.paidMinor) %></div>
+    <div class="stat-lbl">Paid</div></div></div>
+</div>
+
+<%# §313: what is claimable, with the reason it became claimable. %>
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Eligible commission</h2></div>
+  <% if (!eligible.length) { %>
+    <div class="card-body">
+      <p class="muted mb-0">
+        No eligible commission yet. Commission becomes available when the conditions on each
+        booking's rule are met.
+      </p>
+    </div>
+  <% } else if (!canCreate || partnerReadOnly) { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Booking</th><th>Project</th><th class="num">Eligible</th><th>Rule</th></tr></thead>
+      <tbody>
+        <% eligible.forEach(function (e) { %>
+          <tr>
+            <td data-label="Booking"><%= (e.bookingId || {}).bookingNumber || '—' %></td>
+            <td data-label="Project"><%= (e.projectId || {}).name || '—' %></td>
+            <td data-label="Eligible" class="num"><%= h.money(e.uninvoicedEligibleMinor) %></td>
+            <td data-label="Rule" class="small"><%= (e.commissionRuleSnapshot || {}).description || '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <div class="card-body"><p class="small muted mb-0">Your account cannot raise invoices. Ask your company administrator.</p></div>
+  <% } else { %>
+    <form method="post" action="/cp/invoices">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="table-wrap wide"><table class="responsive">
+        <thead>
+          <tr><th>Booking</th><th>Customer</th><th>Project</th><th class="num">Booking value</th>
+          <th class="num">Collected</th><th>Rule</th><th class="num">Eligible</th><th class="num">Claim</th></tr>
+        </thead>
+        <tbody>
+          <% eligible.forEach(function (e) { %>
+            <tr>
+              <td data-label="Booking">
+                <%= (e.bookingId || {}).bookingNumber || '—' %>
+                <input type="hidden" name="entitlementId" value="<%= e._id %>">
+              </td>
+              <td data-label="Customer"><%= e.customerName || '—' %></td>
+              <td data-label="Project"><%= (e.projectId || {}).name || '—' %></td>
+              <td data-label="Booking value" class="num"><%= h.moneyShort((e.bookingId || {}).finalPriceMinor || 0) %></td>
+              <td data-label="Collected" class="num"><%= e.collectedPct %>%</td>
+              <td data-label="Rule" class="small"><%= (e.commissionRuleSnapshot || {}).description || '—' %></td>
+              <td data-label="Eligible" class="num"><%= h.money(e.uninvoicedEligibleMinor) %></td>
+              <td data-label="Claim" class="num">
+                <input type="text" name="claimAmount" inputmode="decimal"
+                       value="<%= (e.uninvoicedEligibleMinor / 100) %>" class="w-amount">
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field"><label for="invoiceNumber">Your invoice number</label><input type="text" id="invoiceNumber" name="invoiceNumber" maxlength="60" required></div>
+          <div class="field"><label for="invoiceDate">Invoice date</label><input type="date" id="invoiceDate" name="invoiceDate" required></div>
+          <div class="field"><label for="gstAmount">GST amount <span class="opt">optional</span></label><input type="text" id="gstAmount" name="gstAmount" inputmode="decimal"></div>
+          <div class="field"><label for="otherAdjustment">Other adjustment <span class="opt">optional</span></label><input type="text" id="otherAdjustment" name="otherAdjustment" inputmode="decimal"></div>
+        </div>
+        <div class="field">
+          <label for="note">Note <span class="opt">optional</span></label>
+          <input type="text" id="note" name="note" maxlength="1000">
+        </div>
+        <button class="btn btn-primary" type="submit">Create invoice draft</button>
+        <p class="small muted mb-0 mt-1">
+          A claim can never exceed the eligible amount shown. Tax values are recorded as you enter
+          them — they are not calculated here.
+        </p>
+      </div>
+    </form>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">My invoices</h2></div>
+  <% if (!invoices.length) { %>
+    <div class="card-body"><p class="muted mb-0">No invoices yet.</p></div>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Invoice</th><th>Date</th><th class="num">Total</th><th class="num">Paid</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% invoices.forEach(function (i) { %>
+          <tr>
+            <td data-label="Invoice"><%= i.invoiceNumber || i.invoiceRef %></td>
+            <td data-label="Date"><%= i.invoiceDate ? h.date(i.invoiceDate) : '—' %></td>
+            <td data-label="Total" class="num"><%= h.money(i.invoiceTotalMinor) %></td>
+            <td data-label="Paid" class="num"><%= h.money(i.paidAmountMinor || 0) %></td>
+            <td data-label="Status">
+              <span class="badge <%= i.status === 'PAID' ? 'b-green' : (['REJECTED','CANCELLED'].includes(i.status) ? 'b-red' : '') %>">
+                <%= i.status.toLowerCase().replace(/_/g,' ') %>
+              </span>
+              <% if (i.reviewNote && ['CORRECTION_REQUIRED','REJECTED'].includes(i.status)) { %>
+                <div class="small muted"><%= i.reviewNote %></div>
+              <% } %>
+            </td>
+            <td data-label=""><a class="btn btn-sm" href="/cp/invoices/<%= i._id %>">Open</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+<%- include('../../partials/cp-foot') %>

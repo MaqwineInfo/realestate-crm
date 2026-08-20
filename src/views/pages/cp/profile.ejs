@@ -1,0 +1,100 @@
+<%- include('../../partials/cp-head') %>
+<%
+  const p = partner.profile;
+  const bank = p.bank || {};
+%>
+<div class="page-head"><div class="grow"><h1>My profile</h1>
+  <div class="sub">What the developer has on file for you.</div></div></div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Business</h2></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Type</dt><dd><%= p.partnerType === 'COMPANY' ? 'Company' : 'Individual' %></dd>
+        <dt>Name</dt><dd><%= p.tradeName || p.legalName || p.primaryContactName %></dd>
+        <dt>Partner code</dt><dd><%= partner.partnerCode %></dd>
+        <dt>Contact</dt><dd><%= p.primaryContactName || '—' %></dd>
+        <dt>Mobile</dt><dd><%= p.mobile || '—' %></dd>
+        <dt>Email</dt><dd><%= p.email || '—' %></dd>
+        <dt>PAN</dt><dd><%= p.pan || '—' %></dd>
+        <dt>GSTIN</dt><dd><%= p.gstin || '—' %></dd>
+        <dt>Status</dt><dd><span class="badge <%= partner.status === 'ACTIVE' ? 'b-green' : 'b-amber' %>"><%= partner.status.toLowerCase() %></span></dd>
+      </dl>
+      <%# §21: the partner sees their own account masked, like everyone else. %>
+      <dl class="dl">
+        <dt>Bank</dt><dd><%= bank.bankName || '—' %></dd>
+        <dt>Account</dt><dd><%= bank.accountNumberMasked || '—' %></dd>
+        <dt>IFSC</dt><dd><%= bank.ifsc || '—' %></dd>
+      </dl>
+      <p class="small muted mb-0">Contact the sales team to change these details.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">RERA</h2>
+      <% if (partner.reraStatus) { %><span class="badge"><%= partner.reraStatus.toLowerCase() %></span><% } %>
+    </div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Number</dt><dd><%= partner.reraNumber || '—' %></dd>
+        <dt>Expires</dt><dd><%= partner.reraExpiryDate ? h.date(partner.reraExpiryDate) : '—' %></dd>
+      </dl>
+
+      <% if (!partnerReadOnly) { %>
+        <%# §217: a renewal is a new version. The old certificate is kept. %>
+        <form method="post" action="/cp/profile/rera" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <h3>Upload a renewed certificate</h3>
+          <div class="field-row">
+            <div class="field">
+              <label for="registrationNumber">RERA number</label>
+              <input type="text" id="registrationNumber" name="registrationNumber" maxlength="80" required
+                     value="<%= partner.reraNumber || '' %>">
+            </div>
+            <div class="field">
+              <label for="issueDate">Issued</label>
+              <input type="date" id="issueDate" name="issueDate">
+            </div>
+            <div class="field">
+              <label for="expiryDate">Expires</label>
+              <input type="date" id="expiryDate" name="expiryDate" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="certificate">Certificate</label>
+            <input type="file" id="certificate" name="certificate" accept="application/pdf,image/jpeg,image/png" required>
+            <span class="hint">PDF or image. Stored privately.</span>
+          </div>
+          <button class="btn btn-primary" type="submit">Upload certificate</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2 class="grow">Certificate history</h2></div>
+  <table class="responsive">
+    <thead><tr><th>Version</th><th>Number</th><th>Issued</th><th>Expires</th><th>Status</th></tr></thead>
+    <tbody>
+      <% history.forEach(function (d) { %>
+        <tr>
+          <td data-label="Version">v<%= d.version %><% if (d.active) { %> <span class="badge b-blue">current</span><% } %></td>
+          <td data-label="Number"><%= d.registrationNumber %></td>
+          <td data-label="Issued"><%= d.issueDate ? h.date(d.issueDate) : '—' %></td>
+          <td data-label="Expires"><%= d.expiryDate ? h.date(d.expiryDate) : '—' %></td>
+          <td data-label="Status">
+            <span class="badge <%= d.verificationStatus === 'VERIFIED' ? 'b-green' : (d.verificationStatus === 'REJECTED' ? 'b-red' : '') %>">
+              <%= d.verificationStatus.toLowerCase() %>
+            </span>
+            <% if (d.verificationNote) { %><div class="small muted"><%= d.verificationNote %></div><% } %>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (!history.length) { %><tr><td colspan="5" class="muted small">No certificate on file.</td></tr><% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../../partials/cp-foot') %>

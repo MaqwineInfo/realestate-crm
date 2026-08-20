@@ -19,6 +19,12 @@ const MANAGER_TILES = ['unattended', 'sla', 'today', 'missed', 'reinquiry', 'una
  */
 router.get('/app/dashboard', async (req, res, next) => {
   try {
+    /**
+     * V2 §4: `?view=collections` is the documented way in. It redirects to the
+     * one collections implementation rather than growing a second copy of the
+     * queue here — the tiles and the list must never drift apart (§279).
+     */
+    if (req.query.view === 'collections') return res.redirect('/app/collections');
     const isTeamView = req.query.view === 'team' && can(req.user, 'dashboard.team');
     const zone = res.locals.zone;
 

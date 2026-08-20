@@ -1,0 +1,150 @@
+<%- include('../../partials/cp-head') %>
+<%
+  const t = tiles;
+  const name = partner.profile.tradeName || partner.profile.legalName || partner.profile.primaryContactName;
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= name %></h1>
+    <div class="sub">
+      <%= partner.profile.partnerType === 'COMPANY' ? 'Company' : 'Individual' %> channel partner
+      · <%= partner.partnerCode %>
+      <% if (partner.reraNumber) { %> · RERA <%= partner.reraNumber %><% } %>
+    </div>
+  </div>
+  <% if (!partnerReadOnly) { %>
+    <a class="btn btn-primary" href="/cp/leads/new">Submit a lead</a>
+  <% } %>
+</div>
+
+<%# §29/§30: the same metrics for company and individual partners. %>
+<div class="tiles">
+  <a class="tile" href="/cp/leads"><div class="num"><%= t.leadsSubmitted %></div><div class="lbl">Leads submitted</div></a>
+  <a class="tile" href="/cp/leads?status=ACCEPTED"><div class="num"><%= t.leadsAccepted %></div><div class="lbl">Accepted</div></a>
+  <a class="tile" href="/cp/visits"><div class="num"><%= t.visitsCompleted %></div><div class="lbl">Visits completed</div></a>
+  <a class="tile" href="/cp/bookings"><div class="num"><%= t.bookings %></div><div class="lbl">Bookings</div></a>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(t.bookingValueMinor) %></div>
+    <div class="stat-lbl">Booking value</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(t.eligibleCommissionMinor) %></div>
+    <div class="stat-lbl">Eligible commission</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= t.invoicesPending %></div>
+    <div class="stat-lbl">Invoices pending</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(t.paidCommissionMinor) %></div>
+    <div class="stat-lbl">Paid to date</div>
+  </div></div>
+</div>
+
+<%# §206: four separate figures. Accrued is not payable. %>
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Commission</h2></div>
+  <div class="card-body">
+    <dl class="dl">
+      <dt>Accrued</dt><dd><%= h.money(commission.accruedMinor) %> <span class="muted small">earned on bookings so far</span></dd>
+      <dt>Eligible</dt><dd><%= h.money(commission.eligibleMinor) %> <span class="muted small">conditions met</span></dd>
+      <dt>Invoiced</dt><dd><%= h.money(commission.invoicedMinor) %></dd>
+      <dt>Paid</dt><dd><%= h.money(commission.paidMinor) %></dd>
+    </dl>
+    <p class="small muted mb-0">
+      Accrued commission is not yet payable — each booking's rule says when it becomes eligible.
+    </p>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Conversion</h2></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Lead → visit</dt><dd><%= conversions.leadToVisit %>%</dd>
+        <dt>Visit → booking</dt><dd><%= conversions.visitToBooking %>%</dd>
+        <dt>Lead → booking</dt><dd><%= conversions.leadToBooking %>%</dd>
+      </dl>
+      <p class="small muted mb-0">Based on accepted leads only.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Projects</h2></div>
+    <% if (!projectRows.length) { %>
+      <div class="card-body"><p class="muted mb-0">You are not empanelled on any project yet.</p></div>
+    <% } else { %>
+      <table class="responsive">
+        <thead><tr><th>Project</th><th class="num">Leads</th><th class="num">Bookings</th><th class="num">Value</th><th>Status</th></tr></thead>
+        <tbody>
+          <% projectRows.forEach(function (r) { %>
+            <tr>
+              <td data-label="Project"><%= r.project %></td>
+              <td data-label="Leads" class="num"><%= r.leads %></td>
+              <td data-label="Bookings" class="num"><%= r.bookings %></td>
+              <td data-label="Value" class="num"><%= h.moneyShort(r.bookingValueMinor) %></td>
+              <td data-label="Status">
+                <span class="badge <%= r.status === 'APPROVED' ? 'b-green' : '' %>"><%= r.status.toLowerCase() %></span>
+                <% if (r.effectiveTo) { %><div class="small muted">to <%= h.date(r.effectiveTo) %></div><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>
+
+<% if (isCompanyAdmin && team.length) { %>
+  <%# §311: company data only. %>
+  <div class="card mt-2">
+    <div class="card-head"><h2 class="grow">Team performance</h2></div>
+    <table class="responsive">
+      <thead><tr><th>Member</th><th class="num">Leads</th><th class="num">Visits</th><th class="num">Bookings</th><th class="num">Booking value</th></tr></thead>
+      <tbody>
+        <% team.forEach(function (r) { %>
+          <tr>
+            <td data-label="Member"><%= r.name %><% if (!r.active) { %> <span class="badge b-slate">inactive</span><% } %></td>
+            <td data-label="Leads" class="num"><%= r.leads %></td>
+            <td data-label="Visits" class="num"><%= r.visits %></td>
+            <td data-label="Bookings" class="num"><%= r.bookings %></td>
+            <td data-label="Booking value" class="num"><%= h.moneyShort(r.bookingValueMinor) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<% if (recent.length) { %>
+  <div class="card mt-2">
+    <div class="card-head">
+      <h2 class="grow">Recent leads</h2>
+      <a class="btn btn-sm" href="/cp/leads">All leads</a>
+    </div>
+    <table class="responsive">
+      <thead><tr><th>Customer</th><th>Project</th><th>Submitted</th><th>Status</th></tr></thead>
+      <tbody>
+        <% recent.forEach(function (row) { %>
+          <tr>
+            <td data-label="Customer"><%= row.visible.customerName %></td>
+            <td data-label="Project"><%= row.visible.project || '—' %></td>
+            <td data-label="Submitted"><%= h.date(row.claim.submittedAt) %></td>
+            <td data-label="Status">
+              <span class="badge <%= row.claim.status === 'ACCEPTED' ? 'b-green' : (row.claim.status === 'CONFLICT' ? 'b-amber' : '') %>">
+                <%= row.claim.status.toLowerCase().replace('_',' ') %>
+              </span>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<%- include('../../partials/cp-foot') %>

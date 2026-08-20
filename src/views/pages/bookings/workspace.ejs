@@ -1,0 +1,1096 @@
+<%- include('../../partials/app-head') %>
+<%
+  const contact = booking.contactId || {};
+  const project = booking.projectId || {};
+  const unit = booking.unitId || {};
+  const owner = booking.collectionOwnerUserId || null;
+  const tabHref = (t) => `/app/bookings/${booking._id}?tab=${t}`;
+  const summary = [contact.displayName, project.name, unit.unitNumber].filter(Boolean).join(' · ');
+  const scheduleGap = booking.scheduledTotalMinor && booking.scheduledTotalMinor !== booking.finalPriceMinor;
+  const progressSteps = [
+    { label: 'Booked', done: true },
+    { label: 'Booking form', done: ['SUBMITTED','UNDER_REVIEW','VERIFIED','CORRECTION_REQUIRED'].includes(booking.kycStatus) },
+    { label: 'KYC verified', done: booking.kycStatus === 'VERIFIED' },
+    { label: 'Payments in progress', done: booking.totalReceivedMinor > 0 },
+    { label: 'Fully paid', done: booking.postBookingStatus === 'FULLY_PAID' },
+  ];
+%>
+
+<% if (justBooked) { %>
+  <%# V1.1 §54: the sale is the biggest moment in the product — say so, once. %>
+  <div class="booking-done">
+    <div class="bd-mark" aria-hidden="true">✓</div>
+    <div>
+      <h1>Booking completed</h1>
+      <div class="bd-lines">
+        <strong><%= contact.displayName %></strong> · <%= project.name %> · Unit <%= unit.unitNumber %>
+        · <%= h.money(booking.finalPriceMinor) %> · <%= h.date(booking.bookingDate) %>
+      </div>
+      <div class="small muted mt-1">
+        The unit is booked, the lead is closed, attribution is frozen — and the payment schedule
+        below has been generated from the payment plan that was sold.
+      </div>
+    </div>
+    <div class="btn-group"><a class="btn" href="/app/leads/<%= booking.leadId %>">Open lead</a></div>
+  </div>
+<% } %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= booking.bookingNumber || 'Booking' %></h1>
+    <div class="sub">
+      <%= contact.displayName || '—' %> · <%= project.name || '' %> <%= unit.unitNumber || '' %>
+      · booked <%= h.date(booking.bookingDate) %>
+      · <span class="badge"><%= (booking.postBookingStatus || 'BOOKED').replace(/_/g,' ').toLowerCase() %></span>
+    </div>
+  </div>
+  <div class="btn-group">
+    <%# §224: quick actions. Payment link, KYC review and record payment arrive with Phase 2. %>
+    <% if (can('collection.followup') && nextFollowUp) { %>
+      <button type="button" class="btn btn-primary" data-collect="1"
+              data-action="/api/collection-followups/<%= nextFollowUp._id %>/complete"
+              data-summary="<%= summary %> — outstanding <%= h.money(booking.outstandingMinor) %>"
+              data-outstanding="<%= booking.outstandingMinor %>">Log collection follow-up</button>
+    <% } else if (can('collection.followup') && booking.outstandingMinor > 0) { %>
+      <button type="button" class="btn btn-primary" data-drawer="drawer-followup">Schedule collection follow-up</button>
+    <% } %>
+    <% if (can('collection.record_payment')) { %>
+      <button type="button" class="btn" data-drawer="drawer-receipt">Record payment</button>
+    <% } %>
+    <% if (can('collection.payment_link') && booking.outstandingMinor > 0) { %>
+      <button type="button" class="btn" data-drawer="drawer-paylink">Payment link</button>
+    <% } %>
+    <% if (can('booking.customer_link.create')) { %>
+      <a class="btn" href="/app/bookings/<%= booking._id %>?tab=customer">Customer form</a>
+    <% } %>
+    <% if (can('collection.assign')) { %>
+      <button type="button" class="btn" data-drawer="drawer-transfer">Transfer collection</button>
+    <% } %>
+    <a class="btn" href="/app/leads/<%= booking.leadId %>">Lead</a>
+  </div>
+</div>
+
+<%# §113: post-booking progress only — the sales funnel is the lead's story. %>
+<div class="card mb-2">
+  <div class="card-body">
+    <div class="progress-strip">
+      <% progressSteps.forEach(function (step, i) { %>
+        <div class="st <%= step.done ? 'done' : 'todo' %>">
+          <span class="mark" aria-hidden="true"><%= step.done ? '✓' : i + 1 %></span>
+          <span><%= step.label %></span>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs mb-2">
+  <% tabs.forEach(function (t) { %>
+    <a class="<%= tab === t ? 'active' : '' %>" href="<%= tabHref(t) %>"><%= t.charAt(0).toUpperCase() + t.slice(1) %></a>
+  <% }) %>
+</nav>
+
+<% if (!booking.postBookingInitAt) { %>
+  <div class="flash warn">
+    <div class="grow">
+      Post-booking setup has not run for this booking yet, so it has no payment schedule.
+      The sale itself is unaffected.
+    </div>
+    <% if (can('booking.edit')) { %>
+      <form method="post" action="/api/bookings/<%= booking._id %>/initialize">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="btn btn-sm" type="submit">Run it now</button>
+      </form>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (tab === 'overview') { %>
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Collection</h2></div>
+      <div class="card-body">
+        <%# §225 %>
+        <dl class="dl">
+          <dt>Booking value</dt><dd><%= h.money(booking.finalPriceMinor) %></dd>
+          <dt>Received</dt><dd><%= h.money(booking.totalReceivedMinor) %></dd>
+          <dt>Outstanding</dt><dd><%= h.money(booking.outstandingMinor) %></dd>
+          <dt>Next due</dt>
+          <dd>
+            <% if (booking.nextDueAt) { %>
+              <%= h.money(booking.nextDueAmountMinor) %> · <%= h.date(booking.nextDueAt) %>
+            <% } else { %>—<% } %>
+          </dd>
+          <dt>Overdue</dt>
+          <dd>
+            <%= h.money(booking.overdueMinor) %>
+            <% if (booking.overdueDaysMax > 0) { %><span class="badge b-red"><%= booking.overdueDaysMax %> days</span><% } %>
+          </dd>
+          <dt>Collection owner</dt><dd><%= owner ? owner.name : 'Unassigned' %></dd>
+          <dt>Next action</dt>
+          <dd>
+            <% if (nextFollowUp) { %>
+              <%= nextFollowUp.actionType.toLowerCase() %> · <%= h.dateTime(nextFollowUp.dueAt) %>
+            <% } else if (booking.outstandingMinor > 0) { %>
+              <span class="badge b-red">None set</span>
+            <% } else { %>—<% } %>
+          </dd>
+        </dl>
+        <% if (openPromise) { %>
+          <p class="small">Promised <strong><%= h.money(openPromise.promisedAmountMinor) %></strong> by <%= h.date(openPromise.promisedDate) %>.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (booking.buyerPurpose === 'INVESTMENT' && booking.investment) { %>
+      <div class="card">
+        <div class="card-head"><h2 class="grow">Investor exit</h2></div>
+        <div class="card-body">
+          <dl class="dl">
+            <dt>Expected exit</dt><dd><%= booking.investment.expectedExitDate ? h.date(booking.investment.expectedExitDate) : '—' %></dd>
+            <dt>Expected price</dt><dd><%= booking.investment.expectedExitPriceMinor ? h.money(booking.investment.expectedExitPriceMinor) : '—' %></dd>
+            <dt>Expected ROI</dt><dd><%= booking.investment.expectedRoiPercentage || '—' %>%</dd>
+          </dl>
+          <a class="btn btn-sm mt-1" href="/app/opportunities/resale">Resale queue</a>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (booking.buyerPurpose === 'RENTAL_INCOME' && booking.rental) { %>
+      <div class="card">
+        <div class="card-head"><h2 class="grow">Rental plan</h2></div>
+        <div class="card-body">
+          <dl class="dl">
+            <dt>Available from</dt><dd><%= booking.rental.expectedRentalStartDate ? h.date(booking.rental.expectedRentalStartDate) : '—' %></dd>
+            <dt>Expected rent</dt><dd><%= booking.rental.expectedRentMinor ? h.money(booking.rental.expectedRentMinor) : '—' %></dd>
+            <dt>Furnishing</dt><dd><%= booking.rental.furnishing || '—' %></dd>
+          </dl>
+          <a class="btn btn-sm mt-1" href="/app/opportunities/rental">Rental queue</a>
+        </div>
+      </div>
+    <% } %>
+
+    <%# §226: what the customer still owes us, at a glance. %>
+    <div class="card">
+      <div class="card-head">
+        <h2 class="grow">Customer &amp; KYC</h2>
+        <a class="btn btn-sm" href="/app/bookings/<%= booking._id %>?tab=customer">Open</a>
+      </div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Booking form</dt>
+          <dd>
+            <%= formStatus.state === 'NOT_SENT' ? 'Not sent' : formStatus.state.toLowerCase() %>
+            <% if (formStatus.link && formStatus.state === 'ACTIVE') { %>
+              <span class="muted small">· valid until <%= h.date(formStatus.link.expiresAt) %></span>
+            <% } %>
+          </dd>
+          <dt>KYC</dt>
+          <dd>
+            <span class="badge <%= booking.kycStatus === 'VERIFIED' ? 'b-green' : (booking.kycStatus === 'CORRECTION_REQUIRED' ? 'b-red' : '') %>">
+              <%= (booking.kycStatus || '').replace(/_/g,' ').toLowerCase() %>
+            </span>
+            <span class="muted small">· <%= checklist.completionPct %>% of mandatory approved</span>
+          </dd>
+          <dt>Applicants</dt>
+          <dd><%= checklist.applicants.length %></dd>
+          <% if (checklist.missingMandatory.length) { %>
+            <dt>Missing</dt>
+            <dd class="small"><%= checklist.missingMandatory.map(function (i) { return i.type.name; }).join(', ') %></dd>
+          <% } %>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Commercials</h2></div>
+      <div class="card-body">
+        <p class="small muted">Frozen at the moment of sale (§115). Read-only once booked (§199).</p>
+        <dl class="dl">
+          <dt>Final price</dt><dd><%= h.money(booking.finalPriceMinor) %></dd>
+          <dt>Booking amount</dt><dd><%= h.money(booking.bookingAmountMinor) %></dd>
+          <dt>Discount</dt><dd><%= h.money(booking.discountMinor || 0) %></dd>
+          <dt>Payment plan</dt><dd><%= booking.paymentPlanName || (booking.paymentPlanId || {}).name || '—' %></dd>
+          <dt>Salesperson</dt><dd><%= (booking.salespersonId || {}).name || '—' %></dd>
+          <dt>Buyer purpose</dt><dd><%= (booking.buyerPurpose || '').replace(/_/g,' ').toLowerCase() %></dd>
+          <dt>KYC</dt><dd><%= (booking.kycStatus || '').replace(/_/g,' ').toLowerCase() %></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<% if (tab === 'customer') { %>
+  <%# ------------------- §288: the customer form send flow ------------------- %>
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">Customer form</h2>
+      <span class="badge"><%= formStatus.state === 'NOT_SENT' ? 'Not sent' : formStatus.state.toLowerCase() %></span>
+    </div>
+    <div class="card-body">
+      <% if (freshLink) { %>
+        <%#
+          §117: the link is shown exactly once. Only its hash is stored, so this
+          is the one moment it can be copied or sent.
+        %>
+        <div class="flash flash-success">
+          <div class="grow">
+            <div><strong>Copy or send this link now — it is shown only once.</strong></div>
+            <code class="small break-all"><%= freshLink.url %></code>
+            <div class="small muted">Valid until <%= h.date(freshLink.expiresAt) %>.</div>
+          </div>
+        </div>
+        <div class="btn-group mb-2">
+          <% ['WHATSAPP', 'SMS', 'EMAIL'].forEach(function (channel) { %>
+            <form method="post" action="/api/bookings/<%= booking._id %>/customer-link/send">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="url" value="<%= freshLink.url %>">
+              <input type="hidden" name="channel" value="<%= channel %>">
+              <button class="btn btn-sm" type="submit">Send by <%= channel.toLowerCase() %></button>
+            </form>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (formStatus.link) { %>
+        <dl class="dl">
+          <dt>Status</dt><dd><%= formStatus.state.toLowerCase() %></dd>
+          <dt>Created</dt><dd><%= h.dateTime(formStatus.link.createdAt) %><%= formStatus.link.createdBy ? ' · ' + formStatus.link.createdBy.name : '' %></dd>
+          <dt>Valid until</dt><dd><%= h.date(formStatus.link.expiresAt) %></dd>
+          <% if (formStatus.link.sentAt) { %>
+            <dt>Sent</dt><dd><%= h.dateTime(formStatus.link.sentAt) %> · <%= (formStatus.link.sentChannel || '').toLowerCase() %></dd>
+          <% } %>
+          <% if (formStatus.link.lastOpenedAt) { %>
+            <dt>Opened</dt><dd><%= h.dateTime(formStatus.link.lastOpenedAt) %> · <%= formStatus.link.openCount %> time<%= formStatus.link.openCount === 1 ? '' : 's' %></dd>
+          <% } %>
+          <% if (formStatus.link.submittedAt) { %>
+            <dt>Submitted</dt><dd><%= h.dateTime(formStatus.link.submittedAt) %></dd>
+          <% } %>
+          <% if (formStatus.link.otpRequired) { %>
+            <dt>OTP</dt><dd><%= formStatus.link.otpVerifiedAt ? 'verified' : 'required, not yet verified' %></dd>
+          <% } %>
+        </dl>
+      <% } else { %>
+        <p class="muted">No customer link has been generated for this booking yet.</p>
+      <% } %>
+
+      <div class="btn-group">
+        <% if (can('booking.customer_link.create')) { %>
+          <form method="post" action="/api/bookings/<%= booking._id %>/customer-link">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="returnTo" value="<%= returnTo %>">
+            <button class="btn btn-primary" type="submit">
+              <%= formStatus.link ? 'Generate a new link' : 'Generate customer link' %>
+            </button>
+          </form>
+          <% if (formStatus.state === 'ACTIVE') { %>
+            <form method="post" action="/api/bookings/<%= booking._id %>/customer-link/revoke" data-confirm="Revoke the customer's link?">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="returnTo" value="<%= returnTo %>">
+              <button class="btn" type="submit">Revoke</button>
+            </form>
+          <% } %>
+        <% } %>
+        <% if (can('booking.kyc.review') && formStatus.state === 'SUBMITTED') { %>
+          <button type="button" class="btn" data-drawer="drawer-reopen">Request correction</button>
+        <% } %>
+      </div>
+      <% if (formStatus.link && formStatus.link.reopenSections && formStatus.link.reopenSections.length) { %>
+        <p class="small muted mt-1">
+          Reopened for: <%= formStatus.link.reopenSections.join(', ').toLowerCase() %>. Approved data is kept.
+        </p>
+      <% } %>
+    </div>
+  </div>
+
+  <%# --------------------------- §290: KYC checklist ------------------------- %>
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">KYC checklist</h2>
+      <span class="badge <%= booking.kycStatus === 'VERIFIED' ? 'b-green' : (booking.kycStatus === 'CORRECTION_REQUIRED' ? 'b-red' : '') %>">
+        <%= (booking.kycStatus || '').replace(/_/g,' ').toLowerCase() %>
+      </span>
+      <span class="muted small"><%= checklist.completionPct %>% approved</span>
+    </div>
+
+    <% if (!checklist.applicants.length) { %>
+      <%- include('../../partials/empty', { heading: 'No applicants yet', message: 'The checklist appears once the customer submits their booking form, or once you add an applicant.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="card-body">
+        <% checklist.applicants.forEach(function (row) { %>
+          <h3>
+            <%= row.applicant.name %>
+            <span class="muted small">
+              <%= row.applicant.applicantRole.replace(/_/g,' ').toLowerCase() %>
+              · <%= row.applicant.type.toLowerCase() %>
+              · <%= (row.applicant.kycStatus || '').replace(/_/g,' ').toLowerCase() %>
+            </span>
+          </h3>
+          <dl class="dl">
+            <dt>Mobile</dt><dd><%= row.applicant.mobile || '—' %></dd>
+            <dt>Email</dt><dd><%= row.applicant.email || '—' %></dd>
+            <dt>PAN</dt><dd><%= row.applicant.panMasked || '—' %></dd>
+            <% if (row.applicant.permanentAddress) { %>
+              <dt>Address</dt><dd class="small"><%= row.applicant.permanentAddress %></dd>
+            <% } %>
+          </dl>
+
+          <div class="table-wrap wide"><table class="responsive">
+            <thead><tr><th>Document</th><th>Status</th><th>Uploaded</th><th></th></tr></thead>
+            <tbody>
+              <% row.items.forEach(function (item) { %>
+                <tr>
+                  <td data-label="Document">
+                    <%= item.type.name %><% if (item.mandatory) { %> <span class="req">*</span><% } %>
+                    <% if (item.document && item.document.documentNumberMasked) { %>
+                      <div class="small muted"><%= item.document.documentNumberMasked %></div>
+                    <% } %>
+                    <% if (item.document && item.document.reviewNote) { %>
+                      <div class="small muted"><%= item.document.reviewNote %></div>
+                    <% } %>
+                  </td>
+                  <td data-label="Status">
+                    <span class="badge <%= item.status === 'APPROVED' ? 'b-green' : (['REJECTED','RESUBMISSION_REQUIRED'].includes(item.status) ? 'b-red' : '') %>">
+                      <%= item.status === 'MISSING' ? 'missing' : item.status.replace(/_/g,' ').toLowerCase() %>
+                    </span>
+                  </td>
+                  <td data-label="Uploaded">
+                    <% if (item.document) { %>
+                      <%= h.date(item.document.uploadedAt) %>
+                      <div class="small muted">by <%= item.document.uploadedByType === 'CUSTOMER' ? 'the customer' : 'our team' %></div>
+                    <% } else { %>—<% } %>
+                  </td>
+                  <td data-label="">
+                    <div class="btn-group">
+                      <% if (item.document && can('booking.kyc.view')) { %>
+                        <a class="btn btn-sm" href="/app/files/kyc-document/<%= item.document._id %>" target="_blank" rel="noopener">View</a>
+                      <% } %>
+                      <% if (item.document && can('booking.kyc.review') && item.status !== 'APPROVED') { %>
+                        <button type="button" class="btn btn-sm btn-primary" data-drawer="drawer-review-<%= item.document._id %>">Review</button>
+                      <% } %>
+                      <% if (can('booking.kyc.edit')) { %>
+                        <button type="button" class="btn btn-sm" data-drawer="drawer-upload-<%= row.applicant._id %>-<%= item.type._id %>">Upload</button>
+                      <% } %>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table></div>
+        <% }) %>
+        <p class="small muted mb-0">
+          Documents are stored privately and every download is recorded. Numbers are masked;
+          the full value is held encrypted.
+        </p>
+      </div>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (tab === 'documents') { %>
+  <%# --------------------------- §166: document set ------------------------- %>
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Booking documents</h2></div>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Document</th><th>Kind</th><th>Added</th><th>Visibility</th><th></th></tr></thead>
+      <tbody>
+        <% if (booking.costSheetId && booking.costSheetId.quotationNumber) { %>
+          <tr>
+            <td data-label="Document"><%= booking.costSheetId.quotationNumber %></td>
+            <td data-label="Kind">Quotation</td>
+            <td data-label="Added"><%= h.date(booking.bookingDate) %></td>
+            <td data-label="Visibility">Customer visible</td>
+            <td data-label=""><a class="btn btn-sm" href="/app/cost-sheets/<%= booking.costSheetId._id %>">Open</a></td>
+          </tr>
+        <% } %>
+        <% checklist.applicants.forEach(function (row) { %>
+          <% row.items.filter(function (i) { return i.document; }).forEach(function (item) { %>
+            <tr>
+              <td data-label="Document">
+                <%= item.type.name %>
+                <div class="small muted"><%= row.applicant.name %></div>
+              </td>
+              <td data-label="Kind">KYC</td>
+              <td data-label="Added"><%= h.date(item.document.uploadedAt) %></td>
+              <td data-label="Visibility">Internal</td>
+              <td data-label="">
+                <% if (can('booking.kyc.view')) { %>
+                  <a class="btn btn-sm" href="/app/files/kyc-document/<%= item.document._id %>" target="_blank" rel="noopener">View</a>
+                <% } else { %><span class="muted small">Restricted</span><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        <% }) %>
+        <% receipts.filter(function (r) { return r.proof && r.proof.storageKey; }).forEach(function (r) { %>
+          <tr>
+            <td data-label="Document">Payment proof <%= r.receiptNo %></td>
+            <td data-label="Kind">Receipt</td>
+            <td data-label="Added"><%= h.date(r.paymentDate) %></td>
+            <td data-label="Visibility">Internal</td>
+            <td data-label=""><a class="btn btn-sm" href="/app/files/receipt-proof/<%= r._id %>" target="_blank" rel="noopener">View</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <div class="card-body">
+      <p class="small muted mb-0">
+        KYC files and payment proofs are never served from a public URL and never included in a CSV export.
+      </p>
+    </div>
+  </div>
+<% } %>
+
+<% if (tab === 'collections') { %>
+  <%# §137: the schedule as a timeline, one row per milestone. %>
+  <div class="card mb-2">
+    <div class="card-head">
+      <h2 class="grow">Payment schedule</h2>
+      <span class="muted small"><%= booking.paymentPlanName || '' %></span>
+    </div>
+    <% if (!installments.length) { %>
+      <%- include('../../partials/empty', { heading: 'No schedule yet', message: 'This booking has no payment plan rows to generate a schedule from.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead>
+          <tr>
+            <th>#</th><th>Milestone</th><th class="num">%</th><th class="num">Amount</th>
+            <th>Due</th><th class="num">Received</th><th class="num">Outstanding</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% installments.forEach(function (i) { %>
+            <tr>
+              <td data-label="#"><%= i.sequence %></td>
+              <td data-label="Milestone">
+                <%= i.milestone %>
+                <% if (i.customerNote) { %><div class="small muted"><%= i.customerNote %></div><% } %>
+              </td>
+              <td data-label="%" class="num"><%= i.percentage != null ? i.percentage + '%' : '—' %></td>
+              <td data-label="Amount" class="num"><%= h.money(i.scheduledAmountMinor) %></td>
+              <td data-label="Due">
+                <% if (i.dueDate) { %>
+                  <%= h.date(i.dueDate) %>
+                  <% if (i.actualDueDate) { %><div class="small muted">revised</div><% } %>
+                <% } else { %>
+                  TBD
+                  <div class="small muted"><%= i.dueRule.replace(/_/g,' ').toLowerCase() %></div>
+                <% } %>
+              </td>
+              <td data-label="Received" class="num"><%= h.money(i.amountReceivedMinor || 0) %></td>
+              <td data-label="Outstanding" class="num"><%= h.money(i.outstandingMinor) %></td>
+              <td data-label="Status">
+                <span class="badge <%= i.overdue ? 'b-red' : '' %>">
+                  <%= i.overdue ? 'overdue ' + i.overdueDays + 'd' : i.status.toLowerCase() %>
+                </span>
+              </td>
+              <td data-label="">
+                <% if (can('collection.adjust_due_date') && i.status !== 'PAID') { %>
+                  <button type="button" class="btn btn-sm" data-drawer="drawer-due-<%= i._id %>">Due date</button>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+      <% if (scheduleGap) { %>
+        <div class="card-body">
+          <p class="small muted mb-0">
+            The schedule totals <%= h.money(booking.scheduledTotalMinor) %> against a booking value of
+            <%= h.money(booking.finalPriceMinor) %>. The payment plan's percentages do not add up to 100 —
+            no installment has been invented to cover the difference.
+          </p>
+        </div>
+      <% } %>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">Collection follow-ups</h2>
+      <% if (can('collection.followup') && booking.outstandingMinor > 0) { %>
+        <button type="button" class="btn btn-sm" data-drawer="drawer-followup">Schedule</button>
+      <% } %>
+    </div>
+    <% if (!followups.length) { %>
+      <%- include('../../partials/empty', { heading: 'No collection follow-ups yet', message: 'Schedule the first contact and the queue takes it from there.', ctaHref: null, ctaLabel: '' }) %>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Action</th><th>Due</th><th>Owner</th><th>Status</th><th>Outcome</th><th></th></tr></thead>
+        <tbody>
+          <% followups.forEach(function (fu) { %>
+            <tr>
+              <td data-label="Action"><%= fu.actionType.toLowerCase() %><% if (fu.note) { %><div class="small muted"><%= fu.note %></div><% } %></td>
+              <td data-label="Due"><%= h.dateTime(fu.dueAt) %></td>
+              <td data-label="Owner"><%= (fu.assignedUserId || {}).name || '—' %></td>
+              <td data-label="Status"><span class="badge <%= fu.status === 'MISSED' ? 'b-red' : '' %>"><%= fu.status.toLowerCase() %></span></td>
+              <td data-label="Outcome"><%= (fu.outcome || '').replace(/_/g,' ').toLowerCase() %><% if (fu.completionNote) { %><div class="small muted"><%= fu.completionNote %></div><% } %></td>
+              <td data-label="">
+                <% if (can('collection.followup') && ['PENDING','MISSED'].includes(fu.status)) { %>
+                  <button type="button" class="btn btn-sm btn-primary" data-collect="1"
+                          data-action="/api/collection-followups/<%= fu._id %>/complete"
+                          data-summary="<%= summary %> — outstanding <%= h.money(booking.outstandingMinor) %>"
+                          data-outstanding="<%= booking.outstandingMinor %>">Log</button>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <%# §291: link status as the provider actually reports it — nothing invented. %>
+  <div class="card mt-2">
+    <div class="card-head">
+      <h2 class="grow">Payment links</h2>
+      <% if (can('collection.payment_link') && booking.outstandingMinor > 0) { %>
+        <button type="button" class="btn btn-sm" data-drawer="drawer-paylink">Create link</button>
+      <% } %>
+    </div>
+    <% if (!paymentRequests.length) { %>
+      <div class="card-body"><p class="muted small mb-0">No payment links raised on this booking.</p></div>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th class="num">Amount</th><th>Towards</th><th>Status</th><th>Shared</th><th>Expires</th><th></th></tr></thead>
+        <tbody>
+          <% paymentRequests.forEach(function (p) { %>
+            <tr>
+              <td data-label="Amount" class="num"><%= h.money(p.amountMinor) %></td>
+              <td data-label="Towards">
+                <% const inst = installments.find(function (i) { return String(i._id) === String(p.installmentId); }); %>
+                <%= inst ? inst.milestone : 'Booking' %>
+              </td>
+              <td data-label="Status">
+                <span class="badge <%= p.status === 'PAID' ? 'b-green' : (['EXPIRED','CANCELLED','FAILED'].includes(p.status) ? 'b-slate' : '') %>">
+                  <%= p.status.toLowerCase() %>
+                </span>
+                <% if (p.openedAt) { %><div class="small muted">opened <%= h.dateTime(p.openedAt) %></div><% } %>
+              </td>
+              <td data-label="Shared">
+                <%= p.sharedAt ? h.date(p.sharedAt) + ' · ' + (p.sharedChannel || '').toLowerCase() : '—' %>
+              </td>
+              <td data-label="Expires"><%= p.expiresAt ? h.date(p.expiresAt) : '—' %></td>
+              <td data-label="">
+                <% if (can('collection.payment_link') && ['CREATED','SENT','OPEN'].includes(p.status)) { %>
+                  <div class="btn-group">
+                    <form method="post" action="/api/payment-requests/<%= p._id %>/share">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input type="hidden" name="channel" value="WHATSAPP">
+                      <input type="hidden" name="returnTo" value="<%= returnTo %>">
+                      <button class="btn btn-sm" type="submit">Send</button>
+                    </form>
+                    <form method="post" action="/api/payment-requests/<%= p._id %>/cancel" data-confirm="Cancel this payment link?">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input type="hidden" name="returnTo" value="<%= returnTo %>">
+                      <button class="btn btn-sm" type="submit">Cancel</button>
+                    </form>
+                  </div>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <%# §144: receipts. Reversal keeps the row (§146). %>
+  <div class="card mt-2">
+    <div class="card-head">
+      <h2 class="grow">Receipts</h2>
+      <% if (can('collection.record_payment')) { %>
+        <button type="button" class="btn btn-sm" data-drawer="drawer-receipt">Record payment</button>
+      <% } %>
+    </div>
+    <% if (!receipts.length) { %>
+      <div class="card-body"><p class="muted small mb-0">Nothing received against this booking yet.</p></div>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Receipt</th><th>Date</th><th class="num">Amount</th><th>Mode</th><th>Allocated to</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <% receipts.forEach(function (r) { %>
+            <tr>
+              <td data-label="Receipt">
+                <%= r.receiptNo %>
+                <% if (r.reference) { %><div class="small muted"><%= r.reference %></div><% } %>
+              </td>
+              <td data-label="Date"><%= h.date(r.paymentDate) %></td>
+              <td data-label="Amount" class="num"><%= h.money(r.amountMinor) %></td>
+              <td data-label="Mode"><%= r.mode.replace(/_/g,' ').toLowerCase() %></td>
+              <td data-label="Allocated to" class="small">
+                <%= r.allocations.map(function (a) { return (a.installmentId || {}).milestone || 'installment'; }).join(', ') %>
+              </td>
+              <td data-label="Status">
+                <span class="badge <%= r.status === 'REVERSED' ? 'b-red' : 'b-green' %>"><%= r.status.toLowerCase() %></span>
+                <% if (r.status === 'REVERSED') { %><div class="small muted"><%= r.reversalReason %></div><% } %>
+              </td>
+              <td data-label="">
+                <div class="btn-group">
+                  <% if (r.proof && r.proof.storageKey && can('collection.view')) { %>
+                    <a class="btn btn-sm" href="/app/files/receipt-proof/<%= r._id %>" target="_blank" rel="noopener">Proof</a>
+                  <% } %>
+                  <% if (can('collection.reverse_receipt') && r.status !== 'REVERSED') { %>
+                    <button type="button" class="btn btn-sm" data-drawer="drawer-reverse-<%= r._id %>">Reverse</button>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+      <div class="card-body">
+        <p class="small muted mb-0">A receipt is never deleted. Reversing one keeps the record and restores the outstanding amount.</p>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (promises.length) { %>
+    <div class="card mt-2">
+      <div class="card-head"><h2 class="grow">Promises to pay</h2></div>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Promised</th><th>By</th><th class="num">Amount</th><th class="num">Received since</th><th>Status</th></tr></thead>
+        <tbody>
+          <% promises.forEach(function (p) { %>
+            <tr>
+              <td data-label="Promised"><%= h.date(p.createdAt) %></td>
+              <td data-label="By"><%= h.date(p.promisedDate) %></td>
+              <td data-label="Amount" class="num"><%= h.money(p.promisedAmountMinor) %></td>
+              <td data-label="Received since" class="num"><%= h.money(p.fulfilledAmountMinor || 0) %></td>
+              <td data-label="Status"><span class="badge <%= ['MISSED','PARTIAL'].includes(p.status) ? 'b-red' : '' %>"><%= p.status.toLowerCase() %></span></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    </div>
+  <% } %>
+<% } %>
+
+<% if (tab === 'timeline') { %>
+  <div class="card">
+    <div class="card-head">
+      <h2 class="grow">Post-booking timeline</h2>
+      <a class="btn btn-sm" href="/app/leads/<%= booking.leadId %>">Sales timeline</a>
+    </div>
+    <div class="card-body">
+      <% if (!events.length) { %>
+        <p class="muted small mb-0">Nothing has happened after the booking yet.</p>
+      <% } else { %>
+        <ul class="timeline">
+          <% events.forEach(function (e) { %>
+            <li>
+              <div class="t-head">
+                <strong><%= e.title %></strong>
+                <span class="muted small"><%= h.dateTime(e.at) %> · <%= (e.actorUserId || {}).name || e.actorLabel || 'System' %></span>
+              </div>
+              <% if (e.body) { %><div class="small"><%= e.body %></div><% } %>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%# ------------------------------ drawers ------------------------------ %>
+<% if (can('collection.followup')) { %>
+  <div class="drawer-backdrop" id="drawer-followup" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Schedule collection follow-up">
+      <form method="post" action="/api/bookings/<%= booking._id %>/collection-followups">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <div class="drawer-head">
+          <h2 class="grow">Schedule collection follow-up</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <div class="field">
+            <label for="fu-actionType">Action</label>
+            <select id="fu-actionType" name="actionType">
+              <% actionTypes.forEach(function (a) { %><option value="<%= a %>"><%= a.replace(/_/g,' ').toLowerCase() %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fu-installmentId">Against installment <span class="opt">optional</span></label>
+            <select id="fu-installmentId" name="installmentId">
+              <option value="">Whole booking</option>
+              <% installments.filter(function (i) { return i.outstandingMinor > 0; }).forEach(function (i) { %>
+                <option value="<%= i._id %>"><%= i.sequence %>. <%= i.milestone %> — <%= h.money(i.outstandingMinor) %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="fu-date">Date</label><input type="date" id="fu-date" name="date" required></div>
+            <div class="field"><label for="fu-time">Time</label><input type="time" id="fu-time" name="time" value="10:00"></div>
+          </div>
+          <div class="field">
+            <label for="fu-note">Note <span class="opt">optional</span></label>
+            <textarea id="fu-note" name="note" rows="2" maxlength="2000"></textarea>
+          </div>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Schedule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<% if (can('collection.assign')) { %>
+  <div class="drawer-backdrop" id="drawer-transfer" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Transfer collection">
+      <form method="post" action="/api/bookings/<%= booking._id %>/collection-owner">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <div class="drawer-head">
+          <h2 class="grow">Transfer collection</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <p class="small muted">
+            The salesperson keeps credit for the sale — this only moves who chases the money (§183).
+          </p>
+          <div class="field">
+            <label for="tr-newOwnerUserId">New collection owner</label>
+            <select id="tr-newOwnerUserId" name="newOwnerUserId" required>
+              <% collectionUsers.forEach(function (u) { %>
+                <option value="<%= u._id %>" <%= owner && String(owner._id) === String(u._id) ? 'disabled' : '' %>><%= u.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tr-reason">Reason</label>
+            <input type="text" id="tr-reason" name="reason" maxlength="300" required>
+          </div>
+          <label class="check">
+            <input type="checkbox" name="includePending" value="1" checked>
+            Move pending follow-ups and open promises too
+          </label>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Transfer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<% if (can('collection.adjust_due_date')) { %>
+  <% installments.filter(function (i) { return i.status !== 'PAID'; }).forEach(function (i) { %>
+    <div class="drawer-backdrop" id="drawer-due-<%= i._id %>" hidden>
+      <div class="drawer" role="dialog" aria-modal="true" aria-label="Change due date">
+        <form method="post" action="/api/bookings/<%= booking._id %>/installments/<%= i._id %>/due-date">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="returnTo" value="<%= returnTo %>">
+          <div class="drawer-head">
+            <h2 class="grow"><%= i.milestone %> — due date</h2>
+            <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+          </div>
+          <div class="drawer-body">
+            <p class="small muted">
+              Only the date changes. Amounts and percentages are fixed by the plan that was sold (§200).
+            </p>
+            <div class="field">
+              <label for="due-<%= i._id %>">New due date</label>
+              <input type="date" id="due-<%= i._id %>" name="actualDueDate" value="<%= i.dueDate ? h.dateInput(i.dueDate) : '' %>" required>
+            </div>
+            <div class="field">
+              <label for="duer-<%= i._id %>">Reason</label>
+              <input type="text" id="duer-<%= i._id %>" name="reason" maxlength="300" required>
+            </div>
+          </div>
+          <div class="drawer-foot">
+            <button type="button" class="btn" data-drawer-close>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save due date</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <% }) %>
+<% } %>
+
+<%# --------------------- Phase 2 drawers (§141, §143, §146) ------------------ %>
+
+<% if (can('collection.payment_link')) { %>
+  <div class="drawer-backdrop" id="drawer-paylink" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Create payment link">
+      <form method="post" action="/api/bookings/<%= booking._id %>/payment-links">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <div class="drawer-head">
+          <h2 class="grow">Create payment link</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <div class="field">
+            <label for="pl-installment">Installment</label>
+            <select id="pl-installment" name="installmentId">
+              <option value="">Whole booking — <%= h.money(booking.outstandingMinor) %> outstanding</option>
+              <% installments.filter(function (i) { return i.outstandingMinor > 0; }).forEach(function (i) { %>
+                <option value="<%= i._id %>" data-outstanding="<%= i.outstandingMinor %>">
+                  <%= i.sequence %>. <%= i.milestone %> — <%= h.money(i.outstandingMinor) %> outstanding
+                </option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pl-amount">Amount <span class="opt">defaults to the outstanding amount</span></label>
+            <input type="text" id="pl-amount" name="amount" inputmode="decimal" placeholder="Leave blank for the full outstanding amount">
+            <span class="hint">Cannot exceed what is outstanding on the selection above.</span>
+          </div>
+          <div class="field">
+            <label for="pl-channel">Share it</label>
+            <select id="pl-channel" name="channel">
+              <option value="COPY">Just create it — I will copy the link</option>
+              <option value="WHATSAPP">Create and send by WhatsApp</option>
+              <option value="SMS">Create and send by SMS</option>
+              <option value="EMAIL">Create and send by email</option>
+            </select>
+          </div>
+          <p class="small muted mb-0">Creating a link is not a payment. It is recorded when the money actually arrives.</p>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Create link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<% if (can('collection.record_payment')) { %>
+  <div class="drawer-backdrop" id="drawer-receipt" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Record payment">
+      <form method="post" action="/api/bookings/<%= booking._id %>/receipts" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <div class="drawer-head">
+          <h2 class="grow">Record payment</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <div class="field-row">
+            <div class="field">
+              <label for="rc-amount">Amount received</label>
+              <input type="text" id="rc-amount" name="amount" inputmode="decimal" required>
+            </div>
+            <div class="field">
+              <label for="rc-date">Payment date</label>
+              <input type="date" id="rc-date" name="paymentDate" value="<%= h.dateInput(new Date()) %>" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="rc-mode">Mode</label>
+              <select id="rc-mode" name="mode">
+                <% receiptModes.filter(function (m) { return m !== 'CASH' || allowCash; }).forEach(function (m) { %>
+                  <option value="<%= m %>" <%= m === 'BANK_TRANSFER' ? 'selected' : '' %>><%= m.replace(/_/g,' ').toLowerCase() %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="rc-reference">Reference / UTR / cheque no.</label>
+              <input type="text" id="rc-reference" name="reference" maxlength="120">
+            </div>
+          </div>
+          <div class="field">
+            <label for="rc-bank">Bank <span class="opt">optional</span></label>
+            <input type="text" id="rc-bank" name="bank" maxlength="120">
+          </div>
+
+          <%# §145: full allocation. Leave the grid empty and the oldest due gets it first. %>
+          <fieldset>
+            <legend>Allocate to installments <span class="opt">optional</span></legend>
+            <% installments.filter(function (i) { return i.outstandingMinor > 0; }).forEach(function (i) { %>
+              <div class="field-row">
+                <div class="field">
+                  <label for="alloc-<%= i._id %>"><%= i.sequence %>. <%= i.milestone %> · <%= h.money(i.outstandingMinor) %> outstanding</label>
+                  <input type="hidden" name="allocationInstallmentId" value="<%= i._id %>">
+                  <input type="text" id="alloc-<%= i._id %>" name="allocationAmount" inputmode="decimal" placeholder="0">
+                </div>
+              </div>
+            <% }) %>
+            <p class="hint">
+              Leave these blank to allocate automatically, oldest due date first. If you fill them in,
+              they must add up to the amount received.
+            </p>
+          </fieldset>
+
+          <div class="field">
+            <label for="rc-proof">Proof of payment <span class="opt">optional</span></label>
+            <input type="file" id="rc-proof" name="proof" accept="image/jpeg,image/png,image/webp,application/pdf">
+            <span class="hint">Stored privately, like every customer document.</span>
+          </div>
+          <div class="field">
+            <label for="rc-note">Note <span class="opt">optional</span></label>
+            <textarea id="rc-note" name="note" rows="2" maxlength="500"></textarea>
+          </div>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Record payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <% if (can('collection.reverse_receipt')) { %>
+    <% receipts.filter(function (r) { return r.status !== 'REVERSED'; }).forEach(function (r) { %>
+      <div class="drawer-backdrop" id="drawer-reverse-<%= r._id %>" hidden>
+        <div class="drawer" role="dialog" aria-modal="true" aria-label="Reverse receipt">
+          <form method="post" action="/api/receipts/<%= r._id %>/reverse">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="returnTo" value="<%= returnTo %>">
+            <div class="drawer-head">
+              <h2 class="grow">Reverse <%= r.receiptNo %></h2>
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+            </div>
+            <div class="drawer-body">
+              <p class="small muted">
+                <%= h.money(r.amountMinor) %> received on <%= h.date(r.paymentDate) %>.
+                The receipt is kept and marked reversed — it is never deleted — and the outstanding
+                amount goes back up.
+              </p>
+              <div class="field">
+                <label for="rev-<%= r._id %>">Reason</label>
+                <textarea id="rev-<%= r._id %>" name="reason" rows="2" maxlength="500" required></textarea>
+              </div>
+            </div>
+            <div class="drawer-foot">
+              <button type="button" class="btn" data-drawer-close>Cancel</button>
+              <button type="submit" class="btn btn-primary">Reverse receipt</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    <% }) %>
+  <% } %>
+<% } %>
+
+<% if (can('booking.kyc.review')) { %>
+  <div class="drawer-backdrop" id="drawer-reopen" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Request correction">
+      <form method="post" action="/api/bookings/<%= booking._id %>/customer-link/reopen">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+        <div class="drawer-head">
+          <h2 class="grow">Request correction</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <p class="small muted">Reopens the form for the customer. Approved data and documents are kept.</p>
+          <div class="field">
+            <label>What may they change?</label>
+            <label class="check"><input type="checkbox" name="sections" value="KYC" checked> Documents</label>
+            <label class="check"><input type="checkbox" name="sections" value="APPLICANTS"> Applicant details</label>
+          </div>
+          <div class="field">
+            <label for="reopen-reason">Reason</label>
+            <textarea id="reopen-reason" name="reason" rows="2" maxlength="300" required></textarea>
+          </div>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Reopen form</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <% checklist.applicants.forEach(function (row) { %>
+    <% row.items.filter(function (i) { return i.document && i.status !== 'APPROVED'; }).forEach(function (item) { %>
+      <div class="drawer-backdrop" id="drawer-review-<%= item.document._id %>" hidden>
+        <div class="drawer" role="dialog" aria-modal="true" aria-label="Review document">
+          <form method="post" action="/api/kyc-documents/<%= item.document._id %>/review">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="returnTo" value="<%= returnTo %>">
+            <div class="drawer-head">
+              <h2 class="grow">Review <%= item.type.name %></h2>
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+            </div>
+            <div class="drawer-body">
+              <p class="small muted">
+                <%= row.applicant.name %> · uploaded <%= h.date(item.document.uploadedAt) %>
+                by <%= item.document.uploadedByType === 'CUSTOMER' ? 'the customer' : 'our team' %>.
+              </p>
+              <a class="btn btn-sm mb-2" href="/app/files/kyc-document/<%= item.document._id %>" target="_blank" rel="noopener">Open the document</a>
+              <div class="field">
+                <label for="dec-<%= item.document._id %>">Decision</label>
+                <select id="dec-<%= item.document._id %>" name="decision">
+                  <option value="APPROVED">Approve</option>
+                  <option value="RESUBMISSION_REQUIRED">Ask the customer to replace it</option>
+                  <option value="REJECTED">Reject</option>
+                  <option value="UNDER_REVIEW">Mark under review</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="note-<%= item.document._id %>">Note to the customer</label>
+                <textarea id="note-<%= item.document._id %>" name="note" rows="2" maxlength="500"
+                          placeholder="e.g. PAN image unreadable. Please upload a clear copy."></textarea>
+                <span class="hint">Required for anything other than approval — the customer needs to know what to fix.</span>
+              </div>
+            </div>
+            <div class="drawer-foot">
+              <button type="button" class="btn" data-drawer-close>Cancel</button>
+              <button type="submit" class="btn btn-primary">Save decision</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    <% }) %>
+  <% }) %>
+<% } %>
+
+<% if (can('booking.kyc.edit')) { %>
+  <% checklist.applicants.forEach(function (row) { %>
+    <% row.items.forEach(function (item) { %>
+      <div class="drawer-backdrop" id="drawer-upload-<%= row.applicant._id %>-<%= item.type._id %>" hidden>
+        <div class="drawer" role="dialog" aria-modal="true" aria-label="Upload document">
+          <form method="post" action="/api/bookings/<%= booking._id %>/kyc/documents" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="returnTo" value="<%= returnTo %>">
+            <input type="hidden" name="applicantId" value="<%= row.applicant._id %>">
+            <input type="hidden" name="documentTypeId" value="<%= item.type._id %>">
+            <div class="drawer-head">
+              <h2 class="grow"><%= item.document ? 'Replace' : 'Upload' %> <%= item.type.name %></h2>
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+            </div>
+            <div class="drawer-body">
+              <p class="small muted"><%= row.applicant.name %></p>
+              <div class="field">
+                <label for="file-<%= row.applicant._id %>-<%= item.type._id %>">File</label>
+                <input type="file" id="file-<%= row.applicant._id %>-<%= item.type._id %>" name="file" required
+                       accept="image/jpeg,image/png,image/webp,application/pdf">
+                <span class="hint">JPG, PNG, WEBP or PDF. Stored privately.</span>
+              </div>
+              <% if (item.type.numberRequired) { %>
+                <div class="field">
+                  <label for="num-<%= item.type._id %>-<%= row.applicant._id %>">Document number</label>
+                  <input type="text" id="num-<%= item.type._id %>-<%= row.applicant._id %>" name="documentNumber" maxlength="30" required>
+                  <span class="hint">Masked in the interface; the full value is stored encrypted.</span>
+                </div>
+              <% } %>
+              <% if (item.type.expiryRequired) { %>
+                <div class="field">
+                  <label for="exp-<%= item.type._id %>-<%= row.applicant._id %>">Expiry date</label>
+                  <input type="date" id="exp-<%= item.type._id %>-<%= row.applicant._id %>" name="expiryDate" required>
+                </div>
+              <% } %>
+              <% if (item.document) { %>
+                <p class="small muted mb-0">The current file is kept as history, not overwritten.</p>
+              <% } %>
+            </div>
+            <div class="drawer-foot">
+              <button type="button" class="btn" data-drawer-close>Cancel</button>
+              <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    <% }) %>
+  <% }) %>
+<% } %>
+
+<%- include('../../partials/collection-drawer') %>
+<%- include('../../partials/app-foot') %>

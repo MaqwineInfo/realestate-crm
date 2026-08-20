@@ -1,0 +1,72 @@
+<%- include('../../partials/app-head') %>
+<%- include('_cp-nav') %>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= data.totals.leads %></div>
+    <div class="stat-lbl">Partner leads</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= data.totals.bookings %></div>
+    <div class="stat-lbl">Bookings · <%= data.totals.leadToBooking %>%</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(data.totals.bookingValueMinor) %></div>
+    <div class="stat-lbl">Booking value</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(data.totals.eligibleMinor - data.totals.invoicedMinor) %></div>
+    <div class="stat-lbl">Eligible, not invoiced</div></div></div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Channel partner performance</h2>
+    <span class="muted small"><%= data.rows.length %> partner<%= data.rows.length === 1 ? '' : 's' %></span>
+  </div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No partner activity in this range', message: 'Widen the dates, or clear the filters.', ctaHref: '/app/channel-partners', ctaLabel: 'All partners' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Partner</th><th>Type</th><th>City</th><th>RERA</th>
+          <th class="num">Leads</th><th class="num">Connected</th><th class="num">Visits</th>
+          <th class="num">Blocks</th><th class="num">Bookings</th><th class="num">Booking value</th>
+          <th class="num">L→V</th><th class="num">V→B</th><th class="num">L→B</th>
+          <th class="num">Accrued</th><th class="num">Eligible</th><th class="num">Invoiced</th><th class="num">Paid</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Partner"><a href="/app/channel-partners/<%= r.partner._id %>"><%= r.name %></a></td>
+            <td data-label="Type"><%= (r.partnerType || '').toLowerCase() %></td>
+            <td data-label="City"><%= r.city || '—' %></td>
+            <td data-label="RERA">
+              <span class="badge <%= r.reraStatus === 'VERIFIED' ? 'b-green' : (r.reraStatus === 'EXPIRED' ? 'b-red' : '') %>">
+                <%= (r.reraStatus || 'none').toLowerCase() %>
+              </span>
+            </td>
+            <td data-label="Leads" class="num"><%= r.leads %></td>
+            <td data-label="Connected" class="num"><%= r.connected %></td>
+            <td data-label="Visits" class="num"><%= r.visits %></td>
+            <td data-label="Blocks" class="num"><%= r.blocks %></td>
+            <td data-label="Bookings" class="num"><%= r.bookings %></td>
+            <td data-label="Booking value" class="num"><%= h.moneyShort(r.bookingValueMinor) %></td>
+            <td data-label="L→V" class="num"><%= r.leadToVisit %>%</td>
+            <td data-label="V→B" class="num"><%= r.visitToBooking %>%</td>
+            <td data-label="L→B" class="num"><%= r.leadToBooking %>%</td>
+            <td data-label="Accrued" class="num"><%= h.moneyShort(r.accruedMinor) %></td>
+            <td data-label="Eligible" class="num"><%= h.moneyShort(r.eligibleMinor) %></td>
+            <td data-label="Invoiced" class="num"><%= h.moneyShort(r.invoicedMinor) %></td>
+            <td data-label="Paid" class="num"><%= h.moneyShort(r.paidMinor) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <div class="card-body">
+      <p class="small muted mb-0">
+        Accepted claims only. Accrued is what was earned; only eligible is payable.
+      </p>
+    </div>
+  <% } %>
+</div>
+<%- include('../../partials/app-foot') %>

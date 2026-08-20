@@ -202,3 +202,137 @@ Two live checks run against the real server (`npm run smoke`):
 | §3.2 | Everything in the out-of-scope list | Excluded by the spec |
 | §42 | LLM-backed AI driver | The deterministic driver satisfies §42 without a key; §42.7 becomes structural |
 | §49 | Live provider credentials | Mock drivers record real delivery state; swapping in a live driver is one file |
+
+## V2.0 Phase 1 — Post-booking foundation & collections
+
+Source: `Real_Estate_CRM_V2_Connected_CP_HRMS_Post_Booking_Collections_Spec.md`.
+Test file: `tests/api/post-booking.test.js` (24 cases).
+
+| Spec | Requirement | Code | Test | Status |
+|---|---|---|---|---|
+| §108, §266 | Post-booking initialization, in the exact order, idempotent | `services/postBooking.js`, `services/bookings.js` | "booking initializes its post-booking data", "initialization is idempotent" | ✅ |
+| §324.1 | A valid booking is never undone by post-booking failure | `services/bookings.js` (try/catch + `booking.post_initialize` job) | `full-lifecycle.test.js` 4.10 | ✅ |
+| §110, §111 | Booking list with money, KYC and collection columns + filters | `services/postBooking.js` `list()`, `routes/bookings.js`, `views/pages/bookings/list.ejs` | "the booking list and workspace show the money" | ✅ |
+| §109, §113 | Booking workspace: overview, collections, timeline, progress strip | `views/pages/bookings/workspace.ejs` | "the booking list and workspace show the money" | ✅ |
+| §112 | `postBookingStatus` derived, kept apart from commercial status | `services/postBooking.js` `derivePostBookingStatus()` | "booking initializes its post-booking data" | ✅ |
+| §114, §115, §344.7 | Schedule from the frozen quotation/plan snapshot, never live pricing | `services/postBooking.js` `planSnapshotFor()`, `db/models/Booking.js` | "a later payment plan edit cannot move an existing schedule" | ✅ |
+| §132, §133, §135 | `BookingInstallment`, due rules, TBD never invented | `db/models/BookingInstallment.js`, `services/installments.js` | "due dates resolve per rule, and TBD is never invented" | ✅ |
+| §136 | Stored status + derived OVERDUE | `services/installments.js` | "due dates resolve…", "the overdue sweep flags a passed due date" | ✅ |
+| §137 | Payment schedule timeline UI | `views/pages/bookings/workspace.ejs` | "the booking list and workspace show the money" | ✅ |
+| §147, §148 | Collection owner; collection pool with its own cursor | `services/collections.js` `resolveOwner()`, `services/distribution.js`, `AssignmentPool.poolType` | "booking initializes its post-booking data" | ✅ |
+| §149 | Pool members must hold collection permission | `services/allocation.js` | "collection cannot be handed to someone who cannot collect" | ✅ |
+| §150, §151 | Collection dashboard tiles + financial snapshot | `services/collections.js` `tiles()`, `snapshot()` | "collection tiles and their drilldown agree" | ✅ |
+| §152, §222, §223 | Work queue rows, tabs, filters, sort | `services/collections.js` `queue()`, `views/pages/collections/queue.ejs` | "collection tiles and their drilldown agree" | ✅ |
+| §153, §201 | Manager aging buckets | `services/collections.js` `aging()` | "the overdue sweep flags a passed due date" | ✅ |
+| §154, §155, §156 | `CollectionFollowUp`, action types, outcomes | `db/models/CollectionFollowUp.js`, `services/collectionFollowups.js` | "collection follow-up can be scheduled against an installment" | ✅ |
+| §157, §324.18 | Outstanding money always leaves a next action behind | `services/collectionFollowups.js` `requireNextAction()` | "closing a follow-up while money is owed demands the next one" | ✅ |
+| §158, §159, §161 | Promise to pay: amount + date, capped at outstanding, one save | `db/models/CollectionPromise.js`, `views/partials/collection-drawer.ejs` | "a promise to pay needs an amount and a date, and is capped", "the drawer saves outcome, promise and next action in one go" | ✅ |
+| §160 | Promise becomes MISSED after its date | `services/collectionFollowups.js` `promiseSweep()` | "an unkept promise becomes MISSED after its date" | ✅ |
+| §162, §189 | Post-booking timeline, separate from the lead's | `services/timeline.js` `forBooking()`, `Activity.bookingId` | "booking initializes its post-booking data" | ✅ |
+| §183, §220, §324.6 | Collection ownership never touches sales credit | `services/collections.js` `transferOwner()` | "transferring collection never touches sales credit" | ✅ |
+| §180, §181, §221 | Booking/collection permissions, two new default roles | `lib/permissions.js` | "collection transfer needs permission", "the new owner sees it in their own queue" | ✅ |
+| §188 | Sweeps: post-init retry, overdue refresh, missed follow-ups, missed promises | `jobs/scheduler.js` | "a pending follow-up whose time passed becomes MISSED", "the overdue sweep flags…" | ✅ |
+| §198 | Collection audit: owner change, due-date change | `services/audit.js` calls in `collections.js`, `installments.js` | "transferring collection…", "a due date can be fixed…" | ✅ |
+| §199, §200 | Commercials read-only; no amount amendment UI | `views/pages/bookings/workspace.ejs` | "booking commercials are read-only after the sale", "amounts have no edit path at all" | ✅ |
+| §242, §241 | Denormalized booking totals, one writer | `services/collections.js` `recalcBooking()` | "the schedule sums to the booking value exactly" | ✅ |
+| §267 | Integer minor units; remainder on the final installment | `services/installments.js` `amountsFor()` | "the schedule sums to the booking value exactly" | ✅ |
+| §268 | Due-date change with reason + audit, expectation preserved | `services/installments.js` `setDueDate()` | "a due date can be fixed, with a reason and an audit trail" | ✅ |
+| §279 | Tile count equals its drilldown | `services/collections.js` `filterFor()` (one definition, both readers) | "collection tiles and their drilldown agree" | ✅ |
+| §294 | Unassigned collection is visible, not silent | `services/postBooking.js` (admin notification) | — (covered by owner-resolution path) | ✅ |
+| §2.3 | Tenant isolation on every new entity | `db/tenantGuard.js` on all three new models | "another tenant cannot see or touch this booking" | ✅ |
+| §139–§146 | Payment links, gateway, receipts, allocation, reversal | — | — | ⬜ Phase 2 |
+| §116–§131 | Customer booking form, secure link, KYC | — | — | ⬜ Phase 2 |
+| §163 | Payment reminder automation | — | — | ⬜ Phase 2 |
+| §168–§170 | Booking, collection and collection-performance reports | — | — | ⬜ Phase 2 |
+
+## V2.0 Phase 2 — Customer booking form, KYC, payments & receipts
+
+Test file: `tests/api/booking-customer.test.js` (38 cases).
+
+| Spec | Requirement | Code | Test | Status |
+|---|---|---|---|---|
+| §116, §288 | Prepare, generate, copy and send the customer link | `services/bookingForm.js`, `views/pages/bookings/workspace.ejs` | "the workspace generates a customer link and shows it once" | ✅ |
+| §117 | Unguessable token, hash-only storage, expiry, revoke, optional OTP | `db/models/BookingCustomerLink.js`, `services/bookingForm.js` | "…shows it once", "generating a second link revokes the first" | ✅ |
+| §118, §324.2 | Commercial section read-only; customer cannot edit price/unit/plan | `services/bookingForm.js` (field allowlist) | "the customer submits applicants and a declaration" | ✅ |
+| §118 | "Report an issue" becomes an internal note | `services/bookingForm.js` `reportIssue()` | "reported issues become an internal note, never an edit" | ✅ |
+| §119–§122 | Individual / company applicant, multiple co-applicants | `db/models/BookingApplicant.js` | "the customer submits applicants and a declaration" | ✅ |
+| §123 | `BookingApplicant` is not a CRM Contact | `db/models/BookingApplicant.js` | (model-level; §185 distinction) | ✅ |
+| §124 | Declaration with timestamp, IP, user agent, form version | `Booking.customerDeclaration` | "the customer submits applicants and a declaration" | ✅ |
+| §125 | Dynamic KYC document types, seeded defaults | `db/models/KycDocumentType.js`, `services/kyc.js` | "a new tenant starts with a KYC checklist…" | ✅ |
+| §126 | Customer and internal upload, same service path | `services/kyc.js` `upload()` | "the customer uploads a document straight into private storage" | ✅ |
+| §127 | Per-document and overall KYC status, derived | `services/kyc.js` `rollup()` | "KYC status is derived from the documents, never typed in" | ✅ |
+| §128 | Correction flow; old file retained, never overwritten | `services/kyc.js`, `BookingKycDocument.supersededById` | "a replacement supersedes and never overwrites", "a rejection…reopens KYC" | ✅ |
+| §129 | KYC queue with tiles and missing-document column | `services/kyc.js` `queue()`, `views/pages/bookings/kyc-queue.ejs` | "the KYC queue counts what the list shows" | ✅ |
+| §130 | Separate view / edit / review permissions | `lib/permissions.js` | "a sales user cannot review KYC or reverse a receipt" | ✅ |
+| §131, §344.23 | Private storage, permission-checked download, audit, masked numbers | `lib/privateFiles.js`, `routes/files.js`, `lib/secretbox.js` | "a KYC file needs permission, and its download is audited" | ✅ |
+| §138, §269 | Customer sees paid / outstanding / next due — and nothing internal | `services/bookingForm.js` `customerView()` | "the customer sees their booking, read-only" | ✅ |
+| §139 | `PAYMENT_GATEWAY` integration category, provider-agnostic adapter | `db/models/Integration.js`, `services/payments.js` DRIVERS | "the gateway webhook verifies its signature and is idempotent" | ✅ |
+| §140, §141, §344.26 | `PaymentRequest`; amount ≤ outstanding; creating a link is not a payment | `services/payments.js` | "a payment link is capped…", "creating a link is not a payment" | ✅ |
+| §142 | Signed, idempotent callback; raw event stored; receipt created | `services/payments.js` `handleWebhook()` | "the gateway webhook verifies its signature and is idempotent" | ✅ |
+| §143 | Manual receipt with mode, reference, proof; cash can be disabled | `services/receipts.js` | "a manual payment records, allocates and recalculates", "cash can be switched off" | ✅ |
+| §144, §324.5 | `BookingReceipt`, numbered, never deleted | `db/models/BookingReceipt.js` | "a receipt is reversed with a reason, never deleted" | ✅ |
+| §145 | Allocations sum to the receipt; no credit ledger | `services/receipts.js` `record()` | "a manual receipt must allocate in full" | ✅ |
+| §146 | Reversal recalculates installment, booking and totals | `services/receipts.js` `reverse()` | "a receipt is reversed…", "reversing restores the installment status too" | ✅ |
+| §163 | Reminder bands, opt-in per tenant, idempotent per band | `services/paymentReminders.js` | "reminders are off until a tenant switches them on", "a paid installment is never chased" | ✅ |
+| §164 | One customer page: summary, applicants, KYC, plan, payments | `views/pages/public/booking-form.ejs` | "the customer sees their booking, read-only" | ✅ |
+| §166 | Document section with visibility | workspace `documents` tab | smoke (`?tab=documents`) | ✅ |
+| §168 | Collection report with aging, modes, PTP, links | `services/postBookingReports.js` | "the three post-booking reports render and export" | ✅ |
+| §169 | Booking & KYC report | `services/postBookingReports.js` | same | ✅ |
+| §170 | Collection performance, amount AND percentage | `services/postBookingReports.js` | same | ✅ |
+| §192 | Rate limits, expiry/revoke messaging, no indexing | `routes/public.js` | "a wrong or unknown token gives nothing away", "a revoked link closes…" | ✅ |
+| §193 | MIME allowlist, size cap, safe key, no executables | `lib/privateFiles.js` | "an executable is refused whatever it claims to be" | ✅ |
+| §231 | Post-booking template purposes, seeded | `db/models/Template.js`, `db/seed.js` | "a new tenant starts with a KYC checklist and message templates" | ✅ |
+| §264 | New tenant settings + setup screen | `db/models/Tenant.js`, `routes/setup-communication.js`, `views/pages/setup/post-booking.ejs` | smoke (`/app/setup/post-booking`) | ✅ |
+| §289 | Reopen for correction, approved data kept | `services/bookingForm.js` `reopen()` | "a rejection without a note is refused, and a rejection reopens KYC" | ✅ |
+| §291 | Link status as the provider reports it; nothing invented | `services/payments.js`, workspace payment-links table | "the customer payment page shows the amount and no internals" | ✅ |
+| §297 | Payment acknowledgement, never called a tax receipt | `services/receipts.js` `acknowledge()` | "paying settles the link, creates a receipt…" | ✅ |
+| §321 | Exports carry filters, scope and audit; never a KYC document | `routes/reports.js` | "the three post-booking reports render and export" | ✅ |
+| §167 | Booking form PDF snapshot | — | — | ⬜ print view deferred (decision 2.12) |
+
+## V2.0 Phase 3 — Channel Partner
+
+Test file: `tests/api/channel-partner.test.js` (43 cases).
+
+| Spec | Requirement | Code | Test | Status |
+|---|---|---|---|---|
+| §7, §16–§17 | Company and individual partners, shared profile shape | `db/models/partnerProfile.js`, `ChannelPartner`, `ChannelPartnerRegistration` | "an application is not a partner until it is approved" | ✅ |
+| §12–§15 | Registration list, statuses, 7-step stepper, entry points | `services/channelPartners.js`, `views/pages/channel-partners/registration-form.ejs` | "an application is not a partner…", smoke | ✅ |
+| §13, §186 | Application → partner only on approval, idempotent | `services/channelPartners.js` `reviewRegistration()` | "approval creates the partner…", "approving twice does not create a second partner" | ✅ |
+| §14 | Internal / invite / public self-registration, all reviewed | `routes/cp-portal.js` `/cp/register` | "public self-registration is off unless the tenant enables it" | ✅ |
+| §18, §217, §324.11 | GujRERA recorded, private certificate, versioned renewals | `db/models/PartnerReraDocument.js`, `services/rera.js` | "the RERA certificate is stored privately as version 1", "a RERA renewal versions rather than overwrites" | ✅ |
+| §19, §20 | RERA policy gates; expiry banner; submission blocked | `services/rera.js` `leadSubmissionBlock()`, `expiryBanner()` | "an application cannot be submitted without RERA", "an expired certificate blocks new submissions" | ✅ |
+| §21 | Bank details masked, sealed, revealed only by audited action | `partnerProfile`, `routes/channel-partners.js` reveal-bank | "the bank account number is masked and sealed, never plain" | ✅ |
+| §22, §23, §219 | Company team, portal roles, exit keeps history | `ChannelPartnerMember`, `services/channelPartners.js` | "a deactivated member loses access and keeps their history" | ✅ |
+| §24, §308 | Separate portal identity; invite → activate | `db/models/PartnerPortalUser.js`, `middleware/partnerAuth.js`, `services/partnerPortal.js` | "the partner activates their own login", "a partner session can never reach an internal route" | ✅ |
+| §25, §26, §307 | Project empanelment gates submission; expiry stops new leads only | `PartnerProjectEmpanelment`, `channelPartners.empanelmentBlock()` | "a partner cannot submit for a project they are not empanelled on", "empanelment opens the project" | ✅ |
+| §27–§30 | Partner workspace, internal overview, portal dashboards | `views/pages/channel-partners/workspace.ejs`, `views/pages/cp/dashboard.ejs` | smoke + "the internal dashboard and reports agree" | ✅ |
+| §31, §32, §344.9 | Portal submission reuses `capture.handleInquiry`; identity server-derived | `services/partnerLeads.js` `submit()` | "a partner submission runs the normal capture path" | ✅ |
+| §33, §184, §324.7 | CP attribution is a separate dimension from owner and source | `Lead.channelPartnerId` + `partnerAttributionStatus` | "a partner submission…", "a second partner claiming… creates a conflict" | ✅ |
+| §34, §35, §324.8 | `PartnerLeadClaim`; protection window; conflict never overwrites | `services/partnerLeads.js` `assessClaim()` | "a second partner claiming…", "a direct lead is defended by tenant policy" | ✅ |
+| §36 | Claim review screen and audited decisions | `partnerLeads.reviewClaim()`, `views/pages/channel-partners/claims.ejs` | "the claim queue lets a reviewer decide, and audits it" | ✅ |
+| §37, §271 | Partner sees only safe fields; no internal notes or KYC | `partnerLeads.partnerVisibleLead()`, `services/partnerPortal.js` | "the partner sees only safe fields about their lead", "the partner sees eligibility progress, never the receipts" | ✅ |
+| §38 | Site visit carries the partner; no duplicate visit record | `partnerLeads.stampVisit()` + visit listener | "a visit on a partner lead carries the partner" | ✅ |
+| §39, §324.9 | Booking freezes CP attribution and the commission rule | `services/bookings.js`, `PartnerCommissionEntitlement` | "a booking freezes the partner attribution and accrues commission" | ✅ |
+| §40, §41, §306 | Rule scope most-specific-wins; forward-only changes | `services/commissions.js` `resolveRule()`, rule `specificity` | "editing the rule later cannot change what was earned" | ✅ |
+| §42, §206 | Entitlement with four separate money figures | `PartnerCommissionEntitlement`, `commissions.summaryFor()` | "a booking freezes…", "the internal dashboard and reports agree" | ✅ |
+| §43 | Collection-driven eligibility, event- and job-driven | `commissions.evaluate()`, `services/listeners.js` | "crossing the collection threshold makes it eligible" | ✅ |
+| §44–§48, §324.10 | Invoice from eligible lines; claim capped; double-invoicing prevented | `services/partnerInvoices.js` `claimCeiling()` | "a partner can only invoice the eligible amount", "a second invoice cannot double-claim" | ✅ |
+| §49 | Review screen with partner, RERA, booking, collection context | `views/pages/channel-partners/invoice-detail.ejs` | "the reviewer sees the whole picture and approves" | ✅ |
+| §50, §344.14 | Operational payout tracking, capped at the invoice | `PartnerPayout`, `partnerInvoices.recordPayout()` | "a payout is recorded operationally and cannot exceed the invoice" | ✅ |
+| §51, §204–§206 | CP performance and invoice reports; conversion definitions | `services/partnerReports.js` | "the internal dashboard and reports agree with the records" | ✅ |
+| §52, §53, §188 | CP notifications; `cp.rera_expiry`, `cp.commission_eligibility` jobs | `jobs/scheduler.js`, `rera.expirySweep()`, `commissions.eligibilitySweep()` | "an expired certificate blocks new submissions" | ✅ |
+| §9–§11 | Internal dashboard tiles, funnel, top performers by chosen column | `partnerReports.dashboard()`, `topPerformers()` | "the top-performer table ranks by the column asked for" | ✅ |
+| §178 | CP permission set, scoped where it matters | `lib/permissions.js` | "a sales user cannot review claims" | ✅ |
+| §181 | Channel Partner Manager default role | `lib/permissions.js` DEFAULT_ROLES | used throughout the suite | ✅ |
+| §196 | Audit: approval, RERA verification, team, empanelment, claims, rules, invoice, payout | `services/audit.js` calls across the CP services | "…and audits it", "verifying the certificate is audited" | ✅ |
+| §216 | Duplicate detection on PAN/GSTIN/mobile/RERA; never auto-merged | `channelPartners.findDuplicates()`, `rera.assertNumberFree()` | "a second application with the same PAN is flagged", "a RERA number cannot belong to two partners" | ✅ |
+| §218 | Suspension: read-only portal, history intact | `channelPartners.setStatus()`, `middleware/partnerAuth.js` | "suspension makes the portal read-only and keeps history" | ✅ |
+| §228 | Reversal may un-eligible; never claws back invoiced or paid | `commissions.evaluate()` | "a reversal after invoicing flags review, never a clawback", "an uninvoiced entitlement does fall back" | ✅ |
+| §264, §265 | CP tenant settings and project overrides | `Tenant.settings`, `Project.channelPartnerEnabled` | "public self-registration is off unless the tenant enables it" | ✅ |
+| §272 | Invoice tax values stored, never computed | `PartnerInvoice`, invoice views | "a partner can only invoice the eligible amount" | ✅ |
+| §298 | Invoice PDF private; partner reads only their own | `routes/cp-portal.js`, `routes/files.js` | "the invoice PDF is private, and the partner reads only their own" | ✅ |
+| §309, §310 | Honest submission acknowledgement and portal statuses | `routes/cp-portal.js`, `views/pages/cp/leads.ejs` | "a second partner claiming…" (portal shows conflict, not attribution) | ✅ |
+| §311, §312 | Team and project performance tables | `partnerPortal.teamPerformance()`, `projectPerformance()` | smoke + dashboard render | ✅ |
+| §313–§315 | Eligibility UI, multi-booking invoices, correction keeps history | `views/pages/cp/invoices.ejs`, `PartnerInvoice.previousVersions` | "a partner can only invoice the eligible amount" | ✅ |
+| §2.3 | Tenant isolation on every CP entity | `db/tenantGuard.js` on all 11 models | "another tenant cannot see or touch this partner" | ✅ |
+| §243 | CP summary counters | computed by aggregation instead (decision) | — | ✅ substance |

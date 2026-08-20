@@ -100,7 +100,7 @@
       ctaLabel: 'New lead'
     }) %>
   <% } else { %>
-    <table class="responsive">
+    <div class="table-wrap"><table class="responsive">
       <thead>
         <tr>
           <th>Customer</th>
@@ -154,7 +154,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
     <%- include('../../partials/pagination') %>
   <% } %>
 </div>

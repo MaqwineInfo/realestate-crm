@@ -9,6 +9,14 @@ const notificationSchema = new Schema({
   body: { type: String, maxlength: 1000 },
   link: { type: String },
   leadId: { type: Schema.Types.ObjectId, ref: 'Lead' },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+  // V2 §190: the notification centre filters by domain once there is more than one.
+  domain: {
+    type: String,
+    enum: ['SALES', 'BOOKING', 'COLLECTION', 'CHANNEL_PARTNER', 'HRMS', 'SYSTEM'],
+    default: 'SALES',
+    index: true,
+  },
   readAt: { type: Date },
   at: { type: Date, default: Date.now },
   severity: { type: String, enum: ['INFO', 'WARNING', 'CRITICAL'], default: 'INFO' },

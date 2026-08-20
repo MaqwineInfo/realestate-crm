@@ -10,7 +10,7 @@
   <% if (!data.rows.length) { %>
     <%- include('../../partials/empty', { heading: 'Nothing in this range', message: 'Widen the date range or clear the filters.', ctaHref: null, ctaLabel: '' }) %>
   <% } else { %>
-    <table class="responsive">
+    <div class="table-wrap wide"><table class="responsive">
       <thead>
         <tr>
           <th>Contact</th><th>Project</th><th>Owner</th><th>Stage</th><th>Temp</th>
@@ -57,7 +57,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

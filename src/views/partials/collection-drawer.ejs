@@ -1,0 +1,99 @@
+<%#
+  V2 §161: the collection quick action drawer — what happened, what they
+  promised, what happens next, in one save.
+
+  One drawer serves every row on the page; the clicked row supplies the action
+  URL, the summary and whether money is still outstanding (which is what decides
+  if a next action is required, §157).
+%>
+<div class="drawer-backdrop" id="drawer-collect" hidden>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Log collection follow-up">
+    <form method="post" action="" id="collect-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="returnTo" value="<%= typeof returnTo !== 'undefined' ? returnTo : '' %>">
+
+      <div class="drawer-head">
+        <h2 class="grow" id="collect-heading">What happened?</h2>
+        <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="read-only-summary" id="collect-summary"></div>
+
+        <div class="field">
+          <label for="collect-outcome">Outcome</label>
+          <select id="collect-outcome" name="outcome">
+            <% outcomes.forEach(function (o) { %>
+              <option value="<%= o %>"><%= o.replace(/_/g, ' ').toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }) %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="collect-note">Note <span class="opt">optional</span></label>
+          <textarea id="collect-note" name="note" rows="2" maxlength="2000"></textarea>
+        </div>
+
+        <%# §158: a promise needs an amount and a date, or it is just a note. %>
+        <fieldset id="collect-promise-block" hidden>
+          <legend>Promise to pay</legend>
+          <div class="field-row">
+            <div class="field">
+              <label for="collect-promisedAmount">Promised amount</label>
+              <input type="text" id="collect-promisedAmount" name="promisedAmount" inputmode="decimal" placeholder="5,00,000">
+            </div>
+            <div class="field">
+              <label for="collect-promisedDate">Promised by</label>
+              <input type="date" id="collect-promisedDate" name="promisedDate">
+            </div>
+          </div>
+          <p class="small muted mb-0">Tracked until it is kept or missed.</p>
+        </fieldset>
+
+        <%# §157: while money is owed, closing this needs the next action. %>
+        <div id="collect-next-block">
+          <fieldset>
+            <legend>Next action — required while money is outstanding</legend>
+            <div class="field">
+              <label for="collect-nextActionType">Next action</label>
+              <select id="collect-nextActionType" name="nextActionType">
+                <% actionTypes.forEach(function (a) { %>
+                  <option value="<%= a %>"><%= a.replace(/_/g, ' ').toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }) %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="presets" role="group" aria-label="Quick dates">
+              <button type="button" class="chip" data-cpreset="today" data-cpreset-time="18:00">Later today</button>
+              <button type="button" class="chip" data-cpreset="1">Tomorrow</button>
+              <button type="button" class="chip" data-cpreset="3">+3 days</button>
+              <button type="button" class="chip" data-cpreset="7">+7 days</button>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="collect-nextDate">Next date</label>
+                <input type="date" id="collect-nextDate" name="nextDate">
+              </div>
+              <div class="field">
+                <label for="collect-nextTime">Next time</label>
+                <input type="time" id="collect-nextTime" name="nextTime" value="10:00">
+              </div>
+            </div>
+            <div class="field">
+              <label for="collect-nextNote">Next action note <span class="opt">optional</span></label>
+              <input type="text" id="collect-nextNote" name="nextNote" maxlength="500">
+            </div>
+          </fieldset>
+        </div>
+
+        <p class="small muted mb-0" id="collect-paid-hint" hidden>
+          Nothing is outstanding on this booking, so no next action is needed.
+        </p>
+      </div>
+
+      <div class="drawer-foot">
+        <button type="button" class="btn" data-drawer-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="collect-submit">Save &amp; next</button>
+      </div>
+    </form>
+  </div>
+</div>

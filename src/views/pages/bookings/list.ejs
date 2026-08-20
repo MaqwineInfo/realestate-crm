@@ -1,0 +1,134 @@
+<%- include('../../partials/app-head') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Bookings</h1>
+    <div class="sub">Every sale, what has been collected against it and who is chasing the rest.</div>
+  </div>
+  <div class="btn-group">
+    <% if (can('booking.kyc.view')) { %>
+      <a class="btn" href="/app/bookings/kyc">KYC review</a>
+    <% } %>
+    <% if (can('booking.report')) { %>
+      <a class="btn" href="/app/reports/bookings">Report</a>
+    <% } %>
+    <% if (can('collection.dashboard') || can('collection.view')) { %>
+      <a class="btn btn-primary" href="/app/collections">My collections</a>
+    <% } %>
+  </div>
+</div>
+
+<%#
+  The house filter pattern (see leads/list): every control is a labelled field,
+  so the bar reads as a set of named filters rather than a row of bare boxes.
+%>
+<form class="filters" method="get" action="/app/bookings">
+  <div class="field">
+    <label for="f-q">Search</label>
+    <input type="search" id="f-q" name="q" value="<%= query.q || '' %>"
+           placeholder="Customer, mobile, unit or booking no.">
+  </div>
+  <div class="field">
+    <label for="f-project">Project</label>
+    <select id="f-project" name="projectId">
+      <option value="">All projects</option>
+      <% projects.forEach(function (p) { %>
+        <option value="<%= p._id %>" <%= String(query.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-kyc">KYC status</label>
+    <select id="f-kyc" name="kycStatus">
+      <option value="">Any</option>
+      <% ['NOT_STARTED','PARTIAL','SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED','VERIFIED'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= query.kycStatus === s ? 'selected' : '' %>><%= s.replace(/_/g,' ').toLowerCase() %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-owner">Collection owner</label>
+    <select id="f-owner" name="collectionOwnerUserId">
+      <option value="">Anyone</option>
+      <% owners.forEach(function (u) { %>
+        <option value="<%= u._id %>" <%= String(query.collectionOwnerUserId) === String(u._id) ? 'selected' : '' %>><%= u.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-overdue">Overdue</label>
+    <select id="f-overdue" name="overdue">
+      <option value="">Any</option>
+      <option value="1" <%= query.overdue === '1' ? 'selected' : '' %>>Overdue only</option>
+      <option value="0" <%= query.overdue === '0' ? 'selected' : '' %>>Not overdue</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-from">Booked from</label>
+    <input type="date" id="f-from" name="from" value="<%= query.from || '' %>">
+  </div>
+  <div class="field">
+    <label for="f-to">Booked to</label>
+    <input type="date" id="f-to" name="to" value="<%= query.to || '' %>">
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Bookings</h2>
+    <span class="muted small"><%= total %> record<%= total === 1 ? '' : 's' %></span>
+  </div>
+
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', { heading: 'No bookings yet', message: 'A booking appears here the moment a unit is sold.', ctaHref: '/app/leads', ctaLabel: 'Go to leads' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Booking</th><th>Customer</th><th>Project / unit</th><th>Booked</th>
+          <th class="num">Value</th><th class="num">Received</th><th class="num">Outstanding</th>
+          <th>Next due</th><th>KYC</th><th>Collection</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach(function (b) { const contact = b.contactId || {}; %>
+          <tr>
+            <td data-label="Booking">
+              <a href="/app/bookings/<%= b._id %>"><strong><%= b.bookingNumber || String(b._id).slice(-6).toUpperCase() %></strong></a>
+              <% if ((b.costSheetId || {}).quotationNumber) { %>
+                <div class="small muted"><%= b.costSheetId.quotationNumber %></div>
+              <% } %>
+            </td>
+            <td data-label="Customer">
+              <%= contact.displayName || '—' %>
+              <div class="small muted"><%= h.mobile(contact.primaryMobile) %></div>
+            </td>
+            <td data-label="Project / unit">
+              <%= (b.projectId || {}).name || '—' %>
+              <div class="small muted"><%= (b.unitId || {}).unitNumber || '' %></div>
+            </td>
+            <td data-label="Booked"><%= h.date(b.bookingDate) %></td>
+            <td data-label="Value" class="num"><%= h.moneyShort(b.finalPriceMinor) %></td>
+            <td data-label="Received" class="num"><%= h.moneyShort(b.totalReceivedMinor) %></td>
+            <td data-label="Outstanding" class="num">
+              <%= h.moneyShort(b.outstandingMinor) %>
+              <% if (b.overdueMinor > 0) { %>
+                <div class="small text-danger"><%= h.moneyShort(b.overdueMinor) %> overdue</div>
+              <% } %>
+            </td>
+            <td data-label="Next due"><%= b.nextDueAt ? h.date(b.nextDueAt) : 'TBD' %></td>
+            <td data-label="KYC"><span class="badge"><%= (b.kycStatus || 'NOT_STARTED').replace(/_/g,' ').toLowerCase() %></span></td>
+            <td data-label="Collection">
+              <%= (b.collectionOwnerUserId || {}).name || '—' %>
+              <% if (!b.collectionOwnerUserId) { %><span class="badge b-red">unassigned</span><% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination') %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

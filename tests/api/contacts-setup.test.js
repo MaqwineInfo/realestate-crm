@@ -113,7 +113,9 @@ test('setup and configuration (§47, §78, §95)', async (t) => {
 
     assert.equal(await ActionType.countDocuments({ tenantId }), 9);
     assert.equal(await SubStage.countDocuments({ tenantId }), 13);
-    assert.equal(await Role.countDocuments({ tenantId }), 5);
+    // V2 §181 adds Channel Partner Manager, Collection Manager and Collection
+    // Executive to the five V1 roles.
+    assert.equal(await Role.countDocuments({ tenantId }), 8);
     assert.ok(await Tag.countDocuments({ tenantId }) >= 6);
   });
 

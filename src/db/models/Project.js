@@ -47,6 +47,13 @@ const projectSchema = new Schema({
   areaMax: { type: Number },
   areaUnit: { type: String, default: 'sqft' },
   possessionDate: { type: Date },
+  /**
+   * V2 §265: project-level partner settings. Null means "use the tenant
+   * setting" — an override has to be chosen, never inherited by accident.
+   */
+  channelPartnerEnabled: { type: Boolean, default: true },
+  cpLeadProtectionDaysOverride: { type: Number, default: null },
+  collectionPoolId: { type: Schema.Types.ObjectId, ref: 'AssignmentPool', default: null },
   salesContactName: { type: String },
   salesContactMobile: { type: String },
   bookingTerms: { type: String, maxlength: 2000 },

@@ -17,7 +17,7 @@
 <% } %>
 
 <div class="card">
-  <table class="responsive">
+  <div class="table-wrap"><table class="responsive">
     <thead>
       <tr><th>Name</th><th>Email</th><th>Role</th><th>Reports to</th><th>Status</th><th>Last login</th><th></th></tr>
     </thead>
@@ -45,7 +45,7 @@
         </tr>
       <% }) %>
     </tbody>
-  </table>
+  </table></div>
 </div>
 
 <%- include('../../partials/drawer-open', { id: 'drawer-invite', heading: 'Invite user', action: '/api/setup/users' }) %>

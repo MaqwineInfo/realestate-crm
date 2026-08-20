@@ -132,6 +132,138 @@ router.get('/app/setup/lead-allocation', requirePermission('setup.distribution')
   } catch (err) { next(err); }
 });
 
+/* ---------------- V2 §125/§264: post-booking settings + KYC types --------- */
+
+router.get('/app/setup/post-booking', requirePermission('setup.post_booking'), async (req, res, next) => {
+  try {
+    const { KycDocumentType, Integration } = require('../db/models');
+    const [types, gateway] = await Promise.all([
+      KycDocumentType.find({ tenantId: req.tenantId }).sort({ displayOrder: 1, name: 1 }).lean(),
+      Integration.findOne({ tenantId: req.tenantId, category: 'PAYMENT_GATEWAY' }).lean(),
+    ]);
+    res.render('pages/setup/post-booking', {
+      title: 'Post-booking',
+      types,
+      gateway,
+      settings: req.tenant.settings || {},
+    });
+  } catch (err) { next(err); }
+});
+
+const postBookingSettingsSchema = z.object({
+  bookingLinkExpiryDays: f.optionalNumber,
+  bookingLinkRequireOtp: f.checkbox,
+  collectionReminderEnabled: f.checkbox,
+  collectionReminderChannel: f.enumField(['WHATSAPP', 'SMS', 'EMAIL']),
+  collectionReminderDaysBefore: f.optionalText(40),
+  collectionReminderDaysAfter: f.optionalText(40),
+  collectionAllowPartialPaymentLink: f.checkbox,
+  collectionAllowCash: f.checkbox,
+  receiptAcknowledgementEnabled: f.checkbox,
+  paymentLinkExpiryDays: f.optionalNumber,
+}).passthrough();
+
+router.post('/api/setup/post-booking/settings', requirePermission('setup.post_booking'), validate(postBookingSettingsSchema), async (req, res, next) => {
+  try {
+    const { Tenant } = require('../db/models');
+    const d = req.data;
+    const days = (value, fallback) => {
+      const parsed = String(value ?? '').split(',').map((n) => Number(String(n).trim()))
+        .filter((n) => Number.isInteger(n) && n > 0 && n <= 180);
+      return parsed.length ? [...new Set(parsed)].sort((a, b) => b - a) : fallback;
+    };
+    const before = await Tenant.findById(req.tenantId).lean();
+    await Tenant.updateOne({ _id: req.tenantId }, {
+      $set: {
+        'settings.bookingLinkExpiryDays': Math.min(90, Math.max(1, Number(d.bookingLinkExpiryDays || 7))),
+        'settings.bookingLinkRequireOtp': !!d.bookingLinkRequireOtp,
+        'settings.collectionReminderEnabled': !!d.collectionReminderEnabled,
+        'settings.collectionReminderChannel': d.collectionReminderChannel || 'WHATSAPP',
+        'settings.collectionReminderDaysBefore': days(d.collectionReminderDaysBefore, [7, 3, 1]),
+        'settings.collectionReminderDaysAfter': days(d.collectionReminderDaysAfter, [1, 7]),
+        'settings.collectionAllowPartialPaymentLink': !!d.collectionAllowPartialPaymentLink,
+        'settings.collectionAllowCash': !!d.collectionAllowCash,
+        'settings.receiptAcknowledgementEnabled': !!d.receiptAcknowledgementEnabled,
+        'settings.paymentLinkExpiryDays': Math.min(30, Math.max(1, Number(d.paymentLinkExpiryDays || 3))),
+      },
+    });
+    await require('../services/audit').record({
+      tenantId: req.tenantId, actor: req.user, entity: 'Tenant', entityId: req.tenantId,
+      action: 'UPDATE_POST_BOOKING_SETTINGS',
+      before: { settings: before.settings }, after: { settings: req.data }, req,
+    });
+    req.session.flash = { type: 'success', message: 'Post-booking settings saved.' };
+    res.redirect('/app/setup/post-booking');
+  } catch (err) { next(err); }
+});
+
+const kycTypeSchema = z.object({
+  name: f.requiredText(100, 'Name this document type.'),
+  code: f.requiredText(40, 'Give it a short code.'),
+  appliesTo: z.enum(['INDIVIDUAL', 'COMPANY', 'BOTH']),
+  mandatory: f.checkbox,
+  expiryRequired: f.checkbox,
+  numberRequired: f.checkbox,
+  displayOrder: f.optionalNumber,
+}).passthrough();
+
+router.post('/api/setup/post-booking/kyc-types', requirePermission('setup.post_booking'), validate(kycTypeSchema), async (req, res, next) => {
+  try {
+    const { KycDocumentType } = require('../db/models');
+    const d = req.data;
+    try {
+      await KycDocumentType.create({
+        tenantId: req.tenantId,
+        name: d.name,
+        code: String(d.code).toUpperCase().replace(/[^A-Z0-9_]/g, '_'),
+        appliesTo: d.appliesTo,
+        mandatory: !!d.mandatory,
+        expiryRequired: !!d.expiryRequired,
+        numberRequired: !!d.numberRequired,
+        displayOrder: Number(d.displayOrder || 50),
+      });
+    } catch (err) {
+      if (err.code === 11000) throw badRequest('A document type with that code already exists.');
+      throw err;
+    }
+    req.session.flash = { type: 'success', message: 'Document type added.' };
+    res.redirect('/app/setup/post-booking');
+  } catch (err) { next(err); }
+});
+
+router.post('/api/setup/post-booking/kyc-types/:id/toggle', requirePermission('setup.post_booking'), async (req, res, next) => {
+  try {
+    const { KycDocumentType } = require('../db/models');
+    const type = await KycDocumentType.findOne({ tenantId: req.tenantId, _id: req.params.id });
+    if (!type) throw badRequest('Document type not found.');
+    // §125: history stays; a retired type is deactivated, never deleted.
+    type.active = !type.active;
+    await type.save();
+    req.session.flash = { type: 'success', message: `${type.name} ${type.active ? 'activated' : 'deactivated'}.` };
+    res.redirect('/app/setup/post-booking');
+  } catch (err) { next(err); }
+});
+
+/* ------------------- V2 §148: collection allocation ---------------------- */
+
+router.get('/app/setup/collection-allocation', requirePermission('setup.collection_allocation'), async (req, res, next) => {
+  try {
+    const allocation = require('../services/allocation');
+    const [pools, projects, users] = await Promise.all([
+      allocation.overview({ tenantId: req.tenantId, poolType: 'COLLECTION' }),
+      Project.find({ tenantId: req.tenantId, archived: { $ne: true } }).select('name').sort({ name: 1 }).lean(),
+      User.find({ tenantId: req.tenantId, status: 'ACTIVE' }).select('name email').sort({ name: 1 }).lean(),
+    ]);
+    res.render('pages/setup/collection-allocation', {
+      title: 'Collection allocation',
+      pools,
+      projects,
+      users,
+      defaultPool: pools.find((p) => p.isDefault) || null,
+    });
+  } catch (err) { next(err); }
+});
+
 const poolSchema = z.object({
   name: f.requiredText(80, 'Name this pool.'),
   scopeType: z.enum(['DEFAULT', 'PROJECT']).default('PROJECT'),
@@ -162,6 +294,33 @@ router.post('/api/setup/assignment-pools/:id/toggle', requirePermission('setup.d
   try {
     await require('../services/allocation').toggle({ tenantId: req.tenantId, actor: req.user, poolId: req.params.id });
     res.redirect('/app/setup/lead-allocation');
+  } catch (err) { next(err); }
+});
+
+router.post('/api/setup/collection-pools', requirePermission('setup.collection_allocation'), validate(poolSchema), async (req, res, next) => {
+  try {
+    await require('../services/allocation').create({
+      tenantId: req.tenantId, actor: req.user, data: req.data, poolType: 'COLLECTION',
+    });
+    req.session.flash = { type: 'success', message: 'Collection allocation rule created.' };
+    res.redirect('/app/setup/collection-allocation');
+  } catch (err) { next(err); }
+});
+
+router.post('/api/setup/collection-pools/:id', requirePermission('setup.collection_allocation'), validate(poolSchema), async (req, res, next) => {
+  try {
+    await require('../services/allocation').update({
+      tenantId: req.tenantId, actor: req.user, poolId: req.params.id, data: req.data,
+    });
+    req.session.flash = { type: 'success', message: 'Collection allocation rule saved.' };
+    res.redirect('/app/setup/collection-allocation');
+  } catch (err) { next(err); }
+});
+
+router.post('/api/setup/collection-pools/:id/toggle', requirePermission('setup.collection_allocation'), async (req, res, next) => {
+  try {
+    await require('../services/allocation').toggle({ tenantId: req.tenantId, actor: req.user, poolId: req.params.id });
+    res.redirect('/app/setup/collection-allocation');
   } catch (err) { next(err); }
 });
 

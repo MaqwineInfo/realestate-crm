@@ -1,8 +1,18 @@
-# Real Estate CRM V1.1
+# Real Estate CRM
 
 A multi-tenant real estate sales CRM built to `Real_Estate_CRM_V1_Master_Product_Spec.md`,
-extended by `Real_Estate_CRM_V1_1_Connected_Flow_Enhancement_Spec.md`.
+extended by `Real_Estate_CRM_V1_1_Connected_Flow_Enhancement_Spec.md` and now by
+`Real_Estate_CRM_V2_Connected_CP_HRMS_Post_Booking_Collections_Spec.md`.
 Node.js + Express + EJS in one codebase. No frontend build step.
+
+**V2 progress:** Phase 1 (post-booking foundation, payment schedule, collections work queue),
+Phase 2 (customer booking form, KYC, payment links, receipts, reminders, money reports) and
+Phase 3 (Channel Partner: registration, GujRERA, teams, empanelment, partner portal, lead
+claims, commission, invoices and payouts) are shipped. Phases 4–5 (HRMS) are planned in
+[V2-PLAN.md](V2-PLAN.md).
+
+The channel partner portal is a **separate identity layer** at `/cp/*` — partner logins are
+`PartnerPortalUser` records and can never resolve an internal `/app/*` route.
 
 ## Documentation
 
@@ -12,6 +22,8 @@ Node.js + Express + EJS in one codebase. No frontend build step.
   field, permission and state machine.
 - **[V1_1-PLAN.md](V1_1-PLAN.md)** — the V1.1 connected-flow release: gap analysis, phases,
   and the three places the spec was followed in substance rather than to the letter.
+- **[V2-PLAN.md](V2-PLAN.md)** — the V2.0 build: five phases, the reuse decisions taken, and
+  the six places the spec is followed in substance rather than to the letter.
 - **[docs/REQUIREMENTS-COVERAGE.md](docs/REQUIREMENTS-COVERAGE.md)** — spec section → code → test.
 
 ## Run it
@@ -23,14 +35,30 @@ npm run seed              # demo organization with sample users
 npm run dev               # http://localhost:3000
 ```
 
+`npm test` runs each suite against its own database and is capped at four at a time
+(`--test-concurrency=4`). Uncapped, twenty-four suites building every index at once has been
+enough to take a local `mongod` down mid-run — the cap is not decoration.
+
 Demo logins (password `Password1`):
 
 | Email | Role |
 |---|---|
 | admin@skyline.test | Organization Admin |
 | manager@skyline.test | Sales Manager |
-| priya@skyline.test | Sales User |
+| priya@skyline.test | Sales User (also collects on their own bookings) |
 | vikram@skyline.test | Sales User |
+
+## Where customer documents live
+
+KYC files, payment proofs and anything else customer-sensitive are written to
+`PRIVATE_UPLOAD_DIR` (default `private-uploads/`), which sits **outside** `public/` — the
+static handler cannot reach it. The only way out is `GET /app/files/:kind/:id`, which checks
+the session, the permission for that kind of file, the tenant, and the booking's visibility,
+then records the download in the audit log. Back this directory up like a database; it is not
+reproducible from anything else.
+
+`UPLOAD_DIR` (default `public/uploads/`) stays what it always was: brochures and project
+images that are *meant* to be shared by link.
 
 ## Copy a database
 

@@ -46,7 +46,7 @@
       ctaHref: null, ctaLabel: ''
     }) %>
   <% } else { %>
-    <table class="responsive">
+    <div class="table-wrap wide"><table class="responsive">
       <thead>
         <tr>
           <th>Campaign</th><th class="num">Spend</th><th class="num">Leads</th><th class="num">CPL</th>
@@ -89,7 +89,7 @@
           <td class="num"><%= totals.roas != null ? totals.roas + '×' : '—' %></td>
         </tr>
       </tbody>
-    </table>
+    </table></div>
     <div class="card-body">
       <p class="small muted mb-0">
         A campaign with a higher cost per lead but more bookings is the better campaign — compare the

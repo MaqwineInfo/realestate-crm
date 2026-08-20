@@ -1,0 +1,85 @@
+<%# V2 §172: the reports hub, grouped by domain. Sales definitions are untouched. %>
+<div class="page-head">
+  <div class="grow">
+    <h1><%= title %></h1>
+    <div class="sub">Every number here comes from the same query that lists its records.</div>
+  </div>
+  <div class="btn-group">
+    <% if (can('report.view')) { %><a class="btn btn-sm" href="/app/reports/leads">Sales</a><% } %>
+    <% if (can('booking.report')) { %>
+      <a class="btn btn-sm <%= kind === 'bookings' ? 'btn-primary' : '' %>" href="/app/reports/bookings">Bookings &amp; KYC</a>
+    <% } %>
+    <% if (can('collection.report')) { %>
+      <a class="btn btn-sm <%= kind === 'collections' ? 'btn-primary' : '' %>" href="/app/reports/collections">Collections</a>
+      <a class="btn btn-sm <%= kind === 'collection-performance' ? 'btn-primary' : '' %>" href="/app/reports/collection-performance">Performance</a>
+    <% } %>
+    <% if (can('cp.report.view')) { %>
+      <a class="btn btn-sm <%= kind === 'channel-partners' ? 'btn-primary' : '' %>" href="/app/reports/channel-partners">Channel partners</a>
+      <a class="btn btn-sm <%= kind === 'cp-invoices' ? 'btn-primary' : '' %>" href="/app/reports/cp-invoices">CP invoices</a>
+    <% } %>
+    <a class="btn btn-sm" href="/app/reports/<%= kind %>/export?<%= new URLSearchParams(query).toString() %>">Export CSV</a>
+  </div>
+</div>
+
+<form class="filters" method="get" action="/app/reports/<%= kind %>">
+  <div class="field"><label for="rb-from">From</label><input type="date" id="rb-from" name="from" value="<%= query.from || '' %>"></div>
+  <div class="field"><label for="rb-to">To</label><input type="date" id="rb-to" name="to" value="<%= query.to || '' %>"></div>
+  <div class="field">
+    <label for="rb-project">Project</label>
+    <select id="rb-project" name="projectId">
+      <option value="">All projects</option>
+      <% projects.forEach(function (p) { %>
+        <option value="<%= p._id %>" <%= String(query.projectId) === String(p._id) ? 'selected' : '' %>><%= p.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="rb-owner">Collection owner</label>
+    <select id="rb-owner" name="collectionOwnerUserId">
+      <option value="">Anyone</option>
+      <% users.forEach(function (u) { %>
+        <option value="<%= u._id %>" <%= String(query.collectionOwnerUserId) === String(u._id) ? 'selected' : '' %>><%= u.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <% if (kind === 'bookings') { %>
+    <div class="field">
+      <label for="rb-kyc">KYC status</label>
+      <select id="rb-kyc" name="kycStatus">
+        <option value="">Any</option>
+        <% ['NOT_STARTED','PARTIAL','SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED','VERIFIED'].forEach(function (s) { %>
+          <option value="<%= s %>" <%= query.kycStatus === s ? 'selected' : '' %>><%= s.replace(/_/g,' ').toLowerCase() %></option>
+        <% }) %>
+      </select>
+    </div>
+  <% } %>
+  <% if (kind === 'collections') { %>
+    <div class="field">
+      <label for="rb-aging">Ageing</label>
+      <select id="rb-aging" name="aging">
+        <option value="">Any</option>
+        <% ['CURRENT','1-30','31-60','61-90','90+'].forEach(function (a) { %>
+          <option value="<%= a %>" <%= query.aging === a ? 'selected' : '' %>><%= a %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="rb-inst">Installment status</label>
+      <select id="rb-inst" name="installmentStatus">
+        <option value="">Any</option>
+        <% ['UPCOMING','DUE','PARTIAL','PAID'].forEach(function (s) { %>
+          <option value="<%= s %>" <%= query.installmentStatus === s ? 'selected' : '' %>><%= s.toLowerCase() %></option>
+        <% }) %>
+      </select>
+    </div>
+  <% } %>
+  <div class="field">
+    <label for="rb-overdue">Overdue</label>
+    <select id="rb-overdue" name="overdue">
+      <option value="">Any</option>
+      <option value="1" <%= query.overdue === '1' ? 'selected' : '' %>>Overdue only</option>
+      <option value="0" <%= query.overdue === '0' ? 'selected' : '' %>>Not overdue</option>
+    </select>
+  </div>
+  <button class="btn" type="submit">Apply</button>
+</form>

@@ -105,9 +105,76 @@
     });
   }
 
+  /* V2 §161: the collection drawer. Same one-drawer-many-rows shape as above.
+     Two things change what it shows: the chosen outcome (promise fields) and
+     whether the booking still owes money (next action). */
+  var collectForm = document.getElementById('collect-form');
+  if (collectForm) {
+    var outcomeSelect = document.getElementById('collect-outcome');
+    var promiseBlock = document.getElementById('collect-promise-block');
+    var collectNext = document.getElementById('collect-next-block');
+    var paidHint = document.getElementById('collect-paid-hint');
+    var outstanding = 1;
+
+    var syncPromise = function () {
+      var isPromise = outcomeSelect.value === 'PROMISE_TO_PAY';
+      promiseBlock.hidden = !isPromise;
+      promiseBlock.querySelectorAll('input').forEach(function (el) { el.disabled = !isPromise; });
+      if (isPromise && !document.getElementById('collect-promisedDate').value) {
+        document.getElementById('collect-promisedDate').value = isoDate(new Date(Date.now() + 3 * 86400000));
+      }
+    };
+    var syncOutstanding = function () {
+      var settled = outstanding <= 0;
+      collectNext.hidden = settled;
+      paidHint.hidden = !settled;
+      collectNext.querySelectorAll('select, input').forEach(function (el) { el.disabled = settled; });
+      document.getElementById('collect-submit').textContent = settled ? 'Save' : 'Save & next';
+    };
+    outcomeSelect.addEventListener('change', syncPromise);
+
+    document.addEventListener('click', function (e) {
+      var trigger = e.target.closest('[data-collect]');
+      if (!trigger) return;
+      e.preventDefault();
+      collectForm.setAttribute('action', trigger.getAttribute('data-action'));
+      document.getElementById('collect-summary').textContent = trigger.getAttribute('data-summary') || '';
+      outstanding = Number(trigger.getAttribute('data-outstanding') || 1);
+      var dateInput = document.getElementById('collect-nextDate');
+      if (!dateInput.value) dateInput.value = isoDate(new Date(Date.now() + 86400000));
+      syncPromise();
+      syncOutstanding();
+      openDrawer('drawer-collect');
+    });
+
+    collectForm.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-cpreset]');
+      if (!chip) return;
+      e.preventDefault();
+      var preset = chip.getAttribute('data-cpreset');
+      var days = preset === 'today' ? 0 : Number(preset);
+      document.getElementById('collect-nextDate').value = isoDate(new Date(Date.now() + days * 86400000));
+      var time = chip.getAttribute('data-cpreset-time');
+      if (time) document.getElementById('collect-nextTime').value = time;
+      collectForm.querySelectorAll('[data-cpreset]').forEach(function (c) { c.classList.remove('on'); });
+      chip.classList.add('on');
+    });
+  }
+
   function isoDate(d) {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
+
+  /* V2 §119: company fields only matter for a company applicant. Hidden, not
+     removed — with JS off every field stays visible and the form still works. */
+  document.querySelectorAll('[data-company-fields]').forEach(function (block) {
+    var form = block.closest('form');
+    var typeSelect = form && form.querySelector('[name="primary[type]"]');
+    if (!typeSelect) return;
+    var sync = function () { block.hidden = typeSelect.value !== 'COMPANY'; };
+    typeSelect.addEventListener('change', sync);
+    sync();
+  });
 
   // Stage pickers filter their sub-stage list so an invalid pair cannot be sent.
   document.querySelectorAll('[data-substage-for]').forEach(function (select) {

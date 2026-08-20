@@ -6,13 +6,15 @@ const { Activity, Lead, Contact } = require('../db/models');
  * lead/contact "last activity" denormalisation can never drift.
  */
 async function log({
-  tenantId, leadId, contactId, type, title, body, meta,
+  tenantId, leadId, contactId, bookingId, channelPartnerId, type, title, body, meta,
   actor, actorType = 'USER', at = new Date(), mentionUserIds, attachments, editable = false,
 }) {
   const activity = await Activity.create({
     tenantId,
     leadId,
     contactId,
+    bookingId,
+    channelPartnerId,
     type,
     title,
     body,
@@ -33,6 +35,35 @@ async function log({
     await Contact.updateOne({ tenantId, _id: contactId }, { $set: { lastActivityAt: at } });
   }
   return activity;
+}
+
+/**
+ * V2 §162/§189: the post-booking timeline. Deliberately a different read from
+ * `forLead` — the sales story and the collection story are shown separately,
+ * even though they share one append-only collection.
+ */
+async function forBooking({ tenantId, bookingId, limit = 50, before }) {
+  const filter = { tenantId, bookingId };
+  if (before) filter.at = { $lt: new Date(before) };
+  return Activity.find(filter)
+    .sort({ at: -1, _id: -1 })
+    .limit(limit)
+    .populate('actorUserId', 'name')
+    .lean();
+}
+
+/**
+ * V2 §189: the channel-partner timeline — registration, compliance, claims and
+ * commission. A third anchor on the same append-only collection.
+ */
+async function forPartner({ tenantId, channelPartnerId, limit = 60, before }) {
+  const filter = { tenantId, channelPartnerId };
+  if (before) filter.at = { $lt: new Date(before) };
+  return Activity.find(filter)
+    .sort({ at: -1, _id: -1 })
+    .limit(limit)
+    .populate('actorUserId', 'name')
+    .lean();
 }
 
 /** Newest-first page of a lead's timeline. */
@@ -83,4 +114,4 @@ async function resolveMentions({ tenantId, body }) {
     .map((u) => u._id);
 }
 
-module.exports = { log, forLead, addNote, resolveMentions };
+module.exports = { log, forLead, addNote, resolveMentions, forBooking, forPartner };

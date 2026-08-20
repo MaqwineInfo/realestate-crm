@@ -1,0 +1,62 @@
+<%- include('../../partials/app-head') %>
+<%- include('_cp-nav') %>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= data.totals.invoices %></div>
+    <div class="stat-lbl">Invoices</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(data.totals.claimedMinor) %></div>
+    <div class="stat-lbl">Claimed</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(data.totals.paidMinor) %></div>
+    <div class="stat-lbl">Paid</div></div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(data.totals.outstandingMinor) %></div>
+    <div class="stat-lbl">Outstanding · <%= data.totals.pending %> to review</div></div></div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Invoices and payouts</h2>
+    <span class="muted small"><%= data.rows.length %> record<%= data.rows.length === 1 ? '' : 's' %></span>
+  </div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No invoices in this range', message: 'Partners invoice once their commission becomes eligible.', ctaHref: '/app/channel-partners/invoices', ctaLabel: 'All invoices' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr><th>Invoice</th><th>Partner</th><th>Date</th><th>Submitted</th>
+        <th class="num">Taxable</th><th class="num">GST</th><th class="num">Total</th>
+        <th class="num">Paid</th><th class="num">Outstanding</th><th>Status</th><th>Payouts</th></tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Invoice"><a href="/app/channel-partners/invoices/<%= r._id %>"><%= r.invoiceNumber || r.invoiceRef %></a></td>
+            <td data-label="Partner"><%= r.partnerName %></td>
+            <td data-label="Date"><%= r.invoiceDate ? h.date(r.invoiceDate) : '—' %></td>
+            <td data-label="Submitted"><%= r.submittedAt ? h.date(r.submittedAt) : '—' %></td>
+            <td data-label="Taxable" class="num"><%= h.moneyShort(r.taxableValueMinor) %></td>
+            <td data-label="GST" class="num"><%= h.moneyShort(r.gstAmountMinor || 0) %></td>
+            <td data-label="Total" class="num"><%= h.moneyShort(r.invoiceTotalMinor) %></td>
+            <td data-label="Paid" class="num"><%= h.moneyShort(r.paidAmountMinor || 0) %></td>
+            <td data-label="Outstanding" class="num"><%= h.moneyShort(r.outstandingMinor) %></td>
+            <td data-label="Status"><span class="badge"><%= r.status.toLowerCase().replace(/_/g,' ') %></span></td>
+            <td data-label="Payouts" class="small">
+              <% if (!r.payouts.length) { %>—<% } else { %>
+                <% r.payouts.forEach(function (p) { %>
+                  <div><%= h.date(p.payoutDate) %> · <%= h.moneyShort(p.amountMinor) %><%= p.transactionReference ? ' · ' + p.transactionReference : '' %></div>
+                <% }) %>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <div class="card-body">
+      <p class="small muted mb-0">Tax values are as supplied by the partner. This is not a tax filing report.</p>
+    </div>
+  <% } %>
+</div>
+<%- include('../../partials/app-foot') %>

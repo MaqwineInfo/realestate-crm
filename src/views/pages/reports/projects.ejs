@@ -7,7 +7,7 @@
   <% if (!data.rows.length) { %>
     <%- include('../../partials/empty', { heading: 'No projects yet', message: 'Create a project to see its funnel.', ctaHref: '/app/projects/new', ctaLabel: 'New project' }) %>
   <% } else { %>
-    <table class="responsive">
+    <div class="table-wrap wide"><table class="responsive">
       <thead>
         <tr>
           <th>Project</th><th class="num">Leads</th><th class="num">Connected</th><th class="num">Visits</th>
@@ -34,7 +34,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

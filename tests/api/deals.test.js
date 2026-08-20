@@ -367,7 +367,7 @@ test('inventory, cost sheets, blocking and booking (§27–§36)', async (t) => 
       expectedExitPrice: '8000000',
     }, `/app/leads/${leadA._id}/bookings/new`);
     assert.equal(res.status, 302, 'booking accepted');
-    bookingId = res.location.split('/').pop();
+    bookingId = res.location.split('?')[0].split('/').pop();
 
     const booking = await Booking.findOne({ tenantId, _id: bookingId }).lean();
     assert.ok(booking, 'booking created');

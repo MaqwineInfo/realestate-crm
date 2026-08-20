@@ -1,0 +1,194 @@
+<%- include('../../partials/app-head') %>
+<%
+  const partner = invoice.channelPartnerId || {};
+  const pr = partner.profile || {};
+  const remaining = invoice.invoiceTotalMinor - (invoice.paidAmountMinor || 0);
+  const awaitingReview = ['SUBMITTED', 'UNDER_REVIEW'].includes(invoice.status);
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= invoice.invoiceNumber || invoice.invoiceRef %></h1>
+    <div class="sub">
+      <%= pr.tradeName || pr.legalName || pr.primaryContactName %>
+      · <%= invoice.invoiceDate ? h.date(invoice.invoiceDate) : 'no date' %>
+      · <span class="badge"><%= invoice.status.toLowerCase().replace(/_/g,' ') %></span>
+    </div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/channel-partners/<%= partner._id %>">Partner</a>
+    <a class="btn" href="/app/channel-partners/invoices">All invoices</a>
+  </div>
+</div>
+
+<%# §49: everything the reviewer needs, on one screen. %>
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Partner</h2></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Partner</dt><dd><%= pr.tradeName || pr.legalName %> <span class="muted small"><%= partner.partnerCode %></span></dd>
+        <dt>Status</dt><dd><span class="badge <%= partner.status === 'ACTIVE' ? 'b-green' : 'b-amber' %>"><%= (partner.status || '').toLowerCase() %></span></dd>
+        <dt>RERA</dt>
+        <dd>
+          <%= partner.reraNumber || '—' %>
+          <span class="badge <%= partner.reraStatus === 'VERIFIED' ? 'b-green' : 'b-amber' %>"><%= (partner.reraStatus || '').toLowerCase() %></span>
+        </dd>
+        <dt>PAN / GSTIN</dt><dd><%= invoice.pan || '—' %> / <%= invoice.gstin || '—' %></dd>
+        <dt>Billing entity</dt><dd><%= invoice.billingEntityName || '—' %></dd>
+      </dl>
+      <% if (showBank && invoice.bankSnapshot) { %>
+        <dl class="dl">
+          <dt>Bank</dt><dd><%= invoice.bankSnapshot.bankName || '—' %></dd>
+          <dt>Account</dt><dd><%= invoice.bankSnapshot.accountNumberMasked || '—' %></dd>
+          <dt>IFSC</dt><dd><%= invoice.bankSnapshot.ifsc || '—' %></dd>
+        </dl>
+        <p class="small muted mb-0">Bank details as they stood when the invoice was raised.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Amounts</h2></div>
+    <div class="card-body">
+      <dl class="dl">
+        <dt>Taxable value</dt><dd><%= h.money(invoice.taxableValueMinor) %></dd>
+        <dt>GST</dt><dd><%= h.money(invoice.gstAmountMinor || 0) %></dd>
+        <dt>Other adjustment</dt><dd><%= h.money(invoice.otherAdjustmentMinor || 0) %></dd>
+        <dt>Total</dt><dd><strong><%= h.money(invoice.invoiceTotalMinor) %></strong></dd>
+        <dt>Paid</dt><dd><%= h.money(invoice.paidAmountMinor || 0) %></dd>
+        <dt>Outstanding</dt><dd><%= h.money(remaining) %></dd>
+      </dl>
+      <p class="small muted">
+        Tax values are recorded as the partner supplied them. Nothing here computes a statutory
+        obligation.
+      </p>
+      <% if (invoice.invoicePdf && invoice.invoicePdf.storageKey) { %>
+        <a class="btn btn-sm" href="/app/files/cp-invoice/<%= invoice._id %>" target="_blank" rel="noopener">Open invoice PDF</a>
+      <% } else { %>
+        <span class="badge b-amber">No PDF attached</span>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2 class="grow">Commission lines</h2></div>
+  <div class="table-wrap wide"><table class="responsive">
+    <thead>
+      <tr><th>Booking</th><th>Customer</th><th>Project / unit</th><th class="num">Booking value</th>
+      <th class="num">Collected</th><th>Rule</th><th class="num">Eligible</th><th class="num">Claimed</th></tr>
+    </thead>
+    <tbody>
+      <% lines.forEach(function (l) { const b = l.booking || {}; const e = l.entitlement || {}; %>
+        <tr>
+          <td data-label="Booking">
+            <a href="/app/bookings/<%= b._id %>"><%= b.bookingNumber || '—' %></a>
+          </td>
+          <td data-label="Customer"><%= l.customerName || '—' %></td>
+          <td data-label="Project / unit">
+            <%= (b.projectId || {}).name || '—' %>
+            <span class="muted small"><%= (b.unitId || {}).unitNumber || '' %></span>
+          </td>
+          <td data-label="Booking value" class="num"><%= h.moneyShort(b.finalPriceMinor || 0) %></td>
+          <td data-label="Collected" class="num"><%= l.collectedPct %>%</td>
+          <td data-label="Rule" class="small">
+            <%= (e.commissionRuleSnapshot || {}).description || '—' %>
+            <% if (e.status === 'REVIEW_REQUIRED') { %>
+              <div><span class="badge b-red">needs review</span></div>
+              <div class="muted"><%= e.reviewReason %></div>
+            <% } %>
+          </td>
+          <td data-label="Eligible" class="num"><%= h.money(l.eligibleCommissionMinor) %></td>
+          <td data-label="Claimed" class="num"><strong><%= h.money(l.invoiceClaimAmountMinor) %></strong></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+</div>
+
+<% if (payouts.length) { %>
+  <div class="card mt-2">
+    <div class="card-head"><h2 class="grow">Payouts</h2></div>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Date</th><th class="num">Amount</th><th>Reference</th><th class="num">Deduction</th><th>Entered by</th></tr></thead>
+      <tbody>
+        <% payouts.forEach(function (p) { %>
+          <tr>
+            <td data-label="Date"><%= h.date(p.payoutDate) %></td>
+            <td data-label="Amount" class="num"><%= h.money(p.amountMinor) %></td>
+            <td data-label="Reference"><%= p.transactionReference || '—' %></td>
+            <td data-label="Deduction" class="num"><%= p.deductionMinor ? h.money(p.deductionMinor) : '—' %></td>
+            <td data-label="Entered by"><%= (p.enteredBy || {}).name || '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <div class="card-body"><p class="small muted mb-0">Operational payout tracking. Deductions are informational.</p></div>
+  </div>
+<% } %>
+
+<div class="grid cols-2 mt-2">
+  <% if (canReview && awaitingReview) { %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Review</h2></div>
+      <div class="card-body">
+        <form method="post" action="/api/partner-invoices/<%= invoice._id %>/review">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="decision">Decision</label>
+            <select id="decision" name="decision">
+              <option value="APPROVED">Approve</option>
+              <option value="CORRECTION_REQUIRED">Request a correction</option>
+              <option value="UNDER_REVIEW">Mark under review</option>
+              <option value="REJECTED">Reject</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="note">Note to the partner</label>
+            <textarea id="note" name="note" rows="2" maxlength="1000"></textarea>
+            <span class="hint">Required for anything except approval.</span>
+          </div>
+          <button class="btn btn-primary" type="submit">Save decision</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (canPay && ['APPROVED','PAYMENT_PROCESSING','PARTIALLY_PAID'].includes(invoice.status)) { %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow">Record a payout</h2></div>
+      <div class="card-body">
+        <form method="post" action="/api/partner-invoices/<%= invoice._id %>/payment">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field-row">
+            <div class="field">
+              <label for="amount">Amount paid</label>
+              <input type="text" id="amount" name="amount" inputmode="decimal" required
+                     value="<%= (remaining / 100) %>">
+              <span class="hint">Cannot exceed <%= h.money(remaining) %> outstanding.</span>
+            </div>
+            <div class="field">
+              <label for="payoutDate">Payout date</label>
+              <input type="date" id="payoutDate" name="payoutDate" value="<%= h.dateInput(new Date()) %>" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="transactionReference">UTR / reference</label><input type="text" id="transactionReference" name="transactionReference" maxlength="120"></div>
+            <div class="field"><label for="deduction">Deduction <span class="opt">informational</span></label><input type="text" id="deduction" name="deduction" inputmode="decimal"></div>
+          </div>
+          <div class="field"><label for="deductionNote">Deduction note</label><input type="text" id="deductionNote" name="deductionNote" maxlength="300"></div>
+          <div class="field"><label for="note2">Note</label><input type="text" id="note2" name="note" maxlength="500"></div>
+          <button class="btn btn-primary" type="submit">Record payout</button>
+        </form>
+        <% if (invoice.status === 'APPROVED') { %>
+          <form method="post" action="/api/partner-invoices/<%= invoice._id %>/processing" class="mt-1">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button class="btn btn-sm" type="submit">Mark payment processing</button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+</div>
+<%- include('../../partials/app-foot') %>

@@ -431,6 +431,7 @@ router.post('/api/leads/:id/bookings', requirePermission('unit.book'), validate(
     const d = req.data;
     const booking = await bookings.createBooking({
       tenantId: req.tenantId,
+      tenant: req.tenant,
       actor: req.user,
       leadId: req.params.id,
       unitId: d.unitId,
@@ -457,14 +458,8 @@ router.post('/api/leads/:id/bookings', requirePermission('unit.book'), validate(
       notes: d.notes,
     });
     req.session.flash = { type: 'success', message: 'Booking confirmed.' };
-    res.redirect(`/app/bookings/${booking._id}`);
-  } catch (err) { next(err); }
-});
-
-router.get('/app/bookings/:id', requirePermission('unit.book', 'lead.view'), async (req, res, next) => {
-  try {
-    const booking = await bookings.get({ tenantId: req.tenantId, bookingId: req.params.id });
-    res.render('pages/deals/booking', { title: 'Booking', booking });
+    // V2 §109: the booking now opens its workspace, not a dead-end receipt page.
+    res.redirect(`/app/bookings/${booking._id}?created=1`);
   } catch (err) { next(err); }
 });
 

@@ -10,7 +10,7 @@
   <% if (!data.rows.length) { %>
     <%- include('../../partials/empty', { heading: 'No campaign data yet', message: 'Connect an ad platform or add a manual campaign.', ctaHref: '/app/campaigns/performance', ctaLabel: 'Campaign performance' }) %>
   <% } else { %>
-    <table class="responsive">
+    <div class="table-wrap wide"><table class="responsive">
       <thead>
         <tr>
           <th>Campaign</th><th class="num">Spend</th><th class="num">Leads</th><th class="num">CPL</th>
@@ -35,7 +35,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

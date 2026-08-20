@@ -18,6 +18,8 @@ const csrf = (html) => (html.match(/name="_csrf" value="([^"]+)"/) || [])[1];
   const mongoose = require('mongoose');
   await mongoose.connect('mongodb://127.0.0.1:27017/real_estate_crm');
   const db = mongoose.connection.db;
+  const cp = await db.collection('channelpartners').findOne({});
+  const cpReg = await db.collection('channelpartnerregistrations').findOne({});
   const ids = {
     lead: String((await db.collection('leads').findOne({}))._id),
     contact: String((await db.collection('contacts').findOne({}))._id),
@@ -40,12 +42,40 @@ const csrf = (html) => (html.match(/name="_csrf" value="([^"]+)"/) || [])[1];
     `/app/projects/${ids.project}?step=media`, `/app/projects/${ids.project}?step=inventory`,
     `/app/projects/${ids.project}?step=pricing`, `/app/projects/${ids.project}?step=review`, `/app/projects/${ids.project}/edit`,
     '/app/inventory', `/app/inventory/${ids.project}`, `/app/inventory/${ids.project}?view=grid`,
-    `/app/cost-sheets/${ids.costSheet}`, `/app/bookings/${ids.booking}`, '/app/approvals',
+    `/app/cost-sheets/${ids.costSheet}`, '/app/approvals',
+    // V2 Phase 1: bookings and collections.
+    '/app/bookings', '/app/bookings?overdue=1', `/app/bookings/${ids.booking}`,
+    `/app/bookings/${ids.booking}?tab=collections`, `/app/bookings/${ids.booking}?tab=timeline`,
+    '/app/collections', '/app/collections?tab=overdue', '/app/collections?tab=upcoming',
+    '/app/collections?tab=ptp-today', '/app/collections?tab=missed-followup', '/app/collections?tab=all',
+    '/app/dashboard?view=collections',
+    // V2 Phase 2: customer form, KYC and the money reports.
+    `/app/bookings/${ids.booking}?tab=customer`, `/app/bookings/${ids.booking}?tab=documents`,
+    '/app/bookings/kyc', '/app/bookings/kyc?kycStatus=NOT_STARTED',
+    '/app/reports/bookings', '/app/reports/collections', '/app/reports/collection-performance',
+    // V2 Phase 3: channel partner.
+    '/app/channel-partners', '/app/channel-partners/dashboard',
+    '/app/channel-partners/dashboard?rankBy=value', '/app/channel-partners/registrations',
+    '/app/channel-partners/registrations/new', '/app/channel-partners/claims',
+    '/app/channel-partners/claims?status=ACCEPTED', '/app/channel-partners/invoices',
+    '/app/reports/channel-partners', '/app/reports/cp-invoices',
+    ...(cp ? [
+      `/app/channel-partners/${cp._id}`,
+      `/app/channel-partners/${cp._id}?tab=team`,
+      `/app/channel-partners/${cp._id}?tab=projects`,
+      `/app/channel-partners/${cp._id}?tab=leads`,
+      `/app/channel-partners/${cp._id}?tab=commission`,
+      `/app/channel-partners/${cp._id}?tab=invoices`,
+      `/app/channel-partners/${cp._id}?tab=documents`,
+      `/app/channel-partners/${cp._id}?tab=audit`,
+    ] : []),
+    ...(cpReg ? [`/app/channel-partners/registrations/${cpReg._id}?step=7`] : []),
     '/app/opportunities/resale', '/app/opportunities/rental',
     '/app/campaigns', '/app/campaigns/communication', '/app/campaigns/communication/new', '/app/campaigns/performance',
     '/app/reports/leads', '/app/reports/sales', '/app/reports/projects', '/app/reports/campaigns', '/app/reports/activities',
     '/app/setup/organization', '/app/setup/users', '/app/setup/roles', `/app/setup/roles/${ids.role}`,
-    '/app/setup/stages', '/app/setup/lead-allocation', '/app/setup/sla', '/app/setup/templates', '/app/setup/nurture',
+    '/app/setup/stages', '/app/setup/lead-allocation', '/app/setup/collection-allocation',
+    '/app/setup/post-booking', '/app/setup/channel-partner', '/app/setup/sla', '/app/setup/templates', '/app/setup/nurture',
     '/app/setup/integrations', '/app/setup/health', '/app/setup/audit',
     '/app/setup/action-types', '/app/setup/visit-outcomes', '/app/setup/sources', '/app/setup/tags',
   ];
@@ -77,10 +107,16 @@ const csrf = (html) => (html.match(/name="_csrf" value="([^"]+)"/) || [])[1];
   const sheet = await db.collection('costsheets').findOne({ shareToken: { $ne: null } });
   const publics = [['/login', 200], ['/forgot-password', 200], [`/visit/${project.qrToken}`, 200],
     [`/p/${project.slug}`, project.miniSite?.published ? 200 : 404], ['/healthz', 200],
-    ['/app/dashboard', 302], ['/visit/bogus-token', 404], ['/nope', 404]];
+    ['/app/dashboard', 302], ['/visit/bogus-token', 404], ['/nope', 404],
+    // V2 §192: a bad customer/payment token must say so plainly, and leak nothing.
+    // V2 §24: the partner portal is a separate identity — no internal session works.
+    ['/cp/login', 200], ['/cp/dashboard', 302], ['/cp/leads', 302],
+    ['/booking-form/definitely-not-a-real-token-0000000', 404],
+    ['/pay/definitely-not-a-real-token-0000000', 404],
+    ['/api/webhooks/payments/not-a-key', 404]];
   const pubProblems = [];
   for (const [path, expect] of publics) {
-    const res = await anon('GET', path);
+    const res = await anon(path.startsWith('/api/webhooks') ? 'POST' : 'GET', path);
     if (res.status !== expect) pubProblems.push(`${path} → ${res.status} (expected ${expect})`);
   }
   if (sheet) {

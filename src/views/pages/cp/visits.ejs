@@ -1,0 +1,23 @@
+<%- include('../../partials/cp-head') %>
+<div class="page-head"><div class="grow"><h1>Site visits</h1>
+  <div class="sub">Visits planned and completed for the customers you submitted.</div></div></div>
+<div class="card">
+  <% if (!rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No visits yet', message: 'A visit appears here once the sales team schedules one for your customer.', ctaHref: '/cp/leads', ctaLabel: 'My leads' }) %>
+  <% } else { %>
+    <table class="responsive">
+      <thead><tr><th>Customer</th><th>Project</th><th>Scheduled</th><th>Status</th></tr></thead>
+      <tbody>
+        <% rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Customer"><%= r.customerName || '—' %></td>
+            <td data-label="Project"><%= r.project || '—' %></td>
+            <td data-label="Scheduled"><%= r.scheduledAt ? h.dateTime(r.scheduledAt) : '—' %></td>
+            <td data-label="Status"><span class="badge <%= r.status === 'COMPLETED' ? 'b-green' : '' %>"><%= r.status.toLowerCase() %></span></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+<%- include('../../partials/cp-foot') %>

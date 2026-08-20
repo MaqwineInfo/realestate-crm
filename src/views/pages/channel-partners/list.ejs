@@ -1,0 +1,100 @@
+<%- include('../../partials/app-head') %>
+<div class="page-head">
+  <div class="grow">
+    <h1>Channel partners</h1>
+    <div class="sub">Every partner, their compliance position and their status.</div>
+  </div>
+  <div class="btn-group">
+    <% if (can('cp.dashboard')) { %><a class="btn" href="/app/channel-partners/dashboard">Dashboard</a><% } %>
+    <% if (can('cp.partner.create')) { %><a class="btn btn-primary" href="/app/channel-partners/registrations/new">Add partner</a><% } %>
+  </div>
+</div>
+
+<form class="filters" method="get" action="/app/channel-partners">
+  <div class="field">
+    <label for="p-q">Search</label>
+    <input type="search" id="p-q" name="q" value="<%= query.q || '' %>" placeholder="Name, code, RERA or mobile">
+  </div>
+  <div class="field">
+    <label for="p-status">Status</label>
+    <select id="p-status" name="status">
+      <option value="">Any</option>
+      <% ['ACTIVE','SUSPENDED','EXPIRED','INACTIVE'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= query.status === s ? 'selected' : '' %>><%= s.toLowerCase() %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="p-type">Type</label>
+    <select id="p-type" name="partnerType">
+      <option value="">Any</option>
+      <option value="COMPANY" <%= query.partnerType === 'COMPANY' ? 'selected' : '' %>>Company</option>
+      <option value="INDIVIDUAL" <%= query.partnerType === 'INDIVIDUAL' ? 'selected' : '' %>>Individual</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="p-rera">RERA status</label>
+    <select id="p-rera" name="reraStatus">
+      <option value="">Any</option>
+      <% ['VERIFIED','PENDING','REJECTED','EXPIRED','NONE'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= query.reraStatus === s ? 'selected' : '' %>><%= s.toLowerCase() %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="p-expiry">RERA expiry</label>
+    <select id="p-expiry" name="expiringDays">
+      <option value="">Any</option>
+      <% [30,60,90].forEach(function (d) { %>
+        <option value="<%= d %>" <%= String(query.expiringDays) === String(d) ? 'selected' : '' %>>Within <%= d %> days</option>
+      <% }) %>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Partners</h2>
+    <span class="muted small"><%= total %> record<%= total === 1 ? '' : 's' %></span>
+  </div>
+  <% if (!items.length) { %>
+    <%- include('../../partials/empty', { heading: 'No channel partners registered yet', message: 'Add a partner and walk through registration, RERA and project empanelment.', ctaHref: can('cp.partner.create') ? '/app/channel-partners/registrations/new' : null, ctaLabel: 'Add channel partner' }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead>
+        <tr><th>Partner</th><th>Type</th><th>Contact</th><th>City</th><th>RERA</th><th>Valid until</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <% items.forEach(function (p) { const pr = p.profile || {}; %>
+          <tr>
+            <td data-label="Partner">
+              <a href="/app/channel-partners/<%= p._id %>"><strong><%= pr.tradeName || pr.legalName || pr.primaryContactName %></strong></a>
+              <div class="small muted"><%= p.partnerCode %></div>
+            </td>
+            <td data-label="Type"><%= (pr.partnerType || '').toLowerCase() %></td>
+            <td data-label="Contact">
+              <%= pr.primaryContactName || '—' %>
+              <div class="small muted"><%= h.mobile(pr.mobile) %></div>
+            </td>
+            <td data-label="City"><%= pr.city || '—' %></td>
+            <td data-label="RERA">
+              <%= p.reraNumber || '—' %>
+              <div class="small">
+                <span class="badge <%= p.reraStatus === 'VERIFIED' ? 'b-green' : (['EXPIRED','REJECTED'].includes(p.reraStatus) ? 'b-red' : '') %>">
+                  <%= (p.reraStatus || 'none').toLowerCase() %>
+                </span>
+              </div>
+            </td>
+            <td data-label="Valid until"><%= p.reraExpiryDate ? h.date(p.reraExpiryDate) : '—' %></td>
+            <td data-label="Status">
+              <span class="badge <%= p.status === 'ACTIVE' ? 'b-green' : 'b-amber' %>"><%= p.status.toLowerCase() %></span>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination') %>
+  <% } %>
+</div>
+<%- include('../../partials/app-foot') %>

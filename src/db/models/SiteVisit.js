@@ -16,6 +16,13 @@ const siteVisitSchema = new Schema({
 
   // §24.1: direct visit or brought by a channel partner.
   visitingWith: { type: String, enum: ['DIRECT', 'CHANNEL_PARTNER'], default: 'DIRECT' },
+  /**
+   * V2 §38: when the visit belongs to a partner-sourced lead, the real partner
+   * record is stamped here. The V1.1 free-text fields below stay — they are what
+   * a walk-in QR form can capture when no partner record exists yet.
+   */
+  channelPartnerId: { type: Schema.Types.ObjectId, ref: 'ChannelPartner', default: null, index: true },
+  channelPartnerMemberId: { type: Schema.Types.ObjectId, ref: 'ChannelPartnerMember', default: null },
   channelPartnerContactId: { type: Schema.Types.ObjectId, ref: 'Contact' },
   channelPartnerName: { type: String, trim: true },
   channelPartnerMobile: { type: String, trim: true },

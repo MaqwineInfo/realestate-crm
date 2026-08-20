@@ -7,6 +7,9 @@
     <% ['leads','sales','projects','campaigns','activities'].forEach(function (k) { %>
       <a class="btn btn-sm <%= kind === k ? 'btn-primary' : '' %>" href="/app/reports/<%= k %>"><%= k.charAt(0).toUpperCase() + k.slice(1) %></a>
     <% }) %>
+    <% if (can('booking.report')) { %><a class="btn btn-sm" href="/app/reports/bookings">Bookings &amp; KYC</a><% } %>
+    <% if (can('collection.report')) { %><a class="btn btn-sm" href="/app/reports/collections">Collections</a><% } %>
+    <% if (can('cp.report.view')) { %><a class="btn btn-sm" href="/app/reports/channel-partners">Channel partners</a><% } %>
     <% if (can('report.export')) { %>
       <a class="btn btn-sm" href="/app/reports/<%= kind %>/export?<%= new URLSearchParams(query).toString() %>">Export CSV</a>
     <% } %>

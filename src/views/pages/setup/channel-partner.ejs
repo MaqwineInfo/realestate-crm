@@ -1,0 +1,212 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/setup-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Channel partner</h1>
+    <div class="sub">RERA policy, who owns a disputed customer, and what a partner earns.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Registration &amp; compliance</h2></div>
+    <div class="card-body">
+      <form method="post" action="/api/setup/cp/settings">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <label class="check">
+          <input type="checkbox" name="cpPublicRegistrationEnabled" value="1" <%= settings.cpPublicRegistrationEnabled ? 'checked' : '' %>>
+          Allow partners to apply from a public page (<code>/cp/register</code>)
+        </label>
+        <p class="hint">Every self-registration still needs internal approval before it is active.</p>
+
+        <label class="check">
+          <input type="checkbox" name="cpRequireRera" value="1" <%= settings.cpRequireRera !== false ? 'checked' : '' %>>
+          Require a RERA certificate on the application
+        </label>
+        <label class="check">
+          <input type="checkbox" name="cpRequireVerifiedReraForActivation" value="1" <%= settings.cpRequireVerifiedReraForActivation ? 'checked' : '' %>>
+          Require the certificate to be <em>verified</em> before a partner can be approved
+        </label>
+        <label class="check">
+          <input type="checkbox" name="cpRequireValidReraForLeadSubmission" value="1" <%= settings.cpRequireValidReraForLeadSubmission !== false ? 'checked' : '' %>>
+          Block lead submission when RERA has expired
+        </label>
+        <div class="field">
+          <label for="bands">Expiry reminder bands (days before)</label>
+          <input type="text" id="bands" name="cpReraExpiryReminderDays"
+                 value="<%= (settings.cpReraExpiryReminderDays || [90,60,30,7]).join(', ') %>">
+          <span class="hint">Each band is announced once per certificate version.</span>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" name="cpRequireProjectEmpanelment" value="1" <%= settings.cpRequireProjectEmpanelment !== false ? 'checked' : '' %>>
+          Require project empanelment before a partner may submit for a project
+        </label>
+
+        <h3>Lead protection</h3>
+        <div class="field-row">
+          <div class="field">
+            <label for="protection">Protection days</label>
+            <input type="number" id="protection" name="cpLeadProtectionDays" min="0" max="730"
+                   value="<%= settings.cpLeadProtectionDays != null ? settings.cpLeadProtectionDays : 90 %>">
+            <span class="hint">How long an accepted association is protected from another partner's claim.</span>
+          </div>
+          <div class="field">
+            <label for="mode">When the customer is already ours</label>
+            <select id="mode" name="cpClaimConflictMode">
+              <option value="REVIEW" <%= (settings.cpClaimConflictMode || 'REVIEW') === 'REVIEW' ? 'selected' : '' %>>Send for internal review</option>
+              <option value="AUTO_REJECT" <%= settings.cpClaimConflictMode === 'AUTO_REJECT' ? 'selected' : '' %>>Reject the claim automatically</option>
+              <option value="ACCEPT_IF_INACTIVE_FOR_N_DAYS" <%= settings.cpClaimConflictMode === 'ACCEPT_IF_INACTIVE_FOR_N_DAYS' ? 'selected' : '' %>>Accept if the lead has gone quiet</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="idle">Quiet for (days)</label>
+            <input type="number" id="idle" name="cpClaimInactiveDays" min="1" max="365"
+                   value="<%= settings.cpClaimInactiveDays != null ? settings.cpClaimInactiveDays : 30 %>">
+          </div>
+        </div>
+        <p class="hint">
+          A conflicting claim never silently overwrites an existing owner, source or partner —
+          whatever this is set to, the decision is recorded.
+        </p>
+
+        <button class="btn btn-primary" type="submit">Save settings</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="grow">Add a commission rule</h2></div>
+    <div class="card-body">
+      <form method="post" action="/api/setup/cp/commission-rules">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="name">Rule name</label>
+          <input type="text" id="name" name="name" maxlength="120" required placeholder="2% after 20% collection">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="projectId">Project <span class="opt">blank = all</span></label>
+            <select id="projectId" name="projectId">
+              <option value="">All projects</option>
+              <% projects.forEach(function (p) { %><option value="<%= p._id %>"><%= p.name %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="channelPartnerId">Partner <span class="opt">blank = all</span></label>
+            <select id="channelPartnerId" name="channelPartnerId">
+              <option value="">All partners</option>
+              <% partners.forEach(function (p) { %>
+                <option value="<%= p._id %>"><%= (p.profile || {}).tradeName || (p.profile || {}).legalName || p.partnerCode %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="partnerType">Partner type <span class="opt">blank = both</span></label>
+            <select id="partnerType" name="partnerType">
+              <option value="">Both</option>
+              <option value="COMPANY">Company</option>
+              <option value="INDIVIDUAL">Individual</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="basis">Basis</label>
+            <select id="basis" name="basis">
+              <% bases.forEach(function (b) { %><option value="<%= b %>"><%= b.toLowerCase().replace(/_/g,' ') %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rateType">Rate type</label>
+            <select id="rateType" name="rateType">
+              <% rateTypes.forEach(function (r) { %><option value="<%= r %>"><%= r.toLowerCase() %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rate">Rate</label>
+            <input type="number" id="rate" name="rate" step="0.01" min="0" required>
+            <span class="hint">Percentage, or use the fixed amount below.</span>
+          </div>
+          <div class="field">
+            <label for="fixedAmount">Fixed amount</label>
+            <input type="text" id="fixedAmount" name="fixedAmount" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="eligibilityTrigger">Becomes payable</label>
+            <select id="eligibilityTrigger" name="eligibilityTrigger">
+              <% triggers.forEach(function (t) { %><option value="<%= t %>"><%= t.toLowerCase().replace(/_/g,' ') %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="collectionThresholdPct">Collection threshold %</label>
+            <input type="number" id="collectionThresholdPct" name="collectionThresholdPct" min="0" max="100">
+            <span class="hint">Used with "on collection percent".</span>
+          </div>
+          <div class="field"><label for="effectiveFrom">Effective from</label><input type="date" id="effectiveFrom" name="effectiveFrom"></div>
+          <div class="field"><label for="effectiveTo">Effective to</label><input type="date" id="effectiveTo" name="effectiveTo"></div>
+        </div>
+        <div class="field"><label for="notes">Notes</label><input type="text" id="notes" name="notes" maxlength="1000"></div>
+        <button class="btn btn-primary" type="submit">Add rule</button>
+        <p class="small muted mb-0 mt-1">
+          The most specific matching rule wins: partner + project beats project, which beats a
+          default. A new rule applies to bookings from now on — existing bookings keep the rule
+          they were sold under.
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Commission rules</h2>
+    <span class="muted small"><%= rules.filter(function (r) { return r.active; }).length %> active</span>
+  </div>
+  <% if (!rules.length) { %>
+    <%- include('../../partials/empty', { heading: 'No commission rules yet', message: 'Without a rule, a partner booking accrues nothing and the CP team is told.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead>
+        <tr><th>Rule</th><th>Scope</th><th>Basis</th><th class="num">Rate</th>
+        <th>Payable</th><th>Effective</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% rules.forEach(function (r) { %>
+          <tr>
+            <td data-label="Rule"><%= r.name %><% if (r.notes) { %><div class="small muted"><%= r.notes %></div><% } %></td>
+            <td data-label="Scope" class="small">
+              <%= (r.channelPartnerId ? ((r.channelPartnerId.profile || {}).tradeName || 'a partner') : 'all partners') %>
+              · <%= r.projectId ? r.projectId.name : 'all projects' %>
+              <%= r.partnerType ? ' · ' + r.partnerType.toLowerCase() : '' %>
+            </td>
+            <td data-label="Basis"><%= r.basis.toLowerCase().replace(/_/g,' ') %></td>
+            <td data-label="Rate" class="num">
+              <%= r.rateType === 'PERCENTAGE' ? r.rate + '%' : h.money(r.fixedAmountMinor || 0) %>
+            </td>
+            <td data-label="Payable" class="small">
+              <%= (r.eligibilityTrigger || '').toLowerCase().replace(/_/g,' ') %>
+              <%= r.collectionThresholdPct ? ' (' + r.collectionThresholdPct + '%)' : '' %>
+            </td>
+            <td data-label="Effective" class="small">
+              <%= r.effectiveFrom ? h.date(r.effectiveFrom) : 'always' %>
+              <%= r.effectiveTo ? ' – ' + h.date(r.effectiveTo) : '' %>
+            </td>
+            <td data-label="Status"><span class="badge <%= r.active ? 'b-green' : 'b-slate' %>"><%= r.active ? 'Active' : 'Inactive' %></span></td>
+            <td data-label="">
+              <form method="post" action="/api/setup/cp/commission-rules/<%= r._id %>/toggle">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm" type="submit"><%= r.active ? 'Deactivate' : 'Activate' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+<%- include('../../partials/app-foot') %>

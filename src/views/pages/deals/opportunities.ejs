@@ -12,10 +12,10 @@
 </div>
 
 <div class="grid cols-4 mb-2">
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= summary.resaleNext30 %></div><div class="lbl muted small">Resale in 30 days</div></div></div>
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= summary.resaleNext90 %></div><div class="lbl muted small">Resale in 90 days</div></div></div>
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= summary.rentalNext30 %></div><div class="lbl muted small">Rental in 30 days</div></div></div>
-  <div class="card"><div class="card-body"><div class="num" style="font-size:22px;font-weight:700"><%= h.moneyShort(summary.expectedResaleValueMinor) %></div><div class="lbl muted small">Expected resale value</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= summary.resaleNext30 %></div><div class="stat-lbl">Resale in 30 days</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= summary.resaleNext90 %></div><div class="stat-lbl">Resale in 90 days</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= summary.rentalNext30 %></div><div class="stat-lbl">Rental in 30 days</div></div></div>
+  <div class="card"><div class="card-body"><div class="stat-num"><%= h.moneyShort(summary.expectedResaleValueMinor) %></div><div class="stat-lbl">Expected resale value</div></div></div>
 </div>
 
 <div class="card">
@@ -26,7 +26,7 @@
       ctaHref: null, ctaLabel: ''
     }) %>
   <% } else { %>
-    <table class="responsive">
+    <div class="table-wrap"><table class="responsive">
       <thead>
         <tr><th>Customer</th><th>Unit</th><th>Expected</th><th class="num"><%= kind === 'rental' ? 'Rent' : 'Asking' %></th><th>Owner</th><th>Status</th><th></th></tr>
       </thead>
@@ -56,7 +56,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

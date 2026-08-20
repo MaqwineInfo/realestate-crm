@@ -823,7 +823,8 @@ test('END-TO-END: a real estate company runs its whole sales operation', async (
       expectedExitDate: inDays(45), expectedExitPrice: '9500000', expectedRoiPercentage: '18',
     }, `/app/leads/${state.nehaLeadId}/bookings/new`);
     assert.equal(res.status, 302);
-    state.bookingId = res.location.split('/').pop();
+    // V2 §109: the redirect now opens the booking workspace with a created flag.
+    state.bookingId = res.location.split('?')[0].split('/').pop();
 
     const booking = await Booking.findOne({ tenantId, _id: state.bookingId }).lean();
     assert.ok(booking, 'booking created');

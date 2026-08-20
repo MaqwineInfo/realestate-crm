@@ -1,0 +1,47 @@
+<%- include('../../partials/app-head') %>
+<%- include('_pb-nav') %>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">By collection owner</h2>
+    <span class="muted small"><%= h.date(data.start) %> – <%= h.date(data.end) %></span>
+  </div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing to compare yet', message: 'Bookings appear here once they are assigned for collection.', ctaHref: '/app/bookings', ctaLabel: 'All bookings' }) %>
+  <% } else { %>
+    <%# §170: amount AND percentage, always together. %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Owner</th><th class="num">Bookings</th><th class="num">Scheduled</th>
+          <th class="num">Received</th><th class="num">Collection %</th>
+          <th class="num">Outstanding</th><th class="num">Overdue</th>
+          <th class="num">Received in range</th>
+          <th class="num">Follow-ups</th><th class="num">Missed</th>
+          <th class="num">PTP</th><th class="num">PTP kept %</th><th class="num">Links</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Owner"><%= r.owner %></td>
+            <td data-label="Bookings" class="num"><%= r.bookings %></td>
+            <td data-label="Scheduled" class="num"><%= h.moneyShort(r.scheduledMinor) %></td>
+            <td data-label="Received" class="num"><%= h.moneyShort(r.receivedMinor) %></td>
+            <td data-label="Collection %" class="num"><%= r.collectionPct %>%</td>
+            <td data-label="Outstanding" class="num"><%= h.moneyShort(r.outstandingMinor) %></td>
+            <td data-label="Overdue" class="num"><%= r.overdueMinor ? h.moneyShort(r.overdueMinor) : '—' %></td>
+            <td data-label="Received in range" class="num"><%= h.moneyShort(r.receiptsInRangeMinor) %></td>
+            <td data-label="Follow-ups" class="num"><%= r.followupsCompleted %></td>
+            <td data-label="Missed" class="num"><%= r.followupsMissed %></td>
+            <td data-label="PTP" class="num"><%= r.promises %></td>
+            <td data-label="PTP kept %" class="num"><%= r.promises ? r.ptpFulfilledPct + '%' : '—' %></td>
+            <td data-label="Links" class="num"><%= r.paymentLinks %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

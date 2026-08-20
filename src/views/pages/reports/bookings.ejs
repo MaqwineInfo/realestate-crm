@@ -1,0 +1,61 @@
+<%- include('../../partials/app-head') %>
+<%- include('_pb-nav') %>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= data.totals.bookings %></div>
+    <div class="stat-lbl">Bookings</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(data.totals.valueMinor) %></div>
+    <div class="stat-lbl">Booking value</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.moneyShort(data.totals.receivedMinor) %></div>
+    <div class="stat-lbl">Collected · <%= data.totals.collectionPct %>%</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= data.kycVerifiedPct %>%</div>
+    <div class="stat-lbl">KYC verified</div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Bookings &amp; KYC</h2>
+    <span class="muted small"><%= data.rows.length %> row<%= data.rows.length === 1 ? '' : 's' %></span>
+  </div>
+  <% if (!data.rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'No bookings in this range', message: 'Widen the date range or clear the filters.', ctaHref: null, ctaLabel: '' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Booking</th><th>Customer</th><th>Project / unit</th><th>Booked</th>
+          <th class="num">Value</th><th class="num">Collected</th><th class="num">Outstanding</th>
+          <th class="num">Overdue</th><th>Next due</th><th>KYC</th><th>Salesperson</th><th>Collection</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Booking"><a href="/app/bookings/<%= r._id %>"><%= r.bookingNumber || '—' %></a></td>
+            <td data-label="Customer"><%= (r.contactId || {}).displayName || '—' %></td>
+            <td data-label="Project / unit"><%= (r.projectId || {}).name %> <span class="muted small"><%= (r.unitId || {}).unitNumber || '' %></span></td>
+            <td data-label="Booked"><%= h.date(r.bookingDate) %></td>
+            <td data-label="Value" class="num"><%= h.moneyShort(r.finalPriceMinor) %></td>
+            <td data-label="Collected" class="num"><%= h.moneyShort(r.totalReceivedMinor) %></td>
+            <td data-label="Outstanding" class="num"><%= h.moneyShort(r.outstandingMinor) %></td>
+            <td data-label="Overdue" class="num"><%= r.overdueMinor ? h.moneyShort(r.overdueMinor) : '—' %></td>
+            <td data-label="Next due"><%= r.nextDueAt ? h.date(r.nextDueAt) : 'TBD' %></td>
+            <td data-label="KYC"><span class="badge"><%= (r.kycStatus || '').replace(/_/g,' ').toLowerCase() %></span></td>
+            <td data-label="Salesperson"><%= (r.salespersonId || {}).name || '—' %></td>
+            <td data-label="Collection"><%= (r.collectionOwnerUserId || {}).name || '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

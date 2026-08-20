@@ -22,7 +22,7 @@ const opportunities = require('./opportunities');
  */
 
 async function createBooking({
-  tenantId, actor, leadId, unitId, costSheetId, bookingDate, finalPriceMinor,
+  tenantId, tenant, actor, leadId, unitId, costSheetId, bookingDate, finalPriceMinor,
   bookingAmountMinor, discountMinor = 0, paymentPlanId, buyerPurpose, investment, rental, notes,
 }) {
   /* ---- 1. Validate everything before a single write (§33.3) ---- */
@@ -102,6 +102,14 @@ async function createBooking({
       investment: buyerPurpose === 'INVESTMENT' ? investment : undefined,
       rental: buyerPurpose === 'RENTAL_INCOME' ? rental : undefined,
       salespersonId: lead.ownerUserId || actor._id,
+      /**
+       * V2 §39/§324.9: the channel-partner attribution is frozen here too. A
+       * later edit to the partner master cannot rewrite the commercial history
+       * of a sale, and the salesperson still owns the sale (§184).
+       */
+      channelPartnerId: lead.partnerAttributionStatus === 'ACCEPTED' ? lead.channelPartnerId : null,
+      channelPartnerMemberId: lead.partnerAttributionStatus === 'ACCEPTED' ? lead.channelPartnerMemberId : null,
+      partnerLeadClaimId: lead.partnerAttributionStatus === 'ACCEPTED' ? lead.partnerLeadClaimId : null,
       // §119: freeze attribution at the moment of sale.
       sourceId: lead.latestSourceId,
       originalSourceId: lead.originalSourceId,
@@ -121,7 +129,7 @@ async function createBooking({
   }
 
   /* ---- 4..n. Idempotent tail, resumable if this process dies ---- */
-  await completeSaga({ tenantId, actor, bookingId: booking._id });
+  await completeSaga({ tenantId, tenant, actor, bookingId: booking._id });
   return Booking.findOne({ tenantId, _id: booking._id }).lean();
 }
 
@@ -129,7 +137,7 @@ async function createBooking({
  * §33.4 side effects. Every step is safe to repeat, so `resume()` can call this
  * again after a crash without doubling anything up.
  */
-async function completeSaga({ tenantId, actor, bookingId }) {
+async function completeSaga({ tenantId, tenant = null, actor, bookingId }) {
   const booking = await Booking.findOne({ tenantId, _id: bookingId }).lean();
   if (!booking || booking.sagaComplete) return booking;
 
@@ -188,6 +196,27 @@ async function completeSaga({ tenantId, actor, bookingId }) {
   await opportunities.createFromBooking({ tenantId, booking, actor });
 
   await Booking.updateOne({ tenantId, _id: booking._id }, { $set: { sagaComplete: true } });
+
+  /**
+   * V2 §108 / §324.1: post-booking setup runs here, inline, so a booking is
+   * immediately collectable — but inside its own try/catch, because a valid
+   * booking is never undone or blocked by post-booking failure. Anything that
+   * fails here is picked up by the `booking.post_initialize` job.
+   *
+   * Deliberately a direct call rather than an event listener: the schedule must
+   * exist by the time this function returns, and an event is fire-and-forget.
+   */
+  try {
+    // Required lazily: post-booking reads bookings, so the import is circular.
+    await require('./postBooking').initialize({
+      tenantId, bookingId: booking._id, actor, tz: tenant?.timezone || 'UTC',
+    });
+  } catch (err) {
+    console.error(JSON.stringify({
+      level: 'error', scope: 'post-booking-init', bookingId: String(booking._id), message: err.message,
+    }));
+  }
+
   emit(EVENTS.BOOKING_CREATED, { tenantId, bookingId: booking._id, leadId: booking.leadId });
   emit(EVENTS.UNIT_BOOKED, { tenantId, unitId: booking.unitId, bookingId: booking._id });
   await audit.record({
