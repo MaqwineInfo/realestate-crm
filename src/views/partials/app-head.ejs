@@ -62,8 +62,14 @@
 
   <div class="main">
     <header class="topbar">
-      <form class="search" method="get" action="/app/search">
-        <input type="search" name="q" placeholder="Search name, mobile, email, unit…" value="<%= query.q || '' %>" aria-label="Global search">
+      <%#
+        V1.1 §5: one search, on every screen. The type-ahead used to live in a
+        second box on the dashboard only — now it is here, so the same lookup
+        works wherever the phone rings. Without JS it still submits to /app/search.
+      %>
+      <form class="search" method="get" action="/app/search" role="search" data-quick-search>
+        <input type="search" name="q" autocomplete="off" placeholder="Search name, mobile, email, unit…" value="<%= query.q || '' %>" aria-label="Global search">
+        <div class="qs-results" data-qs-results hidden aria-live="polite"></div>
       </form>
       <div class="spacer"></div>
       <a class="btn btn-sm" href="/app/notifications">Notifications<% if (typeof unreadCount !== 'undefined' && unreadCount) { %> <span class="badge b-red"><%= unreadCount %></span><% } %></a>

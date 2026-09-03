@@ -2,6 +2,7 @@
 
 <div class="page-head">
   <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/contacts', label: 'Contacts' }) %>
     <h1><%= contact.displayName %></h1>
     <div class="sub">
       <a href="tel:<%= contact.normalizedMobile %>"><%= h.mobile(contact.primaryMobile) %></a>
@@ -84,47 +85,9 @@
 </div>
 
 <% if (can('contact.edit')) { %>
+  <%# The same form as "New contact" — one view, one field set, no drift. %>
   <%- include('../../partials/drawer-open', { id: 'drawer-edit', heading: 'Edit contact', action: '/api/contacts/' + contact._id }) %>
-    <div class="field-row">
-      <div class="field">
-        <label for="e-first">First name</label>
-        <input type="text" id="e-first" name="firstName" required maxlength="80" value="<%= contact.firstName %>">
-      </div>
-      <div class="field">
-        <label for="e-last">Last name</label>
-        <input type="text" id="e-last" name="lastName" maxlength="80" value="<%= contact.lastName || '' %>">
-      </div>
-    </div>
-    <div class="field">
-      <label for="e-mobile">Primary mobile</label>
-      <input type="tel" id="e-mobile" name="primaryMobile" required value="<%= contact.primaryMobile %>">
-    </div>
-    <div class="field">
-      <label for="e-alt">Alternate mobile</label>
-      <input type="tel" id="e-alt" name="altMobile" value="<%= contact.altMobile || '' %>">
-    </div>
-    <div class="field">
-      <label for="e-email">Email</label>
-      <input type="email" id="e-email" name="email" value="<%= contact.email || '' %>">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label for="e-city">City</label>
-        <input type="text" id="e-city" name="city" value="<%= contact.city || '' %>">
-      </div>
-      <div class="field">
-        <label for="e-state">State</label>
-        <input type="text" id="e-state" name="state" value="<%= contact.state || '' %>">
-      </div>
-    </div>
-    <div class="field">
-      <label for="e-tags">Tags</label>
-      <select id="e-tags" name="tagIds" multiple size="5">
-        <% tags.forEach(function (t) { %>
-          <option value="<%= t._id %>" <%= (contact.tagIds || []).some(function (x) { return String(x._id || x) === String(t._id); }) ? 'selected' : '' %>><%= t.name %></option>
-        <% }) %>
-      </select>
-    </div>
+    <%- include('../../partials/contact-form', { contact: contact, idPrefix: 'edit' }) %>
   <%- include('../../partials/drawer-close', { cta: 'Save contact' }) %>
 
   <%- include('../../partials/drawer-open', { id: 'drawer-consent', heading: 'Communication preferences', action: '/api/contacts/' + contact._id + '/consent' }) %>

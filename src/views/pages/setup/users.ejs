@@ -83,6 +83,19 @@
 <% users.forEach(function (u) { %>
   <%- include('../../partials/drawer-open', { id: 'drawer-user-' + u._id, heading: 'Edit ' + u.name, action: '/api/setup/users/' + u._id + '/role' }) %>
     <div class="field">
+      <label for="u-name-<%= u._id %>">Full name</label>
+      <input type="text" id="u-name-<%= u._id %>" name="name" required maxlength="100" value="<%= u.name %>">
+    </div>
+    <div class="field">
+      <label for="u-email-<%= u._id %>">Work email</label>
+      <input type="email" id="u-email-<%= u._id %>" name="email" required value="<%= u.email %>">
+      <div class="hint">This is the address they sign in with.</div>
+    </div>
+    <div class="field">
+      <label for="u-mobile-<%= u._id %>">Mobile <span class="opt">optional</span></label>
+      <input type="tel" id="u-mobile-<%= u._id %>" name="mobile" value="<%= u.mobile || '' %>">
+    </div>
+    <div class="field">
       <label for="u-role-<%= u._id %>">Role</label>
       <select id="u-role-<%= u._id %>" name="roleId" required>
         <% roles.forEach(function (r) { %>

@@ -8,7 +8,7 @@
 <div class="page-head">
   <div class="grow">
     <h1>New lead</h1>
-    <div class="sub">Mobile and source are all that is required. Qualification can wait for the first call (§7).</div>
+    <div class="sub">Mobile and source are all that is required. Requirement and qualification are captured on the lead itself, during the first call (§7).</div>
   </div>
   <a class="btn btn-ghost" href="/app/leads">Cancel</a>
 </div>
@@ -141,11 +141,42 @@
                  value="<%= val('sourceDetail') %>" placeholder="Campaign, form or listing name">
         </div>
 
-        <%# §9.1: a referral is only useful if you know who referred them. %>
+        <%#
+          §9.1: a referral is only useful if you know who referred them — and a
+          typed name cannot be traced or paid. The type picks the book: channel
+          partners come from the partner module, everyone else from the contact
+          book. The free-text fields stay for someone genuinely not on file.
+        %>
         <div data-referral-panel hidden>
+          <div class="field">
+            <label for="referralType">Referred by</label>
+            <select id="referralType" name="referralType" data-referral-type>
+              <option value="">Select a type</option>
+              <% [['MEMBER','Member'],['LEAD','Existing lead'],['CHANNEL_PARTNER','Channel partner'],['INVESTOR','Investor']].forEach(function (o) { %>
+                <option value="<%= o[0] %>" <%= sel('referralType', o[0]) %>><%= o[1] %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="field" data-referrer-lookup hidden>
+            <label for="referrerSearch">Who referred them?</label>
+            <div class="lookup">
+              <input type="search" id="referrerSearch" autocomplete="off" placeholder="Search by name or mobile…"
+                     data-referrer-search aria-describedby="referrer-chosen">
+              <div class="lookup-results" data-referrer-results hidden aria-live="polite"></div>
+            </div>
+            <input type="hidden" name="referrerContactId" value="<%= val('referrerContactId') %>" data-referrer-contact>
+            <input type="hidden" name="referrerChannelPartnerId" value="<%= val('referrerChannelPartnerId') %>" data-referrer-partner>
+            <div class="chosen-row" id="referrer-chosen" data-referrer-chosen hidden>
+              <span data-referrer-label></span>
+              <button type="button" class="btn btn-ghost btn-sm" data-referrer-clear>Change</button>
+            </div>
+            <div class="hint">Not on file yet? Leave the search empty and type the name below.</div>
+          </div>
+
           <div class="field-row">
             <div class="field">
-              <label for="referrerName">Referrer / channel partner</label>
+              <label for="referrerName">Referrer name <span class="opt">if not on file</span></label>
               <input type="text" id="referrerName" name="referrerName" maxlength="120" value="<%= val('referrerName') %>">
             </div>
             <div class="field">
@@ -207,128 +238,89 @@
         </div>
       </div>
     </div>
-    <%# --------------------- 3. Requirement (collapsible) --------------------- %>
-    <details class="card section" <%= v.budgetMinMinor || v.preferredConfigurations ? 'open' : '' %>>
-      <summary class="card-head">
-        <h2 class="grow"><span class="step-n">3</span> Property requirement</h2>
-        <span class="opt-tag">optional</span>
-      </summary>
-    <div class="card-body">
-      <div class="field-row">
-        <div class="field">
-          <label for="budgetMinMinor">Budget from</label>
-          <input type="text" id="budgetMinMinor" name="budgetMinMinor" inputmode="decimal" value="<%= val('budgetMinMinor') %>" placeholder="e.g. 6500000">
-        </div>
-        <div class="field">
-          <label for="budgetMaxMinor">Budget to</label>
-          <input type="text" id="budgetMaxMinor" name="budgetMaxMinor" inputmode="decimal" value="<%= val('budgetMaxMinor') %>">
-        </div>
-        <div class="field">
-          <label for="purpose">Purchase purpose</label>
-          <select id="purpose" name="purpose">
-            <option value="">Not stated</option>
-            <% [['SELF_USE','Self use'],['INVESTMENT','Investment'],['RENTAL_INCOME','Rental income'],['OTHER','Other']].forEach(function (o) { %>
-              <option value="<%= o[0] %>" <%= sel('purpose', o[0]) %>><%= o[1] %></option>
-            <% }) %>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="preferredConfigurations">Configuration <span class="opt">comma separated</span></label>
-          <input type="text" id="preferredConfigurations" name="preferredConfigurations" data-list-input
-                 value="<%= Array.isArray(v.preferredConfigurations) ? v.preferredConfigurations.join(', ') : val('preferredConfigurations') %>" placeholder="2 BHK, 3 BHK">
-        </div>
-        <div class="field">
-          <label for="preferredFacings">Facing <span class="opt">comma separated</span></label>
-          <input type="text" id="preferredFacings" name="preferredFacings" data-list-input
-                 value="<%= Array.isArray(v.preferredFacings) ? v.preferredFacings.join(', ') : val('preferredFacings') %>" placeholder="East, North-East">
-        </div>
-      </div>
-      <div class="field-row three">
-        <div class="field"><label for="areaMin">Area from</label><input type="text" id="areaMin" name="areaMin" inputmode="numeric" value="<%= val('areaMin') %>"></div>
-        <div class="field"><label for="areaMax">Area to</label><input type="text" id="areaMax" name="areaMax" inputmode="numeric" value="<%= val('areaMax') %>"></div>
-        <div class="field">
-          <label for="areaBasis">Area basis</label>
-          <select id="areaBasis" name="areaBasis">
-            <option value="">Not stated</option>
-            <% [['CARPET','Carpet'],['BUILT_UP','Built-up'],['SALEABLE','Saleable']].forEach(function (o) { %>
-              <option value="<%= o[0] %>" <%= sel('areaBasis', o[0]) %>><%= o[1] %></option>
-            <% }) %>
-          </select>
-        </div>
-      </div>
-      <div class="field-row three">
-        <div class="field"><label for="preferredFloorMin">Floor from</label><input type="text" id="preferredFloorMin" name="preferredFloorMin" inputmode="numeric" value="<%= val('preferredFloorMin') %>"></div>
-        <div class="field"><label for="preferredFloorMax">Floor to</label><input type="text" id="preferredFloorMax" name="preferredFloorMax" inputmode="numeric" value="<%= val('preferredFloorMax') %>"></div>
-        <div class="field">
-          <label for="possessionPreference">Possession</label>
-          <select id="possessionPreference" name="possessionPreference">
-            <option value="">Not stated</option>
-            <% [['READY','Ready to move'],['NEAR_POSSESSION','Near possession'],['UNDER_CONSTRUCTION','Under construction'],['ANY','Any']].forEach(function (o) { %>
-              <option value="<%= o[0] %>" <%= sel('possessionPreference', o[0]) %>><%= o[1] %></option>
-            <% }) %>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label for="preferredLocation">Preferred location <span class="opt">useful when no project is chosen</span></label>
-        <input type="text" id="preferredLocation" name="preferredLocation" maxlength="200" value="<%= val('preferredLocation') %>">
-      </div>
-    </div>
-  </details>
+    <%#
+      §7: sections 3 and 4 (requirement and qualification) used to sit here.
+      They are asked on the first call, not while the phone is ringing, so they
+      now live on the lead workspace — which already edits both, so nothing was
+      lost by taking them off the capture form.
+    %>
 
-    <%# ------------------ 4. Qualification (collapsible, §10.1) --------------- %>
-    <details class="card section">
-      <summary class="card-head">
-        <h2 class="grow"><span class="step-n">4</span> Qualification</h2>
-        <span class="opt-tag">optional</span>
-      </summary>
-    <div class="card-body">
-      <div class="field-row">
-        <div class="field">
-          <label for="purchaseTimeline">Purchase timeline</label>
-          <select id="purchaseTimeline" name="purchaseTimeline">
-            <option value="">Not stated</option>
-            <% [['IMMEDIATE','Immediate'],['DAYS_0_30','0–30 days'],['MONTHS_1_3','1–3 months'],['MONTHS_3_6','3–6 months'],['MONTHS_6_PLUS','6+ months'],['EXPLORING','Exploring']].forEach(function (o) { %>
-              <option value="<%= o[0] %>" <%= sel('purchaseTimeline', o[0]) %>><%= o[1] %></option>
-            <% }) %>
-          </select>
+    <%# --------------------- 3. Stage & next follow-up --------------------- %>
+    <div class="card">
+      <div class="card-head"><h2 class="grow"><span class="step-n">3</span> Stage &amp; next follow-up</h2></div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field">
+            <label for="stageId">Stage</label>
+            <select id="stageId" name="stageId" data-capture-stage>
+              <% stages.forEach(function (st) { %>
+                <option value="<%= st._id %>"
+                        data-terminal="<%= st.terminal ? '1' : '0' %>"
+                        data-requires-substage="<%= st.requiresSubStage ? '1' : '0' %>"
+                        <%= ['BOOKED','BLOCKED'].includes(st.semanticType) ? 'disabled' : '' %>
+                        <%= String(v.stageId || '') === String(st._id) ? 'selected' : (!v.stageId && st.semanticType === 'NEW' ? 'selected' : '') %>>
+                  <%= st.name %><%= ['BOOKED','BLOCKED'].includes(st.semanticType) ? ' (set by booking/block action)' : '' %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="subStageId">Outcome <span class="opt">optional</span></label>
+            <select id="subStageId" name="subStageId" data-substage-for="stageId">
+              <option value="">No outcome</option>
+              <% subStages.forEach(function (ss) { %>
+                <option value="<%= ss._id %>" data-stage="<%= ss.stageId %>" <%= sel('subStageId', ss._id) %>><%= ss.depth ? '\u00a0\u00a0└ ' : '' %><%= ss.name %></option>
+              <% }) %>
+            </select>
+          </div>
         </div>
-        <div class="field">
-          <label for="fundingType">Funding</label>
-          <select id="fundingType" name="fundingType" data-funding-select>
-            <option value="">Not stated</option>
-            <% [['SELF_FUNDED','Self funded'],['HOME_LOAN','Home loan'],['MIXED','Mixed'],['UNKNOWN','Unknown']].forEach(function (o) { %>
-              <option value="<%= o[0] %>" <%= sel('fundingType', o[0]) %>><%= o[1] %></option>
-            <% }) %>
-          </select>
+
+        <%#
+          §55.3: an active lead must never exist without a next action. Setting
+          it here means a lead is never created into that gap in the first place.
+        %>
+        <div data-capture-next>
+          <fieldset>
+            <legend>Next follow-up — required while the lead is open</legend>
+            <div class="field">
+              <label for="nextActionTypeId">Action type</label>
+              <select id="nextActionTypeId" name="nextActionTypeId">
+                <% actionTypes.forEach(function (a) { %>
+                  <option value="<%= a._id %>" <%= String(v.nextActionTypeId || '') === String(a._id) ? 'selected' : (a.semantic === 'CALL' ? 'selected' : '') %>><%= a.name %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="presets" role="group" aria-label="Quick dates">
+              <button type="button" class="chip" data-preset="today" data-preset-time="18:00">Later today</button>
+              <button type="button" class="chip" data-preset="1">Tomorrow</button>
+              <button type="button" class="chip" data-preset="2">+2 days</button>
+              <button type="button" class="chip" data-preset="7">+7 days</button>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="nextDate">Date</label>
+                <input type="date" id="nextDate" name="nextDate" value="<%= val('nextDate') %>">
+              </div>
+              <div class="field">
+                <label for="nextTime">Time</label>
+                <input type="time" id="nextTime" name="nextTime" value="<%= val('nextTime') || '10:00' %>">
+              </div>
+            </div>
+            <div class="field">
+              <label for="nextNote">Note <span class="opt">optional</span></label>
+              <input type="text" id="nextNote" name="nextNote" maxlength="500" value="<%= val('nextNote') %>">
+            </div>
+          </fieldset>
         </div>
-        <div class="field" data-loan-field hidden>
-          <label for="loanStatus">Loan status</label>
-          <select id="loanStatus" name="loanStatus">
-            <option value="">Not stated</option>
-            <% [['NOT_STARTED','Not started'],['EXPLORING','Exploring'],['PRE_APPROVED','Pre-approved'],['APPROVED','Approved']].forEach(function (o) { %>
-              <option value="<%= o[0] %>" <%= sel('loanStatus', o[0]) %>><%= o[1] %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="field">
-          <label for="decisionMaker">Decision maker</label>
-          <select id="decisionMaker" name="decisionMaker">
-            <option value="">Not stated</option>
-            <% [['SELF','Self'],['SPOUSE','Spouse'],['FAMILY','Family'],['BUSINESS_PARTNER','Business partner'],['OTHER','Other']].forEach(function (o) { %>
-              <option value="<%= o[0] %>" <%= sel('decisionMaker', o[0]) %>><%= o[1] %></option>
-            <% }) %>
-          </select>
-        </div>
+        <p class="small muted mb-0" data-capture-terminal-hint hidden>
+          This stage closes the lead, so no follow-up is needed.
+        </p>
       </div>
     </div>
-  </details>
 
     <%# ------------------------------ 5. Notes ------------------------------ %>
     <div class="card">
-      <div class="card-head"><h2 class="grow"><span class="step-n">5</span> Notes</h2></div>
+      <div class="card-head"><h2 class="grow"><span class="step-n">4</span> Notes</h2></div>
       <div class="card-body">
         <div class="field">
           <label for="requirementNote">What did the customer ask for? <span class="opt">optional</span></label>

@@ -69,7 +69,19 @@ const activitySchema = new Schema({
   body: { type: String, maxlength: 5000 },
   meta: { type: Schema.Types.Mixed, default: () => ({}) },
   mentionUserIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  attachments: [{ name: String, url: String, mime: String, size: Number }],
+  /**
+   * §18.7: files attached to a note. `storageKey` points into the private
+   * upload directory — never a URL — so the bytes are only ever reachable
+   * through the permission-checked file route, exactly like a KYC document.
+   */
+  attachments: [{
+    name: String,
+    storageKey: String,
+    mime: String,
+    size: Number,
+    kind: { type: String, enum: ['FILE', 'VOICE'], default: 'FILE' },
+    durationSeconds: Number,
+  }],
   visibility: { type: String, enum: ['INTERNAL', 'CUSTOMER_VISIBLE'], default: 'INTERNAL' },
   // Only NOTE_ADDED is ever editable (§99).
   editable: { type: Boolean, default: false },

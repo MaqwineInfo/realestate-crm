@@ -51,6 +51,29 @@ test('mobile normalization is the duplicate key (§9.2)', async (t) => {
     assert.equal(phone.normalizeMobile('501234567', '971'), '+971501234567');
   });
 
+  /**
+   * The length rule, per country. Without it a mistyped 9- or 11-digit number
+   * normalized cleanly into a contact that could never be matched again — and
+   * this value is the duplicate key, so a bad one is not recoverable.
+   */
+  await t.test('a national number of the wrong length is rejected, not saved', () => {
+    assert.equal(phone.normalizeMobile('987654321', '91'), null, 'nine digits is not an Indian mobile');
+    assert.equal(phone.normalizeMobile('98765432109', '91'), null, 'eleven digits is not an Indian mobile');
+    assert.equal(phone.normalizeMobile('+97150123456', '91'), null, 'eight digits is not a UAE mobile');
+    assert.equal(phone.normalizeMobile('9876543210', '91'), '+919876543210', 'ten still passes');
+  });
+
+  await t.test('the country is judged from the number, not the tenant default', () => {
+    // An Indian tenant pasting a UAE number must not have it measured as Indian.
+    assert.equal(phone.normalizeMobile('+971501234567', '91'), '+971501234567');
+  });
+
+  await t.test('splitMobile round-trips what the form fields need', () => {
+    assert.deepEqual(phone.splitMobile('+919876543210'), { callingCode: '91', national: '9876543210' });
+    assert.deepEqual(phone.splitMobile('+971501234567'), { callingCode: '971', national: '501234567' });
+    assert.deepEqual(phone.splitMobile(''), { callingCode: '91', national: '' });
+  });
+
   await t.test('email validation', () => {
     assert.ok(phone.isValidEmail('a@b.co'));
     assert.ok(!phone.isValidEmail('a@b'));

@@ -329,17 +329,18 @@ function applicantPayload({ raw, tenant, role }) {
  * the roles the customer may edit; KYC documents are untouched here — they
  * arrive one at a time through their own upload route.
  */
-async function submit({
-  token, body, ip, userAgent, now = new Date(),
+/**
+ * §288: the same booking form, filled by two different people.
+ *
+ * A customer opens a one-time link; a salesperson sitting across the desk fills
+ * it from the panel. Both paths end up here, so the validation, the applicant
+ * merge and the KYC rollup cannot drift apart. Only two things differ: who is
+ * recorded as having filled it, and whether there is a link to close off.
+ */
+async function applySubmission({
+  tenantId, booking, link = null, body, actor = null,
+  filledBy = 'CUSTOMER', ip, userAgent, now = new Date(),
 }) {
-  const link = await resolveToken({ token, now });
-  if (link.status === 'SUBMITTED') throw badRequest('This form has already been submitted.');
-  if (link.otpRequired && !link.otpVerifiedAt) throw forbidden('Verify the code sent to your mobile first.');
-
-  const tenantId = link.tenantId;
-  const booking = await Booking.findOne({ tenantId, _id: link.bookingId }).lean();
-  if (!booking) throw notFound('This booking link is not valid.');
-  if (booking.status === 'CANCELLED') throw forbidden('This booking is no longer active.');
   const tenant = await Tenant.findById(tenantId).lean();
 
   if (!body?.declaration) throw badRequest('Please confirm that the information is correct.');
@@ -361,11 +362,11 @@ async function submit({
   // recreated — deleting it would orphan its documents.
   const existingPrimary = await BookingApplicant.findOne({ tenantId, bookingId: booking._id, applicantRole: 'PRIMARY' });
   if (existingPrimary) {
-    Object.assign(existingPrimary, primary, { updatedByType: 'CUSTOMER' });
+    Object.assign(existingPrimary, primary, { updatedByType: filledBy });
     await existingPrimary.save();
   } else {
     await BookingApplicant.create({
-      tenantId, bookingId: booking._id, ...primary, displayOrder: 0, updatedByType: 'CUSTOMER',
+      tenantId, bookingId: booking._id, ...primary, displayOrder: 0, updatedByType: filledBy,
     });
   }
 
@@ -377,12 +378,12 @@ async function submit({
     const match = existingCo[index];
     if (match) {
       await BookingApplicant.updateOne({ tenantId, _id: match._id }, {
-        $set: { ...payload, updatedByType: 'CUSTOMER' },
+        $set: { ...payload, updatedByType: filledBy },
       });
       keep.push(String(match._id));
     } else {
       const created = await BookingApplicant.create({
-        tenantId, bookingId: booking._id, ...payload, updatedByType: 'CUSTOMER',
+        tenantId, bookingId: booking._id, ...payload, updatedByType: filledBy,
       });
       keep.push(String(created._id));
     }
@@ -395,12 +396,13 @@ async function submit({
   }
 
   // §124: the declaration, with what the law may later want to see.
-  await BookingCustomerLink.updateOne({ tenantId, _id: link._id }, {
-    $set: {
-      status: 'SUBMITTED',
-      submittedAt: now,
-    },
-  });
+  // A panel submission has no link to close, so the customer's own link (if one
+  // is outstanding) is left alone rather than marked submitted on their behalf.
+  if (link) {
+    await BookingCustomerLink.updateOne({ tenantId, _id: link._id }, {
+      $set: { status: 'SUBMITTED', submittedAt: now },
+    });
+  }
   await Booking.updateOne({ tenantId, _id: booking._id }, {
     $set: {
       customerFormSubmittedAt: now,
@@ -409,6 +411,10 @@ async function submit({
         ip: ip || undefined,
         userAgent: userAgent ? String(userAgent).slice(0, 300) : undefined,
         formVersion: 'v2.0',
+        // §124: an audit needs to know whether the customer typed this or staff
+        // did it with the customer present. Never inferred later.
+        filledBy,
+        filledByUserId: filledBy === 'INTERNAL_USER' ? actor?._id : undefined,
       },
     },
   });
@@ -417,11 +423,14 @@ async function submit({
     tenantId,
     bookingId: booking._id,
     type: 'BOOKING_FORM_SUBMITTED',
-    title: 'Customer submitted the booking form',
-    actorType: 'INTEGRATION',
-    actorLabel: 'Customer',
+    title: filledBy === 'INTERNAL_USER'
+      ? `Booking form completed from the panel by ${actor?.name || 'a colleague'}`
+      : 'Customer submitted the booking form',
+    ...(filledBy === 'INTERNAL_USER'
+      ? { actor }
+      : { actorType: 'INTEGRATION', actorLabel: 'Customer' }),
     at: now,
-    meta: { linkId: String(link._id), coApplicants: coApplicants.length },
+    meta: { linkId: link ? String(link._id) : undefined, coApplicants: coApplicants.length, filledBy },
   });
   await kyc.rollup({ tenantId, bookingId: booking._id, tz: tenant?.timezone || 'UTC' });
   emit(EVENTS.BOOKING_FORM_SUBMITTED, { tenantId, bookingId: booking._id });
@@ -444,6 +453,49 @@ async function submit({
  * §118: "this is wrong" from the customer becomes an internal note on the
  * booking. It never edits a commercial field.
  */
+/** The customer's own one-time link (§288). */
+async function submit({ token, body, ip, userAgent, now = new Date() }) {
+  const link = await resolveToken({ token, now });
+  if (link.status === 'SUBMITTED') throw badRequest('This form has already been submitted.');
+  if (link.otpRequired && !link.otpVerifiedAt) throw forbidden('Verify the code sent to your mobile first.');
+
+  const tenantId = link.tenantId;
+  const booking = await Booking.findOne({ tenantId, _id: link.bookingId }).lean();
+  if (!booking) throw notFound('This booking link is not valid.');
+  if (booking.status === 'CANCELLED') throw forbidden('This booking is no longer active.');
+
+  return applySubmission({
+    tenantId, booking, link, body, filledBy: 'CUSTOMER', ip, userAgent, now,
+  });
+}
+
+/**
+ * §288: filled from the panel, with the customer sitting there. No token and no
+ * OTP — the salesperson is already authenticated and permission-checked, and
+ * the declaration records that staff entered it rather than the customer.
+ */
+async function submitFromPanel({ tenantId, actor, bookingId, body, ip, userAgent, now = new Date() }) {
+  const booking = await Booking.findOne({ tenantId, _id: bookingId }).lean();
+  if (!booking) throw notFound('Booking not found.');
+  if (booking.status === 'CANCELLED') throw forbidden('This booking is no longer active.');
+
+  // An outstanding customer link would let the customer overwrite what was just
+  // entered, so it is revoked rather than left live.
+  const outstanding = await BookingCustomerLink.findOne({
+    tenantId, bookingId: booking._id, status: { $in: ['SENT', 'CREATED', 'OPENED'] },
+  }).lean();
+  if (outstanding) {
+    await BookingCustomerLink.updateOne(
+      { tenantId, _id: outstanding._id },
+      { $set: { status: 'REVOKED', revokedAt: now } },
+    );
+  }
+
+  return applySubmission({
+    tenantId, booking, link: null, body, actor, filledBy: 'INTERNAL_USER', ip, userAgent, now,
+  });
+}
+
 async function reportIssue({ token, message, now = new Date() }) {
   const link = await resolveToken({ token, now });
   if (!String(message || '').trim()) throw badRequest('Tell us what looks wrong.');
@@ -506,6 +558,6 @@ async function statusFor({ tenantId, bookingId }) {
 }
 
 module.exports = {
-  SECTIONS, createLink, sendLink, revokeLink, resolveToken, sendOtp, verifyOtp,
+  SECTIONS, createLink, sendLink, revokeLink, resolveToken, sendOtp, verifyOtp, submitFromPanel,
   customerView, submit, reportIssue, reopen, statusFor, linkUrl,
 };

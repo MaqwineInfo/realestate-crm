@@ -37,6 +37,7 @@
 
 <div class="page-head">
   <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/bookings', label: 'Bookings' }) %>
     <h1><%= booking.bookingNumber || 'Booking' %></h1>
     <div class="sub">
       <%= contact.displayName || '—' %> · <%= project.name || '' %> <%= unit.unitNumber || '' %>
@@ -228,6 +229,34 @@
       <span class="badge"><%= formStatus.state === 'NOT_SENT' ? 'Not sent' : formStatus.state.toLowerCase() %></span>
     </div>
     <div class="card-body">
+      <%#
+        §288: two ways to get this filled, side by side, because which one is
+        right depends on where the customer is — at the desk, or on the phone.
+      %>
+      <div class="grid cols-2 mb-2">
+        <div class="card">
+          <div class="card-body">
+            <div class="t-name">Fill it from the panel</div>
+            <p class="small muted">You type the details with the customer here. Saved immediately, and recorded as staff-entered.</p>
+            <a class="btn btn-primary" href="/app/bookings/<%= booking._id %>/form">Open the form</a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div class="t-name">Share a link with the customer</div>
+            <p class="small muted">They fill it on their own phone, with an optional OTP. The link is shown once and expires.</p>
+            <% if (formStatus.state === 'NOT_SENT' || formStatus.state === 'REVOKED') { %>
+              <form method="post" action="/api/bookings/<%= booking._id %>/customer-link">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn" type="submit">Create a link</button>
+              </form>
+            <% } else { %>
+              <span class="badge b-blue"><%= formStatus.state.toLowerCase() %></span>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
       <% if (freshLink) { %>
         <%#
           §117: the link is shown exactly once. Only its hash is stored, so this

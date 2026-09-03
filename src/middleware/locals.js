@@ -26,6 +26,20 @@ function locals(req, res, next) {
     dateInput: (d) => tz.toDateInput(d, zone),
     timeInput: (d) => tz.toTimeInput(d, zone),
     mobile: (m) => phone.formatMobile(m, t.callingCode),
+    splitMobile: (m) => phone.splitMobile(m, t.callingCode || phone.DEFAULT_CALLING_CODE),
+    /**
+     * A stored minor-unit price rendered back in the scale it was typed in
+     * (§26.3). Minor units come out to rupees first — dividing paise by the
+     * scale returns a figure 100× too large.
+     */
+    priceInScale: (minor, scale) => {
+      const div = { ONE: 1, THOUSAND: 1e3, LAKH: 1e5, CRORE: 1e7 }[scale || 'LAKH'];
+      const value = money.toMajor(Number(minor)) / div;
+      return Number.isFinite(value) ? String(Number(value.toFixed(4))) : '';
+    },
+    areaUnit: (u) => ({
+      sqft: 'sq.ft', sqyd: 'sq.yd', sqm: 'sq.m', acre: 'acre', guntha: 'guntha', bigha: 'bigha',
+    }[u] || u),
     initials: (name) => String(name || '?').split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase(),
     isOverdue: (d) => !!d && new Date(d) < new Date(),
   };

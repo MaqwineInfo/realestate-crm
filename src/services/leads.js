@@ -39,6 +39,26 @@ async function create({ tenantId, tenant, actor, data, createdVia = 'MANUAL' }) 
   if (!newStage) throw badRequest('No "New Lead" stage is configured. Add one in Setup → Stages.');
   if (!data.sourceId) throw badRequest('Select a lead source.');
 
+  /**
+   * §7: the capture form may open the lead at a stage other than New — a
+   * telecaller who already spoke to the customer should not have to log a
+   * second action to say so. BOOKED and BLOCKED stay unreachable here, because
+   * §2.3 keeps inventory and the pipeline from drifting apart.
+   */
+  let openingStage = newStage;
+  let openingSubStage = null;
+  if (data.stageId && String(data.stageId) !== String(newStage._id)) {
+    const chosen = await stagesService.requireStage({ tenantId, stageId: data.stageId });
+    stagesService.assertSelectable(chosen);
+    if (['BOOKED', 'BLOCKED'].includes(chosen.semanticType)) {
+      throw badRequest(`${chosen.name} is set by the booking or block action, not on the capture form.`);
+    }
+    openingSubStage = await stagesService.validateStagePair({
+      tenantId, stage: chosen, subStageId: data.subStageId,
+    });
+    openingStage = chosen;
+  }
+
   const now = data.capturedAt ? new Date(data.capturedAt) : new Date();
   const ownerUserId = data.ownerUserId || null;
 
@@ -47,8 +67,9 @@ async function create({ tenantId, tenant, actor, data, createdVia = 'MANUAL' }) 
     contactId: contact._id,
     projectId: data.projectId || undefined,
     ownerUserId: ownerUserId || undefined,
-    stageId: newStage._id,
-    status: 'ACTIVE',
+    stageId: openingStage._id,
+    subStageId: openingSubStage?._id,
+    status: openingStage.terminal ? 'TERMINAL' : 'ACTIVE',
     sourceId: data.sourceId,
     originalSourceId: data.sourceId,
     latestSourceId: data.sourceId,
@@ -82,9 +103,11 @@ async function create({ tenantId, tenant, actor, data, createdVia = 'MANUAL' }) 
     loanStatus: data.loanStatus,
     decisionMaker: data.decisionMaker,
     // V1.1 §9.1/§9.2
+    referralType: data.referralType,
     referrerName: data.referrerName,
     referrerMobile: data.referrerMobile,
     referrerContactId: data.referrerContactId,
+    referrerChannelPartnerId: data.referrerChannelPartnerId,
     portalLeadId: data.portalLeadId,
     listingReference: data.listingReference,
     relatedPreviousLeadId: data.relatedPreviousLeadId,
@@ -95,7 +118,7 @@ async function create({ tenantId, tenant, actor, data, createdVia = 'MANUAL' }) 
   // V1.1 §18: the journey starts here, so the funnel can tell "went through New"
   // from "New simply sorts first".
   await stageHistory.record({
-    tenantId, leadId: lead._id, stageId: newStage._id, actor, sourceAction: 'CAPTURE', at: now,
+    tenantId, leadId: lead._id, stageId: openingStage._id, actor, sourceAction: 'CAPTURE', at: now,
   });
 
   await InquiryTouch.create({

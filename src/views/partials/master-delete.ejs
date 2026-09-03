@@ -1,0 +1,16 @@
+<%#
+  Delete, or the reason there is no delete. Locals: slug, item, usage, singular.
+  A referenced row keeps its label forever (§95) — saying so beats a button that
+  only ever fails.
+%>
+<% if (item.isSystem) { %>
+  <span class="muted small" title="Built in — automation depends on it">Built in</span>
+<% } else if (usage) { %>
+  <span class="muted small" title="Used by <%= usage %> — deactivate instead, so history keeps the label">In use</span>
+<% } else { %>
+  <form method="post" action="/api/setup/<%= slug %>/<%= item._id %>/delete"
+        data-confirm="Delete <%= item.name %>? Nothing uses it, so this cannot be undone.">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="btn btn-sm text-danger" type="submit">Delete</button>
+  </form>
+<% } %>

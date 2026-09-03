@@ -2,6 +2,7 @@
 
 <div class="page-head">
   <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/projects', label: 'Projects' }) %>
     <div class="inline">
       <h1><%= project.name %></h1>
       <span class="badge <%= project.status === 'ACTIVE' ? 'b-green' : 'b-slate' %>"><%= project.status %></span>
@@ -27,7 +28,7 @@
 <nav class="steps" aria-label="Project setup">
   <% [
        ['basics', 'Basics'], ['location', 'Location'], ['sales', 'Sales &amp; configuration'],
-       ['media', 'Media &amp; documents'], ['inventory', 'Towers &amp; units'],
+       ['media', 'Media &amp; documents'], ['inventory', 'Blocks &amp; units'],
        ['pricing', 'Pricing &amp; payment plans'], ['review', 'Mini site &amp; review'],
      ].forEach(function (s, i) {
        const done = readiness.checks.find(function (c) { return c.key === s[0]; }); %>
@@ -49,11 +50,11 @@
 <div class="grid cols-2">
   <div class="card">
     <div class="card-head">
-      <h2 class="grow">Towers &amp; blocks</h2>
-      <% if (can('inventory.edit')) { %><button class="btn btn-sm" data-drawer="drawer-tower">Add tower</button><% } %>
+      <h2 class="grow">Blocks &amp; towers</h2>
+      <% if (can('inventory.edit')) { %><button class="btn btn-sm" data-drawer="drawer-tower">Add block</button><% } %>
     </div>
     <% if (!towers.length) { %>
-      <div class="card-body"><p class="muted mb-0">Add towers/blocks and units to begin inventory management.</p></div>
+      <div class="card-body"><p class="muted mb-0">Add a block or tower, then its floors and units, to begin inventory management.</p></div>
     <% } else { %>
       <table>
         <thead><tr><th>Name</th><th>Type</th><th>Floors</th><th>Units</th></tr></thead>
@@ -135,7 +136,7 @@
         <form class="filters" method="post" action="/api/projects/<%= project._id %>/units/generate">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="field">
-            <label for="g-tower">Tower</label>
+            <label for="g-tower">Block / tower</label>
             <select id="g-tower" name="towerId" required>
               <% towers.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %></option><% }) %>
             </select>
@@ -430,10 +431,10 @@
 <% } %>
 
 <% if (can('inventory.edit')) { %>
-  <%- include('../../partials/drawer-open', { id: 'drawer-tower', heading: 'Add tower or block', action: '/api/projects/' + project._id + '/towers' }) %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-tower', heading: 'Add block or tower', action: '/api/projects/' + project._id + '/towers' }) %>
     <div class="field">
       <label for="t-name">Name</label>
-      <input type="text" id="t-name" name="name" required maxlength="60" placeholder="Tower A">
+      <input type="text" id="t-name" name="name" required maxlength="60" placeholder="Block A">
     </div>
     <div class="field-row">
       <div class="field">
@@ -452,7 +453,7 @@
       <input type="number" id="t-floors" name="floorCount" min="0" max="200" value="10">
       <div class="hint">Floors are created automatically so you can generate units straight away.</div>
     </div>
-  <%- include('../../partials/drawer-close', { cta: 'Add tower' }) %>
+  <%- include('../../partials/drawer-close', { cta: 'Add block' }) %>
 
   <%- include('../../partials/drawer-open', { id: 'drawer-unittype', heading: 'Add unit type', action: '/api/projects/' + project._id + '/unit-types' }) %>
     <div class="field">
@@ -624,10 +625,29 @@
   <div class="drawer" role="dialog" aria-modal="true" aria-label="Walk-in QR">
     <div class="drawer-head"><h2 class="grow">Walk-in QR</h2><button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button></div>
     <div class="drawer-body">
-      <p>Print or display this link at the site. A walk-in customer scans it, enters name and mobile, and the CRM creates the contact, the lead and the visit — no OTP (§25).</p>
+      <p>Print or display this at the site. A walk-in customer scans it, enters name and mobile, and the CRM creates the contact, the lead and the visit — no OTP (§25).</p>
+
+      <%# The code itself, not just the link — it is what people came here for. %>
+      <div class="qr-preview">
+        <img src="/app/projects/<%= project._id %>/qr.png" alt="Walk-in QR code for <%= project.name %>" width="220" height="220">
+      </div>
+
+      <div class="btn-group mb-2">
+        <a class="btn btn-primary" href="/app/projects/<%= project._id %>/qr.pdf">Download A4 sheet (PDF)</a>
+        <a class="btn" href="/app/projects/<%= project._id %>/qr.png">PNG</a>
+        <a class="btn" href="/app/projects/<%= project._id %>/qr.jpg">JPG</a>
+      </div>
+      <p class="small muted">Use the PNG in artwork — it is lossless, so the code stays sharp at any size. JPG is there for tools that insist on it.</p>
+
       <div class="read-only-summary"><code><%= appUrl %>/visit/<%= project.qrToken %></code></div>
+      <% if (/localhost|127\.0\.0\.1/.test(appUrl)) { %>
+        <div class="flash flash-warn">
+          This is a local address, so a printed code will not work on a customer's phone.
+          Set <code>APP_URL</code> to the public address before printing anything.
+        </div>
+      <% } %>
       <p class="small muted">The token identifies the project, so nobody can post a visit for a project they were not standing in front of.</p>
-      <a class="btn btn-primary" target="_blank" rel="noopener" href="/visit/<%= project.qrToken %>">Open the form</a>
+      <a class="btn" target="_blank" rel="noopener" href="/visit/<%= project.qrToken %>">Open the form</a>
     </div>
   </div>
 </div>

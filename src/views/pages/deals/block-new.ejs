@@ -44,7 +44,7 @@
     <div class="card-body">
       <form class="filters mb-2" method="get" action="<%= base %>">
         <div class="field">
-          <label for="b-tower">Tower</label>
+          <label for="b-tower">Block / tower</label>
           <select id="b-tower" name="towerId">
             <option value="">All</option>
             <% facets.towers.forEach(function (t) { %>
@@ -99,7 +99,7 @@
       </div>
       <div class="card-body">
         <dl class="dl">
-          <dt>Tower</dt><dd><%= unit.towerId ? unit.towerId.name : '—' %></dd>
+          <dt>Block / tower</dt><dd><%= unit.towerId ? unit.towerId.name : '—' %></dd>
           <dt>Floor</dt><dd><%= unit.floorNumber != null ? unit.floorNumber : '—' %></dd>
           <dt>Configuration</dt><dd><%= unit.unitTypeId ? unit.unitTypeId.name : '—' %></dd>
           <dt>Area</dt><dd><%= unit.saleableArea || '—' %> <%= unit.areaUnit || 'sqft' %></dd>

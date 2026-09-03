@@ -21,6 +21,16 @@ function notFoundHandler(req, res, next) {
  */
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
+  /**
+   * A path segment that is not a valid ObjectId reaches Mongoose as a CastError
+   * and used to surface as a 500. It is not a server fault — the record simply
+   * cannot exist — so every `/:id` route answers "not found" instead. Handled
+   * here rather than in each route, because they all fail the same way.
+   */
+  if (err.name === 'CastError' && err.kind === 'ObjectId') {
+    err = notFound('That record could not be found.');
+  }
+
   const isAppError = err instanceof AppError;
   const status = isAppError ? err.status : (err.status === 404 ? 404 : 500);
   const message = isAppError ? err.message : 'Something went wrong. Please try again.';

@@ -36,11 +36,70 @@ test('full lead capture form (V1.1 §7–§13)', async (t) => {
   await t.test('the form renders every capture section', async () => {
     const page = await admin.get('/app/leads/new');
     assert.equal(page.status, 200);
-    for (const section of ['1 · Customer', '2 · Inquiry', '3 · Property requirement', '4 · Qualification', '5 · Notes']) {
+    // §7: four sections now. Requirement and qualification moved to the lead
+    // workspace, and the capture form gained the opening stage and the first
+    // follow-up instead — so a lead is never created without a next action.
+    for (const section of ['Customer', 'Inquiry &amp; source', 'Stage &amp; next follow-up', 'Notes']) {
       assert.ok(page.text.includes(section), `${section} is on the form`);
     }
+    for (const n of [1, 2, 3, 4]) {
+      assert.ok(page.text.includes(`<span class="step-n">${n}</span>`), `step ${n} is numbered`);
+    }
+    assert.ok(!page.text.includes('name="purchaseTimeline"'), 'qualification is not on the capture form');
+    assert.match(page.text, /name="stageId"/, 'the opening stage can be chosen');
+    assert.match(page.text, /name="nextActionTypeId"/, 'the first follow-up can be scheduled');
     assert.match(page.text, /Auto allocate \(round robin\)/, 'auto allocation is the default');
     assert.match(page.text, /data-dup-mobile/, 'the mobile field drives duplicate lookup');
+  });
+
+  /**
+   * §55.3 is the product's central rule: an open lead always has a next action.
+   * Capture used to leave that gap for the first call to close — now it does not.
+   */
+  await t.test('capture opens the lead at the chosen stage with its first follow-up', async () => {
+    const { ActionType, Followup } = require('../../src/db/models');
+    const connected = await Stage.findOne({ tenantId, semanticType: 'CONNECTED' }).lean();
+    const call = await ActionType.findOne({ tenantId, semantic: 'CALL' }).lean();
+
+    const res = await admin.submit('/api/leads', {
+      primaryMobile: '9820044556',
+      firstName: 'Stage',
+      lastName: 'Opener',
+      sourceId: String(source._id),
+      assignmentMode: 'AUTO',
+      stageId: String(connected._id),
+      nextActionTypeId: String(call._id),
+      nextDate: '2099-01-15',
+      nextTime: '11:30',
+      nextNote: 'Send the floor plan',
+    }, '/app/leads/new');
+    assert.equal(res.status, 302);
+
+    const lead = await Lead.findOne({ tenantId, stageId: connected._id }).sort({ createdAt: -1 }).lean();
+    assert.ok(lead, 'the lead opened at the chosen stage');
+    assert.equal(lead.status, 'ACTIVE');
+    assert.ok(lead.nextActionAt, 'the lead carries a next action');
+
+    const followup = await Followup.findOne({ tenantId, leadId: lead._id }).lean();
+    assert.equal(followup.note, 'Send the floor plan');
+    assert.equal(followup.status, 'PENDING');
+    // Scheduling a call is not yet a genuine action, so the SLA clock runs on.
+    assert.equal(lead.firstGenuineActionAt, undefined, 'the response clock is still running');
+  });
+
+  await t.test('capture cannot open a lead straight into Booked (§2.3)', async () => {
+    const booked = await Stage.findOne({ tenantId, semanticType: 'BOOKED' }).lean();
+    const res = await admin.submit('/api/leads', {
+      primaryMobile: '9820044557',
+      firstName: 'Cannot',
+      sourceId: String(source._id),
+      assignmentMode: 'AUTO',
+      stageId: String(booked._id),
+    }, '/app/leads/new');
+    // A form post bounces back with a flash rather than an error page.
+    assert.equal(res.status, 302);
+    const created = await Lead.findOne({ tenantId, stageId: booked._id }).lean();
+    assert.equal(created, null, 'no lead was created into Booked');
   });
 
   await t.test('a mobile from search arrives prefilled (§5.8)', async () => {

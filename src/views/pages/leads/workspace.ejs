@@ -8,6 +8,7 @@
 
 <div class="page-head">
   <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/leads', label: 'Leads' }) %>
     <div class="inline">
       <h1><%= contact.displayName %></h1>
       <%- include('../../partials/lead-badges', { lead: lead }) %>
@@ -101,6 +102,19 @@
                   <span class="tl-meta"><%= h.dateTime(a.at) %> · <%= a.actorUserId ? a.actorUserId.name : (a.actorLabel || 'System') %></span>
                 </div>
                 <% if (a.body) { %><div class="tl-body"><%= a.body %></div><% } %>
+                <% if ((a.attachments || []).length) { %>
+                  <div class="tl-files">
+                    <% a.attachments.forEach(function (f) { %>
+                      <% if (f.kind === 'VOICE') { %>
+                        <audio controls preload="none" src="/app/files/note-attachment/<%= f._id %>"></audio>
+                      <% } else { %>
+                        <a class="tl-file" href="/app/files/note-attachment/<%= f._id %>" target="_blank" rel="noopener">
+                          <span aria-hidden="true">📎</span><%= f.name %>
+                        </a>
+                      <% } %>
+                    <% }) %>
+                  </div>
+                <% } %>
               </div>
             <% }) %>
           </div>
@@ -108,10 +122,29 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head"><h2 class="grow">Follow-ups</h2></div>
+    <div class="card <%= isActive && !pendingFollowup ? 'card-alert' : '' %>">
+      <div class="card-head">
+        <h2 class="grow">Follow-ups</h2>
+        <% if (pendingFollowup && (can('followup.edit_own') || can('followup.edit_team'))) { %>
+          <button class="btn btn-sm" data-drawer="drawer-reschedule">Reschedule</button>
+        <% } %>
+      </div>
+      <%# §24: an active lead with no next action is the one state that must never
+          pass quietly, so it keeps its alert — now on the table that owns it. %>
+      <% if (isActive && !pendingFollowup) { %>
+        <div class="card-body">
+          <div class="t-name">Next action missing</div>
+          <p class="small muted <%= can('followup.create') ? '' : 'mb-0' %>">This active lead has no follow-up scheduled. Every active lead must have one.</p>
+          <% if (can('followup.create')) { %>
+            <button class="btn btn-sm btn-primary" data-drawer="drawer-followup">Set next action</button>
+          <% } %>
+        </div>
+      <% } %>
+      <%# The alert above already explains an empty list, so don't say it twice. %>
       <% if (!followups.length) { %>
-        <div class="card-body"><p class="muted mb-0">No follow-ups scheduled yet.</p></div>
+        <% if (!(isActive && !pendingFollowup)) { %>
+          <div class="card-body"><p class="muted mb-0">No follow-ups scheduled yet.</p></div>
+        <% } %>
       <% } else { %>
         <table class="responsive">
           <thead><tr><th>Action</th><th>Due</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
@@ -338,40 +371,8 @@
       </div>
     </div>
 
-    <%# V1.1 §24: the next action is the product's whole promise, so it gets a card. %>
-    <div class="card <%= isActive && !pendingFollowup ? 'card-alert' : '' %>">
-      <div class="card-head"><h2 class="grow">Next action</h2></div>
-      <div class="card-body">
-        <% if (pendingFollowup) { %>
-          <div class="t-name"><%= pendingFollowup.actionTypeId ? pendingFollowup.actionTypeId.name : 'Follow-up' %></div>
-          <div class="small <%= h.isOverdue(pendingFollowup.dueAt) ? 'badge b-red' : 'muted' %>"><%= h.dateTime(pendingFollowup.dueAt) %></div>
-          <% if (pendingFollowup.note) { %><div class="small muted mt-1"><%= pendingFollowup.note %></div><% } %>
-          <div class="btn-group mt-2">
-            <% if (can('followup.complete')) { %>
-              <button class="btn btn-sm btn-primary"
-                      data-quick="complete"
-                      data-action="/api/followups/<%= pendingFollowup._id %>/complete"
-                      data-stage-id="<%= lead.stageId._id %>"
-                      data-summary="<%= pendingFollowup.actionTypeId ? pendingFollowup.actionTypeId.name : 'Follow-up' %> · due <%= h.dateTime(pendingFollowup.dueAt) %>">
-                Complete
-              </button>
-            <% } %>
-            <% if (can('followup.edit_own') || can('followup.edit_team')) { %>
-              <button class="btn btn-sm" data-drawer="drawer-reschedule">Reschedule</button>
-            <% } %>
-          </div>
-        <% } else if (isActive) { %>
-          <%# §24: legacy or interrupted data — say so plainly and offer the fix. %>
-          <div class="t-name">Next action missing</div>
-          <p class="small muted">This active lead has no follow-up scheduled. Every active lead must have one.</p>
-          <% if (can('followup.create')) { %>
-            <button class="btn btn-sm btn-primary" data-drawer="drawer-followup">Set next action</button>
-          <% } %>
-        <% } else { %>
-          <p class="muted small mb-0">Lead closed — no next action needed.</p>
-        <% } %>
-      </div>
-    </div>
+    <%# V1.1 §24: the Next action card used to sit here. It duplicated the
+        Follow-ups table, so it moved there — the alert and Reschedule with it. %>
 
     <%# V1.1 §14: temperature, with the signals that produced it. %>
     <% if (isActive) { %>
@@ -462,13 +463,52 @@
 <% } %>
 
 <% if (can('note.create')) { %>
-  <%- include('../../partials/drawer-open', { id: 'drawer-note', heading: 'Add note', action: '/api/leads/' + lead._id + '/notes' }) %>
-    <div class="field">
-      <label for="note-body">Note</label>
-      <textarea id="note-body" name="body" required maxlength="5000" placeholder="Use @Name to notify a colleague"></textarea>
-      <div class="hint">Mentioned users get a notification with a link back to this lead.</div>
+  <%#
+    §18.7: the note drawer carries files and a voice recording. Multipart, and
+    the recorder uses the browser's own MediaRecorder — no app, no plugin, and
+    with JavaScript off the file picker and the text still work.
+  %>
+  <div class="drawer-backdrop" id="drawer-note" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Add note">
+      <form method="post" action="/api/leads/<%= lead._id %>/notes" enctype="multipart/form-data" data-note-form>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="drawer-head">
+          <h2 class="grow">Add note</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-drawer-close>Close</button>
+        </div>
+        <div class="drawer-body">
+          <div class="field">
+            <label for="note-body">Note</label>
+            <textarea id="note-body" name="body" maxlength="5000" rows="4" placeholder="Use @Name to notify a colleague"></textarea>
+            <div class="hint">Mentioned users get a notification with a link back to this lead.</div>
+          </div>
+
+          <div class="field">
+            <label for="note-files">Attach files <span class="opt">optional</span></label>
+            <input type="file" id="note-files" name="attachments" multiple
+                   accept="application/pdf,image/jpeg,image/png,image/webp">
+            <div class="hint">PDF or images, up to five files.</div>
+          </div>
+
+          <div class="field" data-recorder hidden>
+            <label>Voice note <span class="opt">optional</span></label>
+            <div class="recorder">
+              <button type="button" class="btn btn-sm" data-rec-start>Record</button>
+              <button type="button" class="btn btn-sm text-danger" data-rec-stop hidden>Stop</button>
+              <span class="rec-time" data-rec-time hidden><span class="dot" aria-hidden="true"></span> 0:00</span>
+              <button type="button" class="btn btn-ghost btn-sm" data-rec-discard hidden>Discard</button>
+            </div>
+            <audio class="rec-playback" data-rec-playback controls hidden></audio>
+            <div class="hint" data-rec-hint>Recorded on this device and attached to the note.</div>
+          </div>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="btn" data-drawer-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save note</button>
+        </div>
+      </form>
     </div>
-  <%- include('../../partials/drawer-close', { cta: 'Save note' }) %>
+  </div>
 <% } %>
 
 <%#

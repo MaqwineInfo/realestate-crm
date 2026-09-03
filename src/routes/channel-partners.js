@@ -18,6 +18,9 @@ const partnerLeads = require('../services/partnerLeads');
 const commissions = require('../services/commissions');
 const partnerInvoices = require('../services/partnerInvoices');
 const partnerReports = require('../services/partnerReports');
+const vcardLib = require('../lib/vcard');
+const qrSheet = require('../lib/qrSheet');
+const { publicUrl } = require('../lib/publicUrl');
 
 /**
  * V2 §8: the internal channel-partner screens. Thin routes; the rules live in
@@ -403,6 +406,70 @@ const statusSchema = z.object({
   status: z.enum(['ACTIVE', 'SUSPENDED', 'INACTIVE', 'EXPIRED']),
   reason: f.optionalText(500),
   returnTo: f.optionalText(300),
+});
+
+/**
+ * §20.4: the partner's visiting card.
+ *
+ * A partner is the face of the developer to a customer, so they need something
+ * to hand over — with the RERA number on it, which is the one thing a customer
+ * should check. The QR saves the partner straight to the phone's contacts, so
+ * the card works whether it is printed, shared as an image, or opened on screen.
+ */
+router.get('/app/channel-partners/:id/card', requirePermission('cp.partner.view'), async (req, res, next) => {
+  try {
+    const partner = await ChannelPartner.findOne({ tenantId: req.tenantId, _id: req.params.id }).lean();
+    if (!partner) throw notFound('Channel partner not found.');
+    res.render('pages/channel-partners/card', {
+      title: `${channelPartners.displayNameOf(partner.profile)} · visiting card`,
+      partner,
+      displayName: channelPartners.displayNameOf(partner.profile),
+      tenant: req.tenant,
+      vcardUrl: `${publicUrl(req)}/app/channel-partners/${partner._id}/card.vcf`,
+      appUrl: publicUrl(req),
+    });
+  } catch (err) { next(err); }
+});
+
+/** The same card as a contact file, and as the QR that points at it. */
+router.get('/app/channel-partners/:id/card.vcf', requirePermission('cp.partner.view'), async (req, res, next) => {
+  try {
+    const partner = await ChannelPartner.findOne({ tenantId: req.tenantId, _id: req.params.id }).lean();
+    if (!partner) throw notFound('Channel partner not found.');
+    const p = partner.profile || {};
+    const name = channelPartners.displayNameOf(p);
+    const body = vcardLib.vcard({
+      name,
+      organisation: p.partnerType === 'COMPANY' ? (p.legalName || p.tradeName) : undefined,
+      title: p.partnerType === 'COMPANY' ? (p.primaryContactName ? `Contact: ${p.primaryContactName}` : undefined) : 'Channel partner',
+      mobile: p.mobile,
+      email: p.email,
+      website: p.website,
+      address: [p.correspondenceAddress || p.address, p.city, p.state, p.pincode].filter(Boolean).join(', '),
+      note: [
+        partner.partnerCode ? `Partner code ${partner.partnerCode}` : null,
+        partner.reraNumber ? `RERA ${partner.reraNumber}` : null,
+        req.tenant?.name ? `Channel partner for ${req.tenant.name}` : null,
+      ].filter(Boolean).join(' · '),
+    });
+    res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${vcardLib.fileName(name)}"`);
+    res.send(body);
+  } catch (err) { next(err); }
+});
+
+router.get('/app/channel-partners/:id/card-qr.png', requirePermission('cp.partner.view'), async (req, res, next) => {
+  try {
+    const partner = await ChannelPartner.findOne({ tenantId: req.tenantId, _id: req.params.id })
+      .select('_id').lean();
+    if (!partner) throw notFound('Channel partner not found.');
+    // The QR points at the card page rather than embedding the vCard, so the
+    // code stays small enough to scan from a printed card at arm's length.
+    const png = await qrSheet.png(`${publicUrl(req)}/app/channel-partners/${partner._id}/card`);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(png);
+  } catch (err) { next(err); }
 });
 
 router.post('/api/channel-partners/:id/status', requirePermission('cp.partner.edit'), validate(statusSchema), async (req, res, next) => {

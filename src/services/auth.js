@@ -1,4 +1,7 @@
+const crypto = require('node:crypto');
 const { User, Role, Tenant } = require('../db/models');
+const phone = require('../lib/phone');
+const messaging = require('./messaging');
 const password = require('../lib/password');
 const { unauthorized, badRequest, notFound } = require('../lib/errors');
 const audit = require('./audit');
@@ -29,6 +32,113 @@ async function login(email, plain) {
     // §5.2: inactive/suspended users cannot log in, but their history stays intact.
     throw unauthorized('This account is not active. Contact your administrator.');
   }
+  if (usable.length > 1) {
+    return { needsOrgChoice: true, options: usable.map((u) => ({ userId: u._id, tenantName: u.tenantId.name })) };
+  }
+  return { user: usable[0] };
+}
+
+/* ------------------------------ OTP sign-in ------------------------------- */
+
+const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_RESEND_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+
+const hashOtp = (code) => crypto.createHash('sha256').update(String(code)).digest('hex');
+
+/**
+ * §5.4: sign in with a mobile number and a one-time code.
+ *
+ * Deliberately the same shape as the customer booking-form OTP (§117) —
+ * hashed code, short expiry, hard attempt ceiling — because a six-digit code
+ * without those three is not a second factor, it is a short brute force.
+ *
+ * The response never says whether the number is registered. A login screen that
+ * distinguishes "unknown number" from "code sent" is a directory of who works
+ * here, readable by anyone.
+ */
+async function requestLoginOtp(mobile, { tenantCallingCode, now = new Date() } = {}) {
+  const normalized = phone.normalizeMobile(mobile, tenantCallingCode);
+  if (!normalized) throw badRequest('Enter a valid mobile number.');
+
+  const candidates = await User.find({ normalizedMobile: normalized })
+    .setOptions({ allowCrossTenant: true })
+    .populate('tenantId', 'name status');
+  const usable = candidates.filter((u) => u.canLoginWithOtp() && u.tenantId?.status === 'ACTIVE');
+
+  // Nothing is sent and nothing is revealed — the caller says "if that number
+  // is registered, a code is on its way" either way.
+  if (!usable.length) return { sent: false, codes: [] };
+
+  const codes = [];
+  for (const user of usable) {
+    // §192-style throttle: one code a minute, so the send path is not a free
+    // SMS pump for anyone who knows a colleague's number.
+    if (user.loginOtpSentAt && now.getTime() - new Date(user.loginOtpSentAt).getTime() < OTP_RESEND_MS) {
+      continue;
+    }
+    const code = String(crypto.randomInt(100000, 999999));
+    user.loginOtpHash = hashOtp(code);
+    user.loginOtpExpiresAt = new Date(now.getTime() + OTP_TTL_MS);
+    user.loginOtpAttempts = 0;
+    user.loginOtpSentAt = now;
+    await user.save();
+
+    await messaging.send({
+      tenantId: user.tenantId._id || user.tenantId,
+      channel: 'SMS',
+      to: normalized,
+      purpose: 'ACKNOWLEDGEMENT',
+      body: `${code} is your sign-in code. It expires in 10 minutes. Do not share it with anyone.`,
+    });
+    codes.push({ userId: user._id, code });
+  }
+  return { sent: true, codes };
+}
+
+/**
+ * Verifies the code. Every candidate account on that number is checked, so a
+ * user who belongs to two organizations reaches the same chooser the password
+ * path uses.
+ */
+async function verifyLoginOtp(mobile, code, { tenantCallingCode, now = new Date() } = {}) {
+  const normalized = phone.normalizeMobile(mobile, tenantCallingCode);
+  if (!normalized) throw badRequest('Enter a valid mobile number.');
+  const supplied = String(code || '').trim();
+  if (!/^\d{6}$/.test(supplied)) throw unauthorized('That code is not right. Check it and try again.');
+
+  const candidates = await User.find({ normalizedMobile: normalized })
+    .setOptions({ allowCrossTenant: true })
+    .populate('tenantId', 'name status');
+
+  const matched = [];
+  let sawLockout = false;
+  for (const user of candidates) {
+    if (!user.loginOtpHash || !user.loginOtpExpiresAt || new Date(user.loginOtpExpiresAt) < now) continue;
+    if (user.loginOtpAttempts >= OTP_MAX_ATTEMPTS) { sawLockout = true; continue; }
+    if (hashOtp(supplied) === user.loginOtpHash) {
+      matched.push(user);
+    } else {
+      user.loginOtpAttempts += 1;
+      await user.save();
+    }
+  }
+
+  if (!matched.length) {
+    if (sawLockout) throw unauthorized('Too many incorrect codes. Ask for a new one.');
+    throw unauthorized('That code is not right, or it has expired.');
+  }
+
+  // The code is single-use whichever account it opened.
+  for (const user of matched) {
+    user.loginOtpHash = undefined;
+    user.loginOtpExpiresAt = undefined;
+    user.loginOtpAttempts = 0;
+    await user.save();
+  }
+
+  const usable = matched.filter((u) => u.status === 'ACTIVE' && u.tenantId?.status === 'ACTIVE');
+  if (!usable.length) throw unauthorized('This account is not active. Contact your administrator.');
   if (usable.length > 1) {
     return { needsOrgChoice: true, options: usable.map((u) => ({ userId: u._id, tenantName: u.tenantId.name })) };
   }
@@ -142,6 +252,7 @@ async function changePassword(user, currentPassword, newPassword) {
 }
 
 module.exports = {
+  requestLoginOtp, verifyLoginOtp,
   login, completeOrgChoice, loadSessionUser, createInviteToken, acceptInvite,
   requestPasswordReset, resetPassword, changePassword,
 };

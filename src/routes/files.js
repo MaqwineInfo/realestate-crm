@@ -3,7 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const { can } = require('../lib/access');
 const { forbidden, notFound } = require('../lib/errors');
 const {
-  BookingKycDocument, BookingReceipt, Booking, PartnerReraDocument, PartnerInvoice,
+  BookingKycDocument, BookingReceipt, Booking, PartnerReraDocument, PartnerInvoice, Activity, Lead,
 } = require('../db/models');
 const privateFiles = require('../lib/privateFiles');
 const postBooking = require('../services/postBooking');
@@ -69,6 +69,31 @@ const KINDS = {
       };
     },
   },
+  /**
+   * §18.7: a file or voice note attached to a lead note. Addressed by the
+   * attachment's own id, so one note's PDF cannot be fetched by guessing an
+   * index on another. Lead ownership is checked below, the same way the lead
+   * page itself checks it.
+   */
+  'note-attachment': {
+    permission: 'lead.view',
+    async load({ tenantId, id }) {
+      const activity = await Activity.findOne({ tenantId, 'attachments._id': id })
+        .select('attachments leadId').lean();
+      if (!activity) return null;
+      const file = (activity.attachments || []).find((a) => String(a._id) === String(id));
+      if (!file?.storageKey) return null;
+      return {
+        leadId: activity.leadId,
+        storageKey: file.storageKey,
+        mimeType: file.mime,
+        label: file.name || 'attachment',
+        entity: 'Activity',
+        entityId: activity._id,
+        inline: file.kind === 'VOICE',
+      };
+    },
+  },
   // §298: an invoice PDF is private. Internal reviewers read it here; a partner
   // reads their own through the portal route, which checks ownership instead.
   'cp-invoice': {
@@ -95,6 +120,19 @@ router.get('/app/files/:kind/:id', async (req, res, next) => {
 
     const target = await kind.load({ tenantId: req.tenantId, id: req.params.id });
     if (!target) throw notFound('That file could not be found.');
+
+    // A note attachment inherits the lead's visibility — an out-of-scope lead's
+    // files must not be readable just because the URL was shared.
+    if (target.leadId) {
+      const lead = await Lead.findOne({ tenantId: req.tenantId, _id: target.leadId })
+        .select('ownerUserId').lean();
+      if (!lead) throw notFound('That file could not be found.');
+      const { canActOn } = require('../lib/access');
+      const allowed = await canActOn(req.user, 'lead.view', lead.ownerUserId);
+      // Not-found rather than forbidden, matching the lead page: "this belongs
+      // to someone else" confirms the file exists to a user who cannot open it.
+      if (!allowed && lead.ownerUserId) throw notFound('That file could not be found.');
+    }
 
     // The file belongs to a booking, so booking visibility decides access too.
     if (target.bookingId) {

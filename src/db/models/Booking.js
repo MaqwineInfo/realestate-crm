@@ -106,6 +106,13 @@ const bookingSchema = new Schema({
     ip: { type: String },
     userAgent: { type: String },
     formVersion: { type: String },
+    /**
+     * §288: the form can be filled by the customer on their own link, or by
+     * staff from the panel with the customer present. An audit has to be able
+     * to tell those apart, and it can never be inferred after the fact.
+     */
+    filledBy: { type: String, enum: ['CUSTOMER', 'INTERNAL_USER'], default: 'CUSTOMER' },
+    filledByUserId: { type: Schema.Types.ObjectId, ref: 'User' },
   },
 
   /**

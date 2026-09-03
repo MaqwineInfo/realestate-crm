@@ -28,6 +28,19 @@ const userSchema = new Schema({
   inviteExpiresAt: { type: Date },
   resetTokenHash: { type: String },
   resetExpiresAt: { type: Date },
+
+  /**
+   * §5.4: signing in with a mobile number and a one-time code, for staff who
+   * work from a phone and never remember a password.
+   *
+   * Only the hash is stored, the code expires, and attempts are capped — a
+   * six-digit code without a ceiling is a short brute force, not a factor.
+   * Same shape as the customer booking-form OTP (§117), deliberately.
+   */
+  loginOtpHash: { type: String },
+  loginOtpExpiresAt: { type: Date },
+  loginOtpAttempts: { type: Number, default: 0 },
+  loginOtpSentAt: { type: Date },
 }, { timestamps: true });
 
 userSchema.plugin(tenantGuard);
@@ -38,11 +51,17 @@ userSchema.methods.canLogin = function canLogin() {
   return this.status === 'ACTIVE' && !!this.passwordHash;
 };
 
+/** §5.4: an OTP sign-in needs an active account and a number to send to. */
+userSchema.methods.canLoginWithOtp = function canLoginWithOtp() {
+  return this.status === 'ACTIVE' && !!this.normalizedMobile;
+};
+
 userSchema.set('toJSON', {
   transform(doc, ret) {
     delete ret.passwordHash;
     delete ret.inviteTokenHash;
     delete ret.resetTokenHash;
+    delete ret.loginOtpHash;
     return ret;
   },
 });

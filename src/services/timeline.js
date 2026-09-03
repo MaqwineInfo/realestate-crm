@@ -81,11 +81,22 @@ async function forLead({ tenantId, leadId, limit = 50, before }) {
  * Spec §22: internal notes with @mentions. No separate chat module — a mention
  * is a timeline note plus a notification with a deep link back to the lead.
  */
-async function addNote({ tenantId, leadId, contactId, actor, body, mentionUserIds = [] }) {
+async function addNote({
+  tenantId, leadId, contactId, actor, body, mentionUserIds = [], attachments = [],
+}) {
+  const voice = attachments.filter((a) => a.kind === 'VOICE').length;
+  const files = attachments.length - voice;
+  // The title says what is on the note, so the timeline reads without opening it.
+  const extras = [
+    voice ? `${voice} voice note${voice === 1 ? '' : 's'}` : null,
+    files ? `${files} file${files === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
+
   const activity = await log({
     tenantId, leadId, contactId, type: 'NOTE_ADDED',
-    title: 'Note added', body, actor, editable: true,
-    mentionUserIds,
+    title: extras.length ? `Note added · ${extras.join(', ')}` : 'Note added',
+    body, actor, editable: true,
+    mentionUserIds, attachments,
   });
 
   if (mentionUserIds.length) {

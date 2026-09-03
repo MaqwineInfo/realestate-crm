@@ -176,6 +176,22 @@
     sync();
   });
 
+  /* The channel-partner wizard asks for the type and the legal name on the same
+     step, because the server refuses a company without one. Required only while
+     it is showing, so an individual applicant is never blocked by it. */
+  document.querySelectorAll('[data-company-only]').forEach(function (block) {
+    var typeSelect = document.getElementById('partnerTypeSelect');
+    if (!typeSelect) return;
+    var input = block.querySelector('input, select, textarea');
+    var sync = function () {
+      var isCompany = typeSelect.value === 'COMPANY';
+      block.hidden = !isCompany;
+      if (input) input.required = isCompany;
+    };
+    typeSelect.addEventListener('change', sync);
+    sync();
+  });
+
   // Stage pickers filter their sub-stage list so an invalid pair cannot be sent.
   document.querySelectorAll('[data-substage-for]').forEach(function (select) {
     var stageSelect = document.getElementById(select.getAttribute('data-substage-for'));
@@ -455,4 +471,405 @@ document.querySelectorAll('[data-reorder]').forEach(function (form) {
   document.addEventListener('click', function (e) {
     if (!form.contains(e.target)) box.hidden = true;
   });
+}());
+
+/* Back links return to the list the user actually came from — with its filters
+   still applied — and fall back to the plain href when they arrived any other
+   way (a bookmark, a new tab, a link from outside). */
+(function () {
+  document.querySelectorAll('[data-back]').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      var ref = document.referrer;
+      if (!ref || history.length < 2) return;
+      var sameOrigin = ref.indexOf(window.location.origin + '/app/') === 0;
+      // Only step back when the previous page was the list this link points at.
+      if (sameOrigin && ref.indexOf(link.getAttribute('href')) === (window.location.origin).length) {
+        e.preventDefault();
+        history.back();
+      }
+    });
+  });
+}());
+
+/* Mobile numbers: warn about the wrong length for the country actually chosen,
+   before the form is submitted. The server validates the same rule — this is
+   only here so the correction happens while the number is still on screen. */
+(function () {
+  document.querySelectorAll('.phone-input').forEach(function (wrap) {
+    var select = wrap.querySelector('[data-calling-code]');
+    var input = wrap.querySelector('[data-phone-national]');
+    var hint = wrap.parentNode.querySelector('[data-phone-hint]');
+    if (!select || !input || !hint) return;
+
+    var check = function () {
+      var opt = select.options[select.selectedIndex];
+      var lengths = (opt.getAttribute('data-lengths') || '').split(',').filter(Boolean).map(Number);
+      var digits = input.value.replace(/\D/g, '');
+      var ok = !digits.length || !lengths.length || lengths.indexOf(digits.length) > -1;
+      input.classList.toggle('is-error', !ok);
+      hint.classList.toggle('is-error', !ok);
+      hint.textContent = digits.length && !ok
+        ? 'A ' + opt.textContent.trim().split(' ').slice(1).join(' ') + ' number is '
+          + lengths.join(' or ') + ' digits — this one has ' + digits.length + '.'
+        : (lengths.length ? lengths.join(' or ') + ' digits' : '');
+      input.setCustomValidity(ok ? '' : 'Check the number of digits for the country selected.');
+    };
+
+    select.addEventListener('change', check);
+    input.addEventListener('input', check);
+    check();
+  });
+}());
+
+/* The tag filter. A contact can carry many tags, so the list needs to be
+   searchable once a tenant has more than a handful. */
+(function () {
+  document.querySelectorAll('[data-tag-picker]').forEach(function (picker) {
+    var filter = picker.querySelector('[data-tag-filter]');
+    var empty = picker.querySelector('[data-tag-empty]');
+    if (!filter) return;
+    var options = Array.prototype.slice.call(picker.querySelectorAll('.tag-option'));
+
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var shown = 0;
+      options.forEach(function (opt) {
+        // A selected tag always stays visible, or filtering would hide a choice.
+        var checked = opt.querySelector('input').checked;
+        var match = !q || checked || opt.getAttribute('data-tag-name').indexOf(q) > -1;
+        opt.hidden = !match;
+        if (match) shown += 1;
+      });
+      if (empty) empty.hidden = shown > 0;
+    });
+  });
+}());
+
+/* Repeating form rows (site contacts, configurations). The last row is cloned
+   and cleared, so the markup stays a plain table and the form still submits
+   whatever rows exist with JavaScript off. */
+(function () {
+  document.querySelectorAll('[data-row-table]').forEach(function (table) {
+    var kind = table.getAttribute('data-row-table');
+    var body = table.querySelector('tbody');
+    var addBtn = document.querySelector('[data-row-add="' + kind + '"]');
+    if (!body || !addBtn) return;
+
+    var blankRow = function () {
+      var template = body.rows[0];
+      if (!template) return null;
+      var row = template.cloneNode(true);
+      row.querySelectorAll('input, select').forEach(function (el) {
+        if (el.type === 'radio') { el.checked = false; return; }
+        if (el.tagName === 'SELECT') { el.selectedIndex = 0; return; }
+        el.value = '';
+      });
+      return row;
+    };
+
+    // An empty table has nothing to clone, so keep one hidden template around.
+    var template = body.rows[0] ? body.rows[0].cloneNode(true) : null;
+
+    addBtn.addEventListener('click', function () {
+      var row = blankRow() || (template && template.cloneNode(true));
+      if (!row) return;
+      row.querySelectorAll('input, select').forEach(function (el) {
+        if (el.type === 'radio') { el.checked = false; el.value = String(body.rows.length); }
+        else if (el.tagName !== 'SELECT') el.value = '';
+      });
+      body.appendChild(row);
+      var first = row.querySelector('input, select');
+      if (first) first.focus();
+    });
+
+    body.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-row-remove]')) return;
+      var row = e.target.closest('tr');
+      if (!row) return;
+      // Never leave the table with nothing to clone from — blank it instead.
+      if (body.rows.length === 1) {
+        row.querySelectorAll('input').forEach(function (el) {
+          if (el.type === 'radio') el.checked = false; else el.value = '';
+        });
+        return;
+      }
+      row.remove();
+      // Radio values index the rows, so they have to be renumbered after a removal.
+      Array.prototype.forEach.call(body.rows, function (r, i) {
+        var radio = r.querySelector('input[type=radio]');
+        if (radio) radio.value = String(i);
+      });
+    });
+  });
+}());
+
+/* A renamed project type still has to tell the rest of the app how it behaves,
+   so the semantic travels in a hidden field alongside the chosen id. */
+(function () {
+  var select = document.getElementById('projectTypeId');
+  var semantic = document.querySelector('[data-type-semantic]');
+  if (!select || !semantic) return;
+  var sync = function () {
+    var opt = select.options[select.selectedIndex];
+    var value = opt && opt.getAttribute('data-semantic');
+    if (value) semantic.value = value;
+  };
+  select.addEventListener('change', sync);
+  sync();
+}());
+
+/* Referrer lookup (§9.1). The chosen type decides which book is searched, so a
+   referral ends up pointing at a real record rather than a typed-in name. With
+   JavaScript off the free-text name and mobile fields still capture it. */
+(function () {
+  var panel = document.querySelector('[data-referral-panel]');
+  if (!panel || !window.fetch) return;
+
+  var typeSelect = panel.querySelector('[data-referral-type]');
+  var wrap = panel.querySelector('[data-referrer-lookup]');
+  var input = panel.querySelector('[data-referrer-search]');
+  var box = panel.querySelector('[data-referrer-results]');
+  var contactId = panel.querySelector('[data-referrer-contact]');
+  var partnerId = panel.querySelector('[data-referrer-partner]');
+  var chosen = panel.querySelector('[data-referrer-chosen]');
+  var chosenLabel = panel.querySelector('[data-referrer-label]');
+  var clearBtn = panel.querySelector('[data-referrer-clear]');
+  var nameField = document.getElementById('referrerName');
+  var mobileField = document.getElementById('referrerMobile');
+  if (!typeSelect || !wrap || !input || !box) return;
+
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+
+  var clear = function () {
+    contactId.value = '';
+    partnerId.value = '';
+    chosen.hidden = true;
+    input.hidden = false;
+    input.value = '';
+    box.hidden = true;
+  };
+
+  typeSelect.addEventListener('change', function () {
+    wrap.hidden = !typeSelect.value;
+    clear();
+  });
+  wrap.hidden = !typeSelect.value;
+
+  clearBtn.addEventListener('click', clear);
+
+  var timer = null;
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      var q = input.value.trim();
+      if (q.length < 2) { box.hidden = true; return; }
+      fetch('/api/referrers?type=' + encodeURIComponent(typeSelect.value)
+            + '&q=' + encodeURIComponent(q), { headers: { accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data) { box.hidden = true; return; }
+          if (!data.results.length) {
+            box.innerHTML = '<div class="lookup-empty">Nobody found — type the name below instead.</div>';
+            box.hidden = false;
+            return;
+          }
+          box.innerHTML = data.results.map(function (r) {
+            return '<button type="button" class="lookup-row" data-id="' + esc(r.id) + '"'
+              + ' data-label="' + esc(r.label) + '" data-mobile="' + esc(r.mobile) + '">'
+              + '<strong>' + esc(r.label) + '</strong>'
+              + (r.sub ? '<span class="t-sub">' + esc(r.sub) + '</span>' : '')
+              + '</button>';
+          }).join('');
+          box.hidden = false;
+        })
+        .catch(function () { box.hidden = true; });
+    }, 250);
+  });
+
+  box.addEventListener('click', function (e) {
+    var row = e.target.closest('.lookup-row');
+    if (!row) return;
+    var isPartner = typeSelect.value === 'CHANNEL_PARTNER';
+    (isPartner ? partnerId : contactId).value = row.getAttribute('data-id');
+    (isPartner ? contactId : partnerId).value = '';
+    chosenLabel.textContent = row.getAttribute('data-label');
+    chosen.hidden = false;
+    input.hidden = true;
+    box.hidden = true;
+    // Keep the readable name on the lead too, so a list never has to join.
+    if (nameField) nameField.value = row.getAttribute('data-label');
+    if (mobileField && row.getAttribute('data-mobile')) mobileField.value = row.getAttribute('data-mobile');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!wrap.contains(e.target)) box.hidden = true;
+  });
+}());
+
+/* Voice notes (§18.7). MediaRecorder is built into the browser, so there is no
+   library and nothing to install — and where it is unavailable the block stays
+   hidden and the note still takes text and files. */
+(function () {
+  var block = document.querySelector('[data-recorder]');
+  if (!block) return;
+  var form = block.closest('form');
+  if (!form || !window.MediaRecorder || !navigator.mediaDevices) return;
+  block.hidden = false;
+
+  var startBtn = block.querySelector('[data-rec-start]');
+  var stopBtn = block.querySelector('[data-rec-stop]');
+  var discardBtn = block.querySelector('[data-rec-discard]');
+  var timeEl = block.querySelector('[data-rec-time]');
+  var playback = block.querySelector('[data-rec-playback]');
+  var hint = block.querySelector('[data-rec-hint]');
+
+  var recorder = null;
+  var chunks = [];
+  var stream = null;
+  var ticker = null;
+  var seconds = 0;
+  var blob = null;
+
+  var clock = function () {
+    var m = Math.floor(seconds / 60);
+    var s = seconds % 60;
+    timeEl.innerHTML = '<span class="dot" aria-hidden="true"></span> ' + m + ':' + (s < 10 ? '0' : '') + s;
+  };
+
+  // The stream keeps the microphone indicator lit, so release it the moment
+  // recording stops rather than when the page unloads.
+  var release = function () {
+    if (!stream) return;
+    stream.getTracks().forEach(function (t) { t.stop(); });
+    stream = null;
+  };
+
+  var reset = function () {
+    blob = null;
+    chunks = [];
+    seconds = 0;
+    clearInterval(ticker);
+    timeEl.hidden = true;
+    discardBtn.hidden = true;
+    playback.hidden = true;
+    playback.removeAttribute('src');
+    startBtn.hidden = false;
+    stopBtn.hidden = true;
+  };
+
+  startBtn.addEventListener('click', function () {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+      stream = s;
+      chunks = [];
+      recorder = new MediaRecorder(s);
+      recorder.addEventListener('dataavailable', function (e) {
+        if (e.data && e.data.size) chunks.push(e.data);
+      });
+      recorder.addEventListener('stop', function () {
+        release();
+        blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        playback.src = URL.createObjectURL(blob);
+        playback.hidden = false;
+        discardBtn.hidden = false;
+      });
+      recorder.start();
+      seconds = 0;
+      clock();
+      timeEl.hidden = false;
+      startBtn.hidden = true;
+      stopBtn.hidden = false;
+      ticker = setInterval(function () { seconds += 1; clock(); }, 1000);
+    }).catch(function () {
+      hint.textContent = 'Microphone unavailable — check the browser permission for this site.';
+      hint.classList.add('is-error');
+    });
+  });
+
+  stopBtn.addEventListener('click', function () {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    clearInterval(ticker);
+    startBtn.hidden = false;
+    stopBtn.hidden = true;
+  });
+
+  discardBtn.addEventListener('click', reset);
+
+  // The recording only exists in memory, so it is attached at submit time.
+  form.addEventListener('submit', function () {
+    if (!blob) return;
+    var dt = new DataTransfer();
+    var ext = (blob.type.indexOf('ogg') > -1) ? 'ogg' : (blob.type.indexOf('mp4') > -1 ? 'm4a' : 'webm');
+    dt.items.add(new File([blob], 'voice-note.' + ext, { type: blob.type }));
+    var input = form.querySelector('input[name=voiceNote]');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'file';
+      input.name = 'voiceNote';
+      input.hidden = true;
+      form.appendChild(input);
+    }
+    input.files = dt.files;
+    var secs = form.querySelector('input[name=voiceSeconds]');
+    if (!secs) {
+      secs = document.createElement('input');
+      secs.type = 'hidden';
+      secs.name = 'voiceSeconds';
+      form.appendChild(secs);
+    }
+    secs.value = String(seconds);
+  });
+}());
+
+/* The capture form's stage picker. A stage that closes the lead needs no
+   follow-up, so the block disappears — same rule as the complete-action drawer,
+   and the server enforces it either way. */
+(function () {
+  var stage = document.querySelector('[data-capture-stage]');
+  var block = document.querySelector('[data-capture-next]');
+  var hint = document.querySelector('[data-capture-terminal-hint]');
+  if (!stage || !block || !hint) return;
+
+  var sync = function () {
+    var opt = stage.options[stage.selectedIndex];
+    var terminal = opt && opt.getAttribute('data-terminal') === '1';
+    block.hidden = terminal;
+    hint.hidden = !terminal;
+    block.querySelectorAll('select, input').forEach(function (el) { el.disabled = terminal; });
+  };
+  stage.addEventListener('change', sync);
+  sync();
+
+  // Quick date chips, same shorthand the complete-action drawer uses.
+  block.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-preset]');
+    if (!chip) return;
+    e.preventDefault();
+    var preset = chip.getAttribute('data-preset');
+    var days = preset === 'today' ? 0 : Number(preset);
+    var d = new Date(Date.now() + days * 86400000);
+    document.getElementById('nextDate').value =
+      d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    var time = chip.getAttribute('data-preset-time');
+    if (time) document.getElementById('nextTime').value = time;
+    block.querySelectorAll('[data-preset]').forEach(function (c) { c.classList.remove('on'); });
+    chip.classList.add('on');
+  });
+
+  // Default to tomorrow so the common case is one click, not four.
+  var dateInput = document.getElementById('nextDate');
+  if (dateInput && !dateInput.value) {
+    var t = new Date(Date.now() + 86400000);
+    dateInput.value = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  }
+}());
+
+/* Print the visiting card. The print stylesheet hides everything else, so this
+   is just the trigger. */
+(function () {
+  var btn = document.querySelector('[data-print-card]');
+  if (btn) btn.addEventListener('click', function () { window.print(); });
 }());

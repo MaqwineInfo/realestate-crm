@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { badRequest } = require('../lib/errors');
 const { User } = require('../db/models');
 const config = require('../config');
+const { publicUrl } = require('../lib/publicUrl');
 
 const router = express.Router();
 
@@ -54,6 +55,78 @@ router.post('/login/organization', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/* ------------------------------ OTP sign-in ------------------------------- */
+
+router.get('/login/otp', (req, res) => {
+  if (req.user) return res.redirect('/app/dashboard');
+  res.render('pages/auth/login-otp', {
+    title: 'Sign in with your mobile',
+    next: req.query.next || '',
+    mobile: '',
+    step: 'REQUEST',
+    devCodes: [],
+  });
+});
+
+const otpRequestSchema = z.object({
+  mobile: z.string().trim().min(6, 'Enter your mobile number.'),
+  next: z.string().optional(),
+});
+
+router.post('/login/otp', (req, res, next) => req.app.locals.limiters.auth(req, res, next),
+  validate(otpRequestSchema), async (req, res, next) => {
+    try {
+      const result = await authService.requestLoginOtp(req.data.mobile);
+      /**
+       * The same message whether or not the number is registered — a login
+       * screen that says "no such user" is a staff directory for anyone with a
+       * phone. Without an SMS provider configured the code is surfaced in
+       * development only, never in production.
+       */
+      req.session.flash = {
+        type: 'success',
+        message: 'If that number is registered, a code is on its way.',
+      };
+      res.render('pages/auth/login-otp', {
+        title: 'Enter your code',
+        next: req.data.next || '',
+        mobile: req.data.mobile,
+        step: 'VERIFY',
+        devCodes: config.env === 'production' ? [] : result.codes.map((c) => c.code),
+        flash: req.session.flash,
+      });
+      delete req.session.flash;
+    } catch (err) { next(err); }
+  });
+
+const otpVerifySchema = z.object({
+  mobile: z.string().trim().min(6, 'Enter your mobile number.'),
+  code: z.string().trim().min(1, 'Enter the code you were sent.'),
+  next: z.string().optional(),
+});
+
+router.post('/login/otp/verify', (req, res, next) => req.app.locals.limiters.auth(req, res, next),
+  validate(otpVerifySchema), async (req, res, next) => {
+    try {
+      const result = await authService.verifyLoginOtp(req.data.mobile, req.data.code);
+
+      // Same org chooser the password path uses — one person, two organizations.
+      if (result.needsOrgChoice) {
+        req.session.pendingLogin = {
+          userIds: result.options.map((o) => String(o.userId)),
+          next: req.data.next,
+        };
+        return res.render('pages/auth/choose-org', {
+          title: 'Choose organization',
+          options: result.options,
+        });
+      }
+
+      await establishSession(req, result.user);
+      res.redirect(safeNext(req.data.next));
+    } catch (err) { next(err); }
+  });
+
 router.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
@@ -68,7 +141,7 @@ router.post('/forgot-password', (req, res, next) => req.app.locals.limiters.auth
       const links = await authService.requestPasswordReset(req.body.email);
       // §17.4-style behaviour: without a configured email provider the link is
       // surfaced in the UI rather than silently going nowhere.
-      const devLinks = config.env === 'production' ? [] : links.map((l) => `${config.appUrl}/reset-password?token=${l.token}`);
+      const devLinks = config.env === 'production' ? [] : links.map((l) => `${publicUrl(req)}/reset-password?token=${l.token}`);
       req.session.flash = { type: 'success', message: 'If that email is registered, a reset link is on its way.' };
       res.render('pages/auth/forgot', { title: 'Reset password', devLinks, flash: req.session.flash });
       delete req.session.flash;

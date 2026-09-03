@@ -59,14 +59,20 @@ async function providerFor({ tenantId, channel }) {
  */
 async function send({
   tenantId, channel, contact, contactId, leadId, campaignId, templateId, template,
-  vars = {}, purpose = 'MANUAL', sentBy, subject, body,
+  vars = {}, purpose = 'MANUAL', sentBy, subject, body, to: explicitTo,
 }) {
   const resolvedContact = contact || (contactId ? await Contact.findOne({ tenantId, _id: contactId }).lean() : null);
   const tpl = template || (templateId ? await Template.findOne({ tenantId, _id: templateId }).lean() : null);
 
   const renderedBody = render(body ?? tpl?.body, vars);
   const renderedSubject = render(subject ?? tpl?.subject, vars);
-  const to = recipientFor(resolvedContact, channel);
+  /**
+   * Normally the recipient comes off the contact record. `to` is for the few
+   * operational messages whose recipient is not a contact at all — a staff
+   * sign-in code goes to a User's mobile (§5.4), and no consent rule applies
+   * because it is not marketing and the person asked for it.
+   */
+  const to = explicitTo || recipientFor(resolvedContact, channel);
 
   const base = {
     tenantId,

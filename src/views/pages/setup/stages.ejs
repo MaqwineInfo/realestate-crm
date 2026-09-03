@@ -17,7 +17,11 @@
 <div class="card">
   <div class="card-body">
     <% stages.forEach(function (stage) {
-         const subs = subStages.filter(function (s) { return String(s.stageId) === String(stage._id); });
+         const all = subStages.filter(function (s) { return String(s.stageId) === String(stage._id); });
+         const subs = all.filter(function (s) { return !s.parentSubStageId; });
+         const childrenOf = function (parent) {
+           return all.filter(function (s) { return String(s.parentSubStageId || '') === String(parent._id); });
+         };
          const actionOnly = ['BOOKED', 'BLOCKED'].includes(stage.semanticType); %>
       <details class="stage-node" <%= subs.length ? 'open' : '' %>>
         <summary>
@@ -52,17 +56,32 @@
             <p class="small muted mb-0">No sub-stages. Outcomes recorded against this stage will have no qualifier.</p>
           <% } else { %>
             <ul class="substage-tree">
-              <% subs.forEach(function (s, i) { %>
+              <% subs.forEach(function (s, i) {
+                   const kids = childrenOf(s);
+                   const lastSub = i === subs.length - 1; %>
                 <li>
-                  <span class="branch" aria-hidden="true"><%= i === subs.length - 1 ? '└──' : '├──' %></span>
+                  <span class="branch" aria-hidden="true"><%= lastSub && !kids.length ? '└──' : '├──' %></span>
                   <span class="grow"><%= s.name %></span>
                   <% if (s.defaultActionTypeId) { %><span class="muted small">default next action set</span><% } %>
                   <% if (!s.active) { %><span class="badge b-red">Inactive</span><% } %>
+                  <button class="btn btn-ghost btn-sm" data-drawer="drawer-child-<%= s._id %>">Add child</button>
                   <form method="post" action="/api/setup/sub-stages/<%= s._id %>/toggle">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <button class="btn btn-ghost btn-sm" type="submit"><%= s.active ? 'Deactivate' : 'Activate' %></button>
                   </form>
                 </li>
+                <%# §11.4b: the third level, indented under its parent. %>
+                <% kids.forEach(function (k, ki) { %>
+                  <li class="substage-child">
+                    <span class="branch" aria-hidden="true"><%= lastSub ? '\u00a0\u00a0\u00a0' : '│\u00a0\u00a0' %><%= ki === kids.length - 1 ? '└──' : '├──' %></span>
+                    <span class="grow"><%= k.name %></span>
+                    <% if (!k.active) { %><span class="badge b-red">Inactive</span><% } %>
+                    <form method="post" action="/api/setup/sub-stages/<%= k._id %>/toggle">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-ghost btn-sm" type="submit"><%= k.active ? 'Deactivate' : 'Activate' %></button>
+                    </form>
+                  </li>
+                <% }) %>
               <% }) %>
             </ul>
           <% } %>
@@ -99,6 +118,24 @@
       <input type="number" id="ss-offset-<%= stage._id %>" name="defaultFollowupOffsetHours" min="0" step="1">
     </div>
   <%- include('../../partials/drawer-close', { cta: 'Add sub-stage' }) %>
+<% }) %>
+
+<%# One add-child drawer per second-level sub-stage (§11.4b). %>
+<% subStages.filter(function (s) { return !s.parentSubStageId; }).forEach(function (s) { %>
+  <%- include('../../partials/drawer-open', { id: 'drawer-child-' + s._id, heading: 'Add child outcome under ' + s.name, action: '/api/setup/sub-stages' }) %>
+    <input type="hidden" name="stageId" value="<%= s.stageId %>">
+    <input type="hidden" name="parentSubStageId" value="<%= s._id %>">
+    <div class="read-only-summary">Parent sub-stage: <strong><%= s.name %></strong></div>
+    <div class="field">
+      <label for="cs-name-<%= s._id %>">Name</label>
+      <input type="text" id="cs-name-<%= s._id %>" name="name" required maxlength="60">
+    </div>
+    <div class="field">
+      <label for="cs-order-<%= s._id %>">Display order</label>
+      <input type="number" id="cs-order-<%= s._id %>" name="displayOrder" value="0" min="0">
+    </div>
+    <div class="hint">Three levels is the maximum — deeper than that is a list nobody can pick from.</div>
+  <%- include('../../partials/drawer-close', { cta: 'Add child outcome' }) %>
 <% }) %>
 
 <%- include('../../partials/drawer-open', { id: 'drawer-add-stage', heading: 'Add stage', action: '/api/setup/stages' }) %>

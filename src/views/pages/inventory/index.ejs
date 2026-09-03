@@ -31,7 +31,7 @@
         <input type="search" id="q" name="q" value="<%= query.q || '' %>">
       </div>
       <div class="field">
-        <label for="towerId">Tower</label>
+        <label for="towerId">Block / tower</label>
         <select id="towerId" name="towerId">
           <option value="">All</option>
           <% towers.forEach(function (t) { %>
@@ -149,7 +149,7 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label for="u-tower">Tower</label>
+        <label for="u-tower">Block / tower</label>
         <select id="u-tower" name="towerId">
           <option value="">None</option>
           <% towers.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %></option><% }) %>

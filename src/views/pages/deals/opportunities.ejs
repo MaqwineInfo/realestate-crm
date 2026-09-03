@@ -33,11 +33,15 @@
       <tbody>
         <% items.forEach(function (o) { %>
           <tr>
+            <%# The opportunity always came from a booking, so the name opens it. %>
             <td data-label="Customer">
-              <span class="t-name"><%= o.contactId ? o.contactId.displayName : '—' %></span>
+              <a class="t-name" href="/app/bookings/<%= o.bookingId._id || o.bookingId %>"><%= o.contactId ? o.contactId.displayName : '—' %></a>
               <div class="t-sub"><%= o.contactId ? h.mobile(o.contactId.primaryMobile) : '' %></div>
             </td>
-            <td data-label="Unit"><%= o.unitId ? o.unitId.unitNumber : '—' %><div class="t-sub"><%= o.projectId ? o.projectId.name : '' %></div></td>
+            <td data-label="Unit">
+              <a href="/app/bookings/<%= o.bookingId._id || o.bookingId %>"><%= o.unitId ? o.unitId.unitNumber : '—' %></a>
+              <div class="t-sub"><%= o.projectId ? o.projectId.name : '' %></div>
+            </td>
             <td data-label="Expected"><%= o.expectedAvailableDate ? h.date(o.expectedAvailableDate) : 'Not set' %></td>
             <td data-label="Amount" class="num">
               <%= kind === 'rental'

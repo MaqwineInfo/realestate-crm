@@ -195,7 +195,9 @@ async function submitRegistration({ tenantId, tenant, actor = null, registration
   const policy = await rera.policyFor({ tenantId, tenant });
   if (policy.required) {
     const certificate = await PartnerReraDocument.findOne({ tenantId, registrationId, active: true }).lean();
-    if (!certificate) throw badRequest('A RERA certificate is required before this application can be submitted.');
+    if (!certificate) {
+      throw badRequest('A RERA certificate is required before this application can be submitted. Add it on step 3 — or if this partner does not need one, turn off "Require RERA" in Setup → Channel partners.');
+    }
   }
 
   // §216: the duplicate check runs at submission, when there is something to check.

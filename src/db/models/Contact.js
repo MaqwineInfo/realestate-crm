@@ -23,7 +23,13 @@ const contactSchema = new Schema({
   pincode: { type: String, trim: true },
   address: { type: String, maxlength: 500 },
   tagIds: [{ type: Schema.Types.ObjectId, ref: 'Tag', index: true }],
-  ownerUserId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+  /**
+   * §37: every contact has an owner — an ownerless one is worked by nobody and
+   * falls out of every scoped list. Enforced here rather than on the form so
+   * webhook capture and QR walk-ins are held to it too; the service defaults it
+   * to whoever (or whatever) created the record.
+   */
+  ownerUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   status: { type: String, enum: ['ACTIVE', 'ARCHIVED'], default: 'ACTIVE', index: true },
   // §67: campaign sending must respect these; operational contact is unaffected.
   consent: {
