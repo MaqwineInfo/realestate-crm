@@ -1,0 +1,83 @@
+<%- include('../../partials/app-head') %>
+<%
+  const p = partner.profile || {};
+  const isCompany = p.partnerType === 'COMPANY';
+  const address = [p.correspondenceAddress || p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ');
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/channel-partners/' + partner._id, label: displayName }) %>
+    <h1>Visiting card</h1>
+    <div class="sub">Print it, share it as an image, or let a customer scan the code to save the contact.</div>
+  </div>
+  <div class="btn-group">
+    <a class="btn" href="/app/channel-partners/<%= partner._id %>/card.vcf">Download contact (.vcf)</a>
+    <button class="btn btn-primary" data-print-card>Print</button>
+  </div>
+</div>
+
+<%#
+  §20.4: a real card, at real proportions (3.5 × 2in). The RERA number is on the
+  face of it deliberately — it is the one thing a customer is told to check, and
+  a card that hides it is the card a customer should not trust.
+%>
+<div class="card-stage">
+  <div class="visiting-card" id="visiting-card">
+    <div class="vc-main">
+      <div class="vc-org"><%= tenant.name %></div>
+      <div class="vc-name"><%= displayName %></div>
+      <div class="vc-role">
+        <%= isCompany ? 'Authorised Channel Partner' : 'Channel Partner' %>
+        <% if (partner.partnerCode) { %> · <%= partner.partnerCode %><% } %>
+      </div>
+
+      <dl class="vc-lines">
+        <% if (isCompany && p.primaryContactName) { %>
+          <div><dt>Contact</dt><dd><%= p.primaryContactName %></dd></div>
+        <% } %>
+        <% if (p.mobile) { %><div><dt>Mobile</dt><dd><a href="tel:<%= p.normalizedMobile || p.mobile %>"><%= p.mobile %></a></dd></div><% } %>
+        <% if (p.email) { %><div><dt>Email</dt><dd><%= p.email %></dd></div><% } %>
+        <% if (p.website) { %><div><dt>Web</dt><dd><%= p.website %></dd></div><% } %>
+        <% if (address) { %><div><dt>Address</dt><dd><%= address %></dd></div><% } %>
+      </dl>
+
+      <div class="vc-rera">
+        <% if (partner.reraNumber) { %>
+          RERA <%= partner.reraNumber %><%
+            %><% if (partner.reraExpiryDate) { %> · valid to <%= h.date(partner.reraExpiryDate) %><% } %>
+        <% } else { %>
+          <span class="vc-rera-missing">RERA number not on file</span>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="vc-qr">
+      <img src="/app/channel-partners/<%= partner._id %>/card-qr.png" alt="Scan to save <%= displayName %> to your contacts" width="150" height="150">
+      <span>Scan to save</span>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-2" style="max-width:640px">
+  <div class="card-body">
+    <h2 style="font-size:14px;margin-bottom:6px">Sharing this card</h2>
+    <p class="small muted mb-1">
+      The QR opens this page, where the customer taps <strong>Download contact</strong> and the partner
+      lands in their phone book — name, mobile, email and the RERA number together.
+    </p>
+    <% if (!partner.reraNumber) { %>
+      <div class="flash flash-warn mb-0">
+        This partner has no RERA number recorded, so the card cannot show one.
+        Add the certificate from the partner's Documents tab before sharing it.
+      </div>
+    <% } %>
+    <% if (partner.status !== 'ACTIVE') { %>
+      <div class="flash flash-warn mb-0">
+        This partner is <%= partner.status.toLowerCase() %> — the card should not be circulated.
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

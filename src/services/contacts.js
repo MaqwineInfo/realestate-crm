@@ -40,6 +40,22 @@ async function possibleDuplicatesByEmail({ tenantId, email, excludeId }) {
   return Contact.find(filter).select('displayName primaryMobile email').lean();
 }
 
+/**
+ * §37: a contact must have an owner. A human creating one supplies it (or
+ * inherits it); an inbound webhook or a QR walk-in has no actor at all, so it
+ * falls back to a real administrator rather than leaving the record ownerless
+ * and invisible to every scoped list.
+ */
+async function resolveOwner({ tenantId, payload, actor }) {
+  if (payload.ownerUserId) return payload.ownerUserId;
+  if (actor?._id) return actor._id;
+  const { User } = require('../db/models');
+  const admin = await User.findOne({ tenantId, status: 'ACTIVE' })
+    .sort({ createdAt: 1 }).select('_id').lean();
+  if (!admin) throw badRequest('This organization has no active user to own the contact.');
+  return admin._id;
+}
+
 async function create({ tenantId, tenant, actor, payload, createdVia = 'MANUAL' }) {
   const norm = normalize(payload, tenant?.callingCode);
 
@@ -65,7 +81,7 @@ async function create({ tenantId, tenant, actor, payload, createdVia = 'MANUAL' 
     pincode: payload.pincode,
     address: payload.address,
     tagIds: payload.tagIds || [],
-    ownerUserId: payload.ownerUserId || actor?._id,
+    ownerUserId: await resolveOwner({ tenantId, payload, actor }),
     createdBy: actor?._id,
     createdVia,
   });

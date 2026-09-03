@@ -9,9 +9,38 @@ const listStages = ({ tenantId, includeInactive = false }) => Stage.find({
   tenantId, ...(includeInactive ? {} : { active: true }),
 }).sort({ displayOrder: 1 }).lean();
 
-const listSubStages = ({ tenantId, stageId, includeInactive = false }) => SubStage.find({
-  tenantId, ...(stageId ? { stageId } : {}), ...(includeInactive ? {} : { active: true }),
-}).sort({ displayOrder: 1 }).lean();
+/**
+ * Sub-stages ordered as the tree reads (§11.4b): each second-level outcome
+ * followed by its own children, with `depth` set so a picker can indent them.
+ * Sorting here rather than in each view keeps every list — the filter, the
+ * complete-action drawer, the setup screen — in the same order.
+ */
+async function listSubStages({ tenantId, stageId, includeInactive = false }) {
+  const rows = await SubStage.find({
+    tenantId, ...(stageId ? { stageId } : {}), ...(includeInactive ? {} : { active: true }),
+  }).sort({ displayOrder: 1, name: 1 }).lean();
+
+  const childrenOf = new Map();
+  rows.forEach((r) => {
+    const key = String(r.parentSubStageId || 'root');
+    if (!childrenOf.has(key)) childrenOf.set(key, []);
+    childrenOf.get(key).push(r);
+  });
+
+  const ordered = [];
+  (childrenOf.get('root') || []).forEach((parent) => {
+    ordered.push({ ...parent, depth: 0 });
+    (childrenOf.get(String(parent._id)) || []).forEach((child) => {
+      ordered.push({ ...child, depth: 1 });
+    });
+  });
+  // A child whose parent is filtered out (inactive) would otherwise vanish
+  // silently — keep it, flat, so history and filters still resolve it.
+  rows.forEach((r) => {
+    if (!ordered.some((o) => String(o._id) === String(r._id))) ordered.push({ ...r, depth: 0 });
+  });
+  return ordered;
+}
 
 const bySemantic = ({ tenantId, semanticType }) => Stage.findOne({ tenantId, semanticType, active: true }).lean();
 

@@ -1,0 +1,6 @@
+<%#
+  A back link for detail pages. Locals: href, label.
+  Uses the browser's own history when the referrer is inside the app, so
+  "back" returns to the list *as it was filtered* rather than resetting it.
+%>
+<a class="back-link" href="<%= href %>" data-back><span aria-hidden="true">←</span> <%= label %></a>

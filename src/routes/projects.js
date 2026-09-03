@@ -3,8 +3,13 @@ const { z } = require('zod');
 const { requireAuth, requirePermission } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const f = require('../lib/fields');
+const money = require('../lib/money');
+const phone = require('../lib/phone');
 const config = require('../config');
-const { Project } = require('../db/models');
+const { publicUrl } = require('../lib/publicUrl');
+const qrSheet = require('../lib/qrSheet');
+const { notFound, badRequest } = require('../lib/errors');
+const { Project, Amenity, ProjectType } = require('../db/models');
 const projectsService = require('../services/projects');
 const inventoryService = require('../services/inventory');
 
@@ -32,9 +37,13 @@ const projectSchema = z.object({
   mapUrl: f.optionalText(300),
   startingPriceMinor: f.moneyAmount,
   priceRangeMaxMinor: f.moneyAmount,
+  // §26.3: the scale the number was typed in. Amounts are stored in minor units
+  // either way — this only decides how the figure was meant to be read.
+  priceScale: f.enumField(['ONE', 'THOUSAND', 'LAKH', 'CRORE']),
   configurations: f.stringList,
   areaMin: f.optionalNumber,
   areaMax: f.optionalNumber,
+  areaUnit: f.enumField(Project.AREA_UNITS),
   possessionDate: f.optionalText(10),
   salesContactName: f.optionalText(100),
   salesContactMobile: f.optionalText(20),
@@ -42,13 +51,99 @@ const projectSchema = z.object({
   keyUsps: f.stringList,
   overview: f.optionalText(5000),
   amenities: f.stringList,
+  amenityIds: f.stringList,
+  projectTypeId: f.optionalId,
   highlights: f.stringList,
-});
+  // Repeating rows arrive as parallel arrays — one entry per row, in order.
+  contactName: f.stringList,
+  contactDesignation: f.stringList,
+  contactMobile: f.stringList,
+  contactEmail: f.stringList,
+  contactPrimary: f.optionalText(40),
+  configName: f.stringList,
+  configCarpet: f.stringList,
+  configBuiltUp: f.stringList,
+  configSaleable: f.stringList,
+  configAreaUnit: f.stringList,
+  configPrice: f.stringList,
+  configPossession: f.stringList,
+  configUnits: f.stringList,
+}).passthrough();
 
-const toProjectData = (data) => ({
-  ...data,
-  possessionDate: data.possessionDate ? new Date(data.possessionDate) : undefined,
-});
+/** The multiplier a typed price was meant to carry (§26.3). */
+const PRICE_SCALE = { ONE: 1, THOUSAND: 1e3, LAKH: 1e5, CRORE: 1e7 };
+
+/**
+ * Repeating form rows come back as parallel arrays. Zipping them here — and
+ * dropping rows whose required field is blank — keeps the "add another row"
+ * markup dumb and the model clean.
+ */
+function zipRows(data, keys, requiredKey) {
+  const lists = Object.fromEntries(keys.map((k) => [k.formField, data[k.formField] || []]));
+  const length = Math.max(0, ...keys.map((k) => lists[k.formField].length));
+  const rows = [];
+  for (let i = 0; i < length; i += 1) {
+    const row = {};
+    keys.forEach((k) => {
+      const raw = lists[k.formField][i];
+      const value = k.parse ? k.parse(raw) : (raw === '' ? undefined : raw);
+      if (value !== undefined && value !== null && !Number.isNaN(value)) row[k.field] = value;
+    });
+    if (row[requiredKey]) rows.push({ ...row, displayOrder: i });
+  }
+  return rows;
+}
+
+const num = (v) => (v === '' || v === undefined ? undefined : Number(v));
+const date = (v) => (v ? new Date(v) : undefined);
+
+const CONTACT_ROW = [
+  { formField: 'contactName', field: 'name' },
+  { formField: 'contactDesignation', field: 'designation' },
+  { formField: 'contactMobile', field: 'mobile' },
+  { formField: 'contactEmail', field: 'email' },
+];
+
+const CONFIG_ROW = [
+  { formField: 'configName', field: 'name' },
+  { formField: 'configCarpet', field: 'carpetArea', parse: num },
+  { formField: 'configBuiltUp', field: 'builtUpArea', parse: num },
+  { formField: 'configSaleable', field: 'saleableArea', parse: num },
+  { formField: 'configAreaUnit', field: 'areaUnit' },
+  { formField: 'configPrice', field: 'priceMinor', parse: (v) => (v === '' || v === undefined ? undefined : money.toMinor(v)) },
+  { formField: 'configPossession', field: 'possessionDate', parse: date },
+  { formField: 'configUnits', field: 'unitCount', parse: num },
+];
+
+function toProjectData(data, tenant) {
+  const scale = PRICE_SCALE[data.priceScale] || 1;
+  const siteContacts = zipRows(data, CONTACT_ROW, 'name').map((c, i) => ({
+    ...c,
+    normalizedMobile: c.mobile ? phone.normalizeMobile(c.mobile, tenant?.callingCode) : undefined,
+    isPrimary: String(data.contactPrimary || '') === String(i),
+  }));
+  // Exactly one primary, always — the mini site and the QR page need a number
+  // to show and must never have to guess which.
+  if (siteContacts.length && !siteContacts.some((c) => c.isPrimary)) siteContacts[0].isPrimary = true;
+
+  const configurationDetails = zipRows(data, CONFIG_ROW, 'name');
+
+  return {
+    ...data,
+    // A price typed as "85" in lakh is 85,00,000 — applied once, here.
+    startingPriceMinor: data.startingPriceMinor === undefined ? undefined : data.startingPriceMinor * scale,
+    priceRangeMaxMinor: data.priceRangeMaxMinor === undefined ? undefined : data.priceRangeMaxMinor * scale,
+    possessionDate: data.possessionDate ? new Date(data.possessionDate) : undefined,
+    siteContacts,
+    configurationDetails,
+    // The configuration name list stays in sync so existing filters keep working.
+    configurations: configurationDetails.length
+      ? configurationDetails.map((c) => c.name)
+      : data.configurations,
+    salesContactName: siteContacts.find((c) => c.isPrimary)?.name || data.salesContactName,
+    salesContactMobile: siteContacts.find((c) => c.isPrimary)?.mobile || data.salesContactMobile,
+  };
+}
 
 router.get('/app/projects', requirePermission('project.view'), async (req, res, next) => {
   try {
@@ -94,8 +189,21 @@ async function projectExtras(req, project) {
   };
 }
 
-router.get('/app/projects/new', requirePermission('project.create'), (req, res) => {
-  res.render('pages/projects/form', { title: 'New project', project: null, step: 'basics' });
+/** The managed lists the project form is built from (§26.1, §26.6). */
+async function formLists(tenantId) {
+  const [amenities, projectTypes] = await Promise.all([
+    Amenity.find({ tenantId, active: true }).sort({ group: 1, displayOrder: 1, name: 1 }).lean(),
+    ProjectType.find({ tenantId, active: true }).sort({ displayOrder: 1, name: 1 }).lean(),
+  ]);
+  return { amenities, projectTypes, areaUnits: Project.AREA_UNITS };
+}
+
+router.get('/app/projects/new', requirePermission('project.create'), async (req, res, next) => {
+  try {
+    res.render('pages/projects/form', {
+      title: 'New project', project: null, step: 'basics', ...(await formLists(req.tenantId)),
+    });
+  } catch (err) { next(err); }
 });
 
 router.post('/api/projects', requirePermission('project.create'), validate(projectSchema), async (req, res, next) => {
@@ -104,7 +212,7 @@ router.post('/api/projects', requirePermission('project.create'), validate(proje
     const project = await projectsService.create({
       tenantId: req.tenantId,
       actor: req.user,
-      data: { ...toProjectData(req.data), status: req.data.status || 'DRAFT' },
+      data: { ...toProjectData(req.data, req.tenant), status: req.data.status || 'DRAFT' },
     });
     req.session.flash = { type: 'success', message: 'Draft created. Continue through the steps — you can leave and come back.' };
     res.redirect(`/app/projects/${project._id}?step=location`);
@@ -120,9 +228,43 @@ router.get('/app/projects/:id', requirePermission('project.view'), async (req, r
       title: data.project.name,
       ...data,
       ...(await projectExtras(req, data.project)),
-      appUrl: config.appUrl,
+      appUrl: publicUrl(req),
       step: stepOf(req.query.step),
     });
+  } catch (err) { next(err); }
+});
+
+/**
+ * §25: the walk-in QR as a file. The screen used to print the URL as text, so
+ * anyone wanting a code had to retype it into a generator — which is also how
+ * a localhost address ended up on printed material.
+ *
+ * `.png` is the one to use in artwork; `.jpg` exists because that is what gets
+ * asked for; `.pdf` is an A4 sheet to print and stand at the gate.
+ */
+router.get('/app/projects/:id/qr.:ext', requirePermission('project.view'), async (req, res, next) => {
+  try {
+    const ext = String(req.params.ext).toLowerCase();
+    if (!['png', 'jpg', 'jpeg', 'pdf'].includes(ext)) throw notFound('Unknown QR format.');
+
+    const project = await Project.findOne({ tenantId: req.tenantId, _id: req.params.id })
+      .select('name qrToken city').lean();
+    if (!project) throw notFound('Project not found.');
+    if (!project.qrToken) throw badRequest('This project has no walk-in QR yet.');
+
+    const url = `${publicUrl(req)}/visit/${project.qrToken}`;
+    const slug = String(project.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project';
+
+    const body = ext === 'pdf'
+      ? await qrSheet.pdf({ url, title: project.name, subtitle: 'Scan to register your visit' })
+      : ext === 'png' ? await qrSheet.png(url) : await qrSheet.jpeg(url);
+
+    const type = ext === 'pdf' ? 'application/pdf' : (ext === 'png' ? 'image/png' : 'image/jpeg');
+    res.setHeader('Content-Type', type);
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}-walk-in-qr.${ext === 'jpeg' ? 'jpg' : ext}"`);
+    // The token is stable, but the file must never be cached by a shared proxy.
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(body);
   } catch (err) { next(err); }
 });
 
@@ -133,14 +275,16 @@ router.get('/app/projects/:id/edit', requirePermission('project.edit'), async (r
     // §27.2: every step past basics lives on the project screen itself.
     const step = stepOf(req.query.step);
     if (step !== 'basics') return res.redirect(`/app/projects/${project._id}?step=${step}`);
-    res.render('pages/projects/form', { title: `Edit ${project.name}`, project, step });
+    res.render('pages/projects/form', {
+      title: `Edit ${project.name}`, project, step, ...(await formLists(req.tenantId)),
+    });
   } catch (err) { next(err); }
 });
 
 router.post('/api/projects/:id', requirePermission('project.edit'), validate(projectSchema), async (req, res, next) => {
   try {
     await projectsService.update({
-      tenantId: req.tenantId, actor: req.user, projectId: req.params.id, data: toProjectData(req.data),
+      tenantId: req.tenantId, actor: req.user, projectId: req.params.id, data: toProjectData(req.data, req.tenant),
     });
     req.session.flash = { type: 'success', message: 'Project updated.' };
     const next$ = STEPS.includes(req.body.nextStep) ? req.body.nextStep : 'location';
@@ -285,7 +429,7 @@ router.post('/api/projects/:id/units/generate', requirePermission('inventory.edi
         title: data.project.name,
         ...data,
         ...(await projectExtras(req, data.project)),
-        appUrl: config.appUrl,
+        appUrl: publicUrl(req),
         step: 'inventory',
         generatePreview: { ...preview, input: args },
       });

@@ -27,17 +27,8 @@
   </div>
 </div>
 
-<%#
-  V1.1 §5: the phone is ringing and the customer is on it. One box answers
-  "do we know them, who owns them, where are they" before the call is over.
-  Without JavaScript it submits to the full search page — nothing is lost.
-%>
-<form class="dash-search" method="get" action="/app/search" role="search" data-quick-search>
-  <input type="search" name="q" autocomplete="off" aria-label="Search customers"
-         placeholder="Search mobile, customer, lead ID, email, project or unit…">
-  <button class="btn" type="submit">Search</button>
-  <div class="qs-results" data-qs-results hidden aria-live="polite"></div>
-</form>
+<%# V1.1 §5: the customer lookup moved to the top bar, so it is one box on every
+    screen rather than two stacked on this one. %>
 
 <div class="tiles">
   <% tiles.forEach(function (t) { %>

@@ -8,6 +8,7 @@
 
 <div class="page-head">
   <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/channel-partners', label: 'Channel partners' }) %>
     <h1><%= name %></h1>
     <%# §27: the header states the compliance position, not just the name. %>
     <div class="sub">
@@ -21,6 +22,8 @@
     </div>
   </div>
   <div class="btn-group">
+    <%# §20.4: something the partner can actually hand to a customer. %>
+    <a class="btn" href="/app/channel-partners/<%= partner._id %>/card">Visiting card</a>
     <% if (can('cp.partner.edit')) { %>
       <button type="button" class="btn" data-drawer="drawer-status">Change status</button>
     <% } %>

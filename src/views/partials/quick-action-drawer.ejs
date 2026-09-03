@@ -46,7 +46,7 @@
           <select id="quick-subStageId" name="subStageId" data-substage-for="quick-stageId">
             <option value="">No outcome</option>
             <% subStages.forEach(function (ss) { %>
-              <option value="<%= ss._id %>" data-stage="<%= ss.stageId %>"><%= ss.name %></option>
+              <option value="<%= ss._id %>" data-stage="<%= ss.stageId %>"><%= ss.depth ? '\u00a0\u00a0└ ' : '' %><%= ss.name %></option>
             <% }) %>
           </select>
         </div>

@@ -1,0 +1,56 @@
+<%- include('../../partials/app-head') %>
+<%
+  // Same derivation as the customer's own form — customerView returns a flat
+  // applicant list, and primary/co is a view concern.
+  const val = function (v) { return v == null ? '' : v; };
+  const p = applicants.find(function (a) { return a.applicantRole === 'PRIMARY'; }) || {};
+  const co = applicants.filter(function (a) { return a.applicantRole === 'CO_APPLICANT'; });
+%>
+
+<div class="page-head">
+  <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/bookings/' + booking._id + '?tab=customer', label: 'Booking' }) %>
+    <h1>Fill booking form</h1>
+    <div class="sub">
+      <%= booking.bookingNo || 'Booking' %> · entering these details on the customer's behalf, with them present.
+    </div>
+  </div>
+  <a class="btn btn-ghost" href="/app/bookings/<%= booking._id %>?tab=customer">Cancel</a>
+</div>
+
+<%#
+  §288: the same fields the customer's own form shows, from one partial — so the
+  panel can never ask for less, or more, than the link does.
+%>
+<div class="flash flash-info">
+  Anything already submitted is prefilled. Saving here records that
+  <strong>staff entered these details</strong>, not the customer — and revokes any
+  customer link still outstanding, so the two cannot overwrite each other.
+</div>
+
+<form method="post" action="/api/bookings/<%= booking._id %>/form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="card" style="max-width:860px">
+    <div class="card-head"><h2 class="grow">Applicants</h2></div>
+    <div class="card-body">
+      <%- include('../../partials/booking-applicant-fields', { primary: p, coApplicants: co, val: val }) %>
+
+      <%# §124: the declaration is a data confirmation, not an e-signature. %>
+      <label class="check mt-2">
+        <input type="checkbox" name="declaration" value="1" required>
+        The customer has confirmed these details are correct.
+      </label>
+
+      <div class="btn-group mt-2">
+        <button class="btn btn-primary" type="submit">Save booking form</button>
+        <a class="btn btn-ghost" href="/app/bookings/<%= booking._id %>?tab=customer">Cancel</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<p class="small muted mt-2">
+  Documents are uploaded from the booking's Documents tab, or by the customer through their own link.
+</p>
+
+<%- include('../../partials/app-foot') %>

@@ -22,6 +22,8 @@ const DEFERRED = [
   /^\/api\/channel-partners\/[a-f\d]{24}\/rera$/i,
   /^\/cp\/profile\/rera$/i,
   /^\/cp\/invoices\/[a-f\d]{24}\/pdf$/i,
+  // §18.7: a lead note can carry files and a voice recording.
+  /^\/api\/leads\/[a-f\d]{24}\/notes$/i,
 ];
 
 const tokensMatch = (sent, expected) => !!expected && !!sent

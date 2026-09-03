@@ -1,0 +1,64 @@
+<%- include('../../partials/head') %>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <%- include('../../partials/flash') %>
+
+    <% if (step === 'REQUEST') { %>
+      <h1>Sign in with your mobile</h1>
+      <p class="sub">We'll text you a six-digit code. No password needed.</p>
+
+      <form method="post" action="/login/otp">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="next" value="<%= next %>">
+        <div class="field">
+          <label for="mobile">Mobile number</label>
+          <input type="tel" id="mobile" name="mobile" required autofocus autocomplete="tel"
+                 inputmode="numeric" value="<%= mobile %>">
+          <div class="hint">The number your administrator has on file for you.</div>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Send me a code</button>
+      </form>
+
+      <div class="auth-foot">
+        <a href="/login">Sign in with a password</a>
+        <a href="/forgot-password">Forgot password?</a>
+      </div>
+
+    <% } else { %>
+      <h1>Enter your code</h1>
+      <p class="sub">Sent to <%= mobile %>. It expires in 10 minutes.</p>
+
+      <%#
+        Without an SMS provider configured the code cannot arrive, so in
+        development it is shown here rather than silently going nowhere.
+        Production never reaches this branch (see routes/auth.js).
+      %>
+      <% if (devCodes.length) { %>
+        <div class="flash flash-info">
+          <div>No SMS provider is connected yet — your code is
+            <% devCodes.forEach(function (c) { %><strong><%= c %></strong> <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <form method="post" action="/login/otp/verify">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="next" value="<%= next %>">
+        <input type="hidden" name="mobile" value="<%= mobile %>">
+        <div class="field">
+          <label for="code">Six-digit code</label>
+          <input type="text" id="code" name="code" required autofocus autocomplete="one-time-code"
+                 inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="otp-input">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      </form>
+
+      <div class="auth-foot">
+        <a href="/login/otp">Use a different number</a>
+        <a href="/login">Sign in with a password</a>
+      </div>
+    <% } %>
+  </div>
+</div>
+</body>
+</html>

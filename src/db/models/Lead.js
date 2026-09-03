@@ -26,6 +26,8 @@ const leadSchema = new Schema({
   sourceDetail: { type: String },
   originalSourceId: { type: Schema.Types.ObjectId, ref: 'LeadSource', required: true },
   latestSourceId: { type: Schema.Types.ObjectId, ref: 'LeadSource', required: true },
+  // §12.1 second level: which campaign, page or agent inside that source.
+  subSourceId: { type: Schema.Types.ObjectId, ref: 'LeadSubSource', index: true },
   campaignId: { type: Schema.Types.ObjectId, ref: 'MarketingCampaign', index: true },
   firstTouchCampaignId: { type: Schema.Types.ObjectId, ref: 'MarketingCampaign' },
   lastTouchCampaignId: { type: Schema.Types.ObjectId, ref: 'MarketingCampaign' },
@@ -115,10 +117,20 @@ const leadSchema = new Schema({
     index: true,
   },
 
-  // V1.1 §9.1/§9.2: who sent them, when the source is a referral or a portal.
+  /**
+   * V1.1 §9.1/§9.2: who sent them, when the source is a referral or a portal.
+   *
+   * The type decides which book the referrer is looked up in — a channel
+   * partner resolves against the partner module, everyone else against the
+   * contact book. Free-typed name and mobile are kept as the fallback for
+   * someone genuinely not on file yet, but a referral that resolves to a real
+   * record is the one that can actually be traced and paid.
+   */
+  referralType: { type: String, enum: ['MEMBER', 'LEAD', 'CHANNEL_PARTNER', 'INVESTOR'], default: undefined },
+  referrerChannelPartnerId: { type: Schema.Types.ObjectId, ref: 'ChannelPartner', index: true },
   referrerName: { type: String, maxlength: 120 },
   referrerMobile: { type: String, maxlength: 20 },
-  referrerContactId: { type: Schema.Types.ObjectId, ref: 'Contact' },
+  referrerContactId: { type: Schema.Types.ObjectId, ref: 'Contact', index: true },
   portalLeadId: { type: String, maxlength: 80 },
   listingReference: { type: String, maxlength: 120 },
   notesSummary: { type: String, maxlength: 2000 },

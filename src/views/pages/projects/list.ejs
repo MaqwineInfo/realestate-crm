@@ -18,29 +18,61 @@
     }) %>
   </div>
 <% } else { %>
-  <div class="grid cols-3">
-    <% projects.forEach(function (p) { %>
-      <div class="card">
-        <div class="card-head">
-          <h2 class="grow"><a href="/app/projects/<%= p._id %>"><%= p.name %></a></h2>
-          <span class="badge <%= p.status === 'ACTIVE' ? 'b-green' : (p.status === 'DRAFT' ? 'b-slate' : 'b-amber') %>"><%= p.status %></span>
-        </div>
-        <div class="card-body">
-          <div class="muted small mb-1"><%= p.city || '—' %><%= p.developerName ? ' · ' + p.developerName : '' %></div>
-          <dl class="dl">
-            <dt>Available</dt><dd><%= p.stats.available %> of <%= p.stats.total %></dd>
-            <dt>Blocked</dt><dd><%= p.stats.blocked %></dd>
-            <dt>Booked</dt><dd><%= p.stats.booked %></dd>
-            <% if (p.startingPriceMinor) { %><dt>From</dt><dd><%= h.moneyShort(p.startingPriceMinor) %></dd><% } %>
-          </dl>
-          <div class="btn-group mt-2">
-            <a class="btn btn-sm" href="/app/inventory/<%= p._id %>">Inventory</a>
-            <% if (p.miniSite && p.miniSite.published) { %>
-              <a class="btn btn-sm" target="_blank" rel="noopener" href="/p/<%= p.slug %>">Mini site</a>
-            <% } %>
+  <div class="project-grid">
+    <% projects.forEach(function (p) {
+         const cover = (p.media || []).find(function (m) { return m.kind === 'COVER'; })
+           || (p.media || []).find(function (m) { return m.kind === 'GALLERY'; });
+         const total = p.stats.total || 0;
+         // Sold-through, not availability — it is the number that says how the project is doing.
+         const pct = function (n) { return total ? Math.round((n / total) * 100) : 0; };
+    %>
+      <article class="project-card">
+        <a class="pc-cover" href="/app/projects/<%= p._id %>" aria-label="<%= p.name %>">
+          <% if (cover) { %>
+            <img src="<%= cover.url %>" alt="" loading="lazy">
+          <% } else { %>
+            <span class="pc-cover-fallback" aria-hidden="true"><%= (p.name || '?').trim().charAt(0).toUpperCase() %></span>
+          <% } %>
+          <span class="badge <%= p.status === 'ACTIVE' ? 'b-green' : (p.status === 'DRAFT' ? 'b-slate' : 'b-amber') %> pc-status"><%= p.status.replace('_', ' ') %></span>
+        </a>
+
+        <div class="pc-body">
+          <h2 class="pc-name"><a href="/app/projects/<%= p._id %>"><%= p.name %></a></h2>
+          <div class="pc-meta"><%= p.city || 'Location not set' %><%= p.developerName ? ' · ' + p.developerName : '' %></div>
+
+          <% if (total) { %>
+            <%# One bar reads faster than three numbers: booked, blocked, free. %>
+            <div class="pc-meter" role="img"
+                 aria-label="<%= p.stats.booked %> booked, <%= p.stats.blocked %> blocked, <%= p.stats.available %> available of <%= total %> units">
+              <span class="seg is-booked" style="width:<%= pct(p.stats.booked) %>%"></span>
+              <span class="seg is-blocked" style="width:<%= pct(p.stats.blocked) %>%"></span>
+            </div>
+            <div class="pc-legend">
+              <span><b><%= p.stats.available %></b> available</span>
+              <span><b><%= p.stats.blocked %></b> blocked</span>
+              <span><b><%= p.stats.booked %></b> booked</span>
+            </div>
+          <% } else { %>
+            <p class="small muted pc-empty mb-0">No units yet — add a block to begin.</p>
+          <% } %>
+
+          <div class="pc-foot">
+            <span class="pc-price">
+              <% if (p.startingPriceMinor) { %>
+                From <b><%= h.moneyShort(p.startingPriceMinor) %></b><% if (p.priceRangeMaxMinor) { %> – <%= h.moneyShort(p.priceRangeMaxMinor) %><% } %>
+              <% } else { %>
+                <span class="faint">Price not set</span>
+              <% } %>
+            </span>
+            <span class="btn-group">
+              <a class="btn btn-sm" href="/app/inventory/<%= p._id %>">Inventory</a>
+              <% if (p.miniSite && p.miniSite.published) { %>
+                <a class="btn btn-sm" target="_blank" rel="noopener" href="/p/<%= p.slug %>">Site</a>
+              <% } %>
+            </span>
           </div>
         </div>
-      </div>
+      </article>
     <% }) %>
   </div>
 <% } %>

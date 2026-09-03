@@ -37,12 +37,26 @@
             </select>
           </div>
           <div class="field">
-            <label for="projectType">Project type</label>
-            <select id="projectType" name="projectType">
-              <% ['RESIDENTIAL','COMMERCIAL','PLOTTING','VILLA','MIXED_USE'].forEach(function (s) { %>
-                <option value="<%= s %>" <%= p.projectType === s ? 'selected' : '' %>><%= s.replace('_',' ') %></option>
-              <% }) %>
-            </select>
+            <label for="projectTypeId">Project type</label>
+            <% if (projectTypes.length) { %>
+              <select id="projectTypeId" name="projectTypeId">
+                <option value="">Select a type</option>
+                <% projectTypes.forEach(function (t) { %>
+                  <option value="<%= t._id %>" data-semantic="<%= t.semantic %>"
+                          <%= String(p.projectTypeId || '') === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+                <% }) %>
+              </select>
+              <div class="hint">Manage this list in <a href="/app/setup/project-types">Setup → Project types</a>.</div>
+              <%# The semantic still travels, so reporting and the mini site are unaffected by a rename. %>
+              <input type="hidden" name="projectType" value="<%= p.projectType || 'RESIDENTIAL' %>" data-type-semantic>
+            <% } else { %>
+              <select id="projectTypeId" name="projectType">
+                <% ['RESIDENTIAL','COMMERCIAL','PLOTTING','VILLA','MIXED_USE'].forEach(function (s) { %>
+                  <option value="<%= s %>" <%= p.projectType === s ? 'selected' : '' %>><%= s.replace('_',' ') %></option>
+                <% }) %>
+              </select>
+              <div class="hint">Add your own types in <a href="/app/setup/project-types">Setup → Project types</a>.</div>
+            <% } %>
           </div>
         </div>
         <div class="field-row">
@@ -93,23 +107,32 @@
     <div class="card">
       <div class="card-head"><h2 class="grow">Sales</h2></div>
       <div class="card-body">
-        <div class="field-row">
+        <%#
+          §26.3: the number and the scale it was typed in. Entering "85" and
+          picking Lakh is how people actually quote, and it is far harder to
+          mistype than 8500000.
+        %>
+        <div class="field-row three">
           <div class="field">
             <label for="startingPriceMinor">Starting price</label>
             <input type="text" id="startingPriceMinor" name="startingPriceMinor" inputmode="decimal"
-                   value="<%= p.startingPriceMinor ? (p.startingPriceMinor / 100) : '' %>">
+                   value="<%= p.startingPriceMinor ? h.priceInScale(p.startingPriceMinor, p.priceScale) : '' %>">
           </div>
           <div class="field">
             <label for="priceRangeMaxMinor">Up to</label>
             <input type="text" id="priceRangeMaxMinor" name="priceRangeMaxMinor" inputmode="decimal"
-                   value="<%= p.priceRangeMaxMinor ? (p.priceRangeMaxMinor / 100) : '' %>">
+                   value="<%= p.priceRangeMaxMinor ? h.priceInScale(p.priceRangeMaxMinor, p.priceScale) : '' %>">
+          </div>
+          <div class="field">
+            <label for="priceScale">Price in</label>
+            <select id="priceScale" name="priceScale">
+              <% [['LAKH','Lakh'],['CRORE','Crore'],['THOUSAND','Thousand'],['ONE','Rupees']].forEach(function (o) { %>
+                <option value="<%= o[0] %>" <%= (p.priceScale || 'LAKH') === o[0] ? 'selected' : '' %>><%= o[1] %></option>
+              <% }) %>
+            </select>
           </div>
         </div>
-        <div class="field">
-          <label for="configurations">Configurations <span class="opt">comma separated</span></label>
-          <input type="text" id="configurations" name="configurations" data-list-input value="<%= (p.configurations || []).join(', ') %>"
-                 placeholder="2 BHK, 3 BHK">
-        </div>
+
         <div class="field-row three">
           <div class="field">
             <label for="areaMin">Area from</label>
@@ -120,20 +143,101 @@
             <input type="number" id="areaMax" name="areaMax" value="<%= p.areaMax || '' %>">
           </div>
           <div class="field">
-            <label for="possessionDate">Possession</label>
-            <input type="date" id="possessionDate" name="possessionDate" value="<%= p.possessionDate ? h.dateInput(p.possessionDate) : '' %>">
+            <label for="areaUnit">Area in</label>
+            <select id="areaUnit" name="areaUnit">
+              <% areaUnits.forEach(function (u) { %>
+                <option value="<%= u %>" <%= (p.areaUnit || 'sqft') === u ? 'selected' : '' %>><%= h.areaUnit(u) %></option>
+              <% }) %>
+            </select>
           </div>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="salesContactName">Sales contact</label>
-            <input type="text" id="salesContactName" name="salesContactName" value="<%= p.salesContactName || '' %>">
-          </div>
-          <div class="field">
-            <label for="salesContactMobile">Sales mobile</label>
-            <input type="tel" id="salesContactMobile" name="salesContactMobile" value="<%= p.salesContactMobile || '' %>">
-          </div>
+
+        <div class="field">
+          <label for="possessionDate">Possession <span class="opt">project-wide</span></label>
+          <input type="date" id="possessionDate" name="possessionDate" value="<%= p.possessionDate ? h.dateInput(p.possessionDate) : '' %>">
         </div>
+      </div>
+    </div>
+
+    <%#
+      §26.5: one row per configuration. A comma-separated list could not hold an
+      area, a price or a possession date, which is what the sales team is asked
+      for on every call.
+    %>
+    <div class="card span-2">
+      <div class="card-head">
+        <h2 class="grow">Configurations</h2>
+        <button type="button" class="btn btn-sm" data-row-add="config">Add configuration</button>
+      </div>
+      <div class="card-body tight">
+        <div class="table-wrap"><table class="row-table" data-row-table="config">
+          <thead>
+            <tr>
+              <th>Configuration</th><th>Carpet</th><th>Built-up</th><th>Saleable</th>
+              <th>Unit</th><th>Price</th><th>Possession</th><th>Units</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% const configRows = (p.configurationDetails && p.configurationDetails.length)
+                 ? p.configurationDetails
+                 : (p.configurations || []).map(function (n) { return { name: n }; }); %>
+            <% configRows.forEach(function (c) { %>
+              <tr>
+                <td><input type="text" name="configName" maxlength="60" value="<%= c.name || '' %>" placeholder="2 BHK"></td>
+                <td><input type="number" name="configCarpet" step="0.01" value="<%= c.carpetArea == null ? '' : c.carpetArea %>"></td>
+                <td><input type="number" name="configBuiltUp" step="0.01" value="<%= c.builtUpArea == null ? '' : c.builtUpArea %>"></td>
+                <td><input type="number" name="configSaleable" step="0.01" value="<%= c.saleableArea == null ? '' : c.saleableArea %>"></td>
+                <td>
+                  <select name="configAreaUnit">
+                    <% areaUnits.forEach(function (u) { %>
+                      <option value="<%= u %>" <%= (c.areaUnit || p.areaUnit || 'sqft') === u ? 'selected' : '' %>><%= h.areaUnit(u) %></option>
+                    <% }) %>
+                  </select>
+                </td>
+                <td><input type="text" name="configPrice" inputmode="decimal" value="<%= c.priceMinor ? (c.priceMinor / 100) : '' %>" placeholder="6500000"></td>
+                <td><input type="date" name="configPossession" value="<%= c.possessionDate ? h.dateInput(c.possessionDate) : '' %>"></td>
+                <td><input type="number" name="configUnits" min="0" value="<%= c.unitCount == null ? '' : c.unitCount %>"></td>
+                <td><button type="button" class="btn btn-ghost btn-sm text-danger" data-row-remove>Remove</button></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table></div>
+        <p class="small muted" style="padding:10px 14px 0;margin:0">
+          Price is in rupees. Leave a row blank to drop it — a row with no configuration name is discarded on save.
+        </p>
+      </div>
+    </div>
+
+    <%# §26.4: the people at the site, each with the designation a customer asks for. %>
+    <div class="card span-2">
+      <div class="card-head">
+        <h2 class="grow">Site sales team</h2>
+        <button type="button" class="btn btn-sm" data-row-add="contact">Add contact</button>
+      </div>
+      <div class="card-body tight">
+        <div class="table-wrap"><table class="row-table" data-row-table="contact">
+          <thead>
+            <tr><th>Name</th><th>Designation</th><th>Mobile</th><th>Email</th><th class="nowrap">Show publicly</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% const contactRows = (p.siteContacts && p.siteContacts.length)
+                 ? p.siteContacts
+                 : (p.salesContactName ? [{ name: p.salesContactName, mobile: p.salesContactMobile, isPrimary: true }] : []); %>
+            <% contactRows.forEach(function (c, i) { %>
+              <tr>
+                <td><input type="text" name="contactName" maxlength="120" value="<%= c.name || '' %>"></td>
+                <td><input type="text" name="contactDesignation" maxlength="80" value="<%= c.designation || '' %>" placeholder="Site head"></td>
+                <td><input type="tel" name="contactMobile" maxlength="20" value="<%= c.mobile || '' %>"></td>
+                <td><input type="email" name="contactEmail" maxlength="150" value="<%= c.email || '' %>"></td>
+                <td class="center"><input type="radio" name="contactPrimary" value="<%= i %>" <%= c.isPrimary ? 'checked' : '' %> aria-label="Show this contact publicly"></td>
+                <td><button type="button" class="btn btn-ghost btn-sm text-danger" data-row-remove>Remove</button></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table></div>
+        <p class="small muted" style="padding:10px 14px 0;margin:0">
+          The one marked <strong>Show publicly</strong> is the number on the mini site and the walk-in QR page.
+        </p>
       </div>
     </div>
 
@@ -144,9 +248,40 @@
           <label for="overview">Overview</label>
           <textarea id="overview" name="overview" maxlength="5000" rows="4"><%= p.overview || '' %></textarea>
         </div>
+        <%# §26.6: a checklist, so "Gym" and "gym" stop being two amenities. %>
         <div class="field">
-          <label for="amenities">Amenities <span class="opt">comma separated</span></label>
-          <input type="text" id="amenities" name="amenities" data-list-input value="<%= (p.amenities || []).join(', ') %>">
+          <label for="amenity-filter">Amenities</label>
+          <% if (amenities.length) { %>
+            <%
+              const chosen = (p.amenityIds || []).map(function (a) { return String(a._id || a); });
+              const groups = {};
+              amenities.forEach(function (a) { (groups[a.group] = groups[a.group] || []).push(a); });
+            %>
+            <div class="tag-picker" data-tag-picker>
+              <input type="search" class="tag-filter" id="amenity-filter" data-tag-filter
+                     placeholder="Filter amenities…" autocomplete="off" aria-label="Filter amenities">
+              <div class="amenity-groups">
+                <% Object.keys(groups).forEach(function (g) { %>
+                  <div class="amenity-group">
+                    <div class="amenity-group-head"><%= g.toLowerCase().replace(/_/g, ' ') %></div>
+                    <div class="tag-options">
+                      <% groups[g].forEach(function (a) { %>
+                        <label class="tag-option" data-tag-name="<%= a.name.toLowerCase() %>">
+                          <input type="checkbox" name="amenityIds" value="<%= a._id %>" <%= chosen.indexOf(String(a._id)) > -1 ? 'checked' : '' %>>
+                          <span><%= a.name %></span>
+                        </label>
+                      <% }) %>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+              <p class="small muted mb-0" data-tag-empty hidden>No amenity matches that.</p>
+            </div>
+            <div class="hint">Manage the list in <a href="/app/setup/amenities">Setup → Amenities</a>.</div>
+          <% } else { %>
+            <input type="text" id="amenities" name="amenities" data-list-input value="<%= (p.amenities || []).join(', ') %>">
+            <div class="hint">Add an amenity list in <a href="/app/setup/amenities">Setup → Amenities</a> to get a checklist here.</div>
+          <% } %>
         </div>
         <div class="field">
           <label for="keyUsps">Key USPs <span class="opt">comma separated</span></label>

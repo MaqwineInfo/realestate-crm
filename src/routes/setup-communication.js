@@ -11,6 +11,7 @@ const {
 const audit = require('../services/audit');
 const secretbox = require('../lib/secretbox');
 const config = require('../config');
+const { publicUrl } = require('../lib/publicUrl');
 
 /**
  * Setup screens for the operational rules: §16 SLA, §17 acknowledgement
@@ -431,7 +432,7 @@ router.get('/app/setup/integrations', requirePermission('setup.integrations'), a
       projects,
       sources,
       failures,
-      appUrl: config.appUrl,
+      appUrl: publicUrl(req),
       categories: Integration.CATEGORIES,
     });
   } catch (err) { next(err); }

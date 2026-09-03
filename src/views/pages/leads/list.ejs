@@ -33,7 +33,7 @@
         <select id="subStageId" name="subStageId" data-substage-for="stageId" <%= query.stageId ? '' : 'disabled' %>>
           <option value="">All sub-stages</option>
           <% subStages.forEach(function (ss) { %>
-            <option value="<%= ss._id %>" data-stage="<%= ss.stageId %>" <%= String(query.subStageId) === String(ss._id) ? 'selected' : '' %>><%= ss.name %></option>
+            <option value="<%= ss._id %>" data-stage="<%= ss.stageId %>" <%= String(query.subStageId) === String(ss._id) ? 'selected' : '' %>><%= ss.depth ? '\u00a0\u00a0└ ' : '' %><%= ss.name %></option>
           <% }) %>
         </select>
       </div>

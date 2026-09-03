@@ -17,7 +17,14 @@ const { badRequest, notFound } = require('./errors');
  */
 const IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const DOCUMENT_MIME = ['application/pdf'];
+/**
+ * §18.7: voice notes. Browsers record to whatever container they prefer —
+ * Chrome and Firefox produce webm/ogg, Safari mp4 — so all four are accepted
+ * rather than forcing a client-side transcode.
+ */
+const AUDIO_MIME = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg'];
 const DEFAULT_ALLOWED = [...IMAGE_MIME, ...DOCUMENT_MIME];
+const NOTE_ALLOWED = [...IMAGE_MIME, ...DOCUMENT_MIME, ...AUDIO_MIME];
 
 /**
  * §193: an executable can never be a KYC document, whatever it claims to be.
@@ -29,11 +36,16 @@ const EXTENSION = {
   'image/png': '.png',
   'image/webp': '.webp',
   'application/pdf': '.pdf',
+  'audio/webm': '.webm',
+  'audio/ogg': '.ogg',
+  'audio/mp4': '.m4a',
+  'audio/mpeg': '.mp3',
 };
 
 function assertAcceptable({ mimeType, size, allowed = DEFAULT_ALLOWED, maxBytes = config.maxUploadBytes }) {
   if (!mimeType || !allowed.includes(mimeType)) {
-    const names = allowed.map((m) => (m === 'application/pdf' ? 'PDF' : m.replace('image/', '').toUpperCase()));
+    const names = allowed.map((m) => (m === 'application/pdf' ? 'PDF'
+      : (m.startsWith('audio/') ? 'audio' : m.replace('image/', '').toUpperCase())));
     throw badRequest(`This file type is not accepted. Upload ${[...new Set(names)].join(', ')}.`);
   }
   if (!size) throw badRequest('That file is empty.');
@@ -96,4 +108,5 @@ function maskNumber(value) {
 module.exports = {
   IMAGE_MIME, DOCUMENT_MIME, DEFAULT_ALLOWED, EXTENSION,
   assertAcceptable, store, read, resolve, downloadName, maskNumber,
+  NOTE_ALLOWED, AUDIO_MIME,
 };

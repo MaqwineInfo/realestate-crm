@@ -6,11 +6,14 @@ const { badRequest, notFound, forbidden } = require('../lib/errors');
 const permissionsCatalog = require('../lib/permissions');
 const phone = require('../lib/phone');
 const {
-  User, Role, Stage, SubStage, ActionType, VisitOutcome, LeadSource, Tag, Tenant, Lead, Followup,
+  User, Role, Stage, SubStage, ActionType, VisitOutcome, LeadSource, LeadSubSource, Tag, Tenant,
+  Lead, Followup, SiteVisit, NurtureSequence, Contact, Amenity, ProjectType, Project,
 } = require('../db/models');
 const authService = require('../services/auth');
 const audit = require('../services/audit');
 const config = require('../config');
+const { publicUrl } = require('../lib/publicUrl');
+const f = require('../lib/fields');
 
 const router = express.Router();
 router.use('/app/setup', requireAuth);
@@ -26,21 +29,70 @@ const MASTERS = {
     model: ActionType, label: 'Action types', singular: 'Action type', permission: 'setup.action_types',
     help: 'The follow-up actions your team can schedule (§18.2).',
     extra: { key: 'semantic', label: 'Behaviour', options: ['CALL', 'WHATSAPP', 'MEETING', 'SITE_VISIT', 'COST_SHEET', 'BROCHURE', 'VIDEO_CALL', 'EMAIL', 'OTHER'] },
+    /**
+     * §95 keeps history readable by never deleting a label something points at.
+     * That rule only needs to bite when something actually points at it — so a
+     * master records where it is referenced, and anything unreferenced can go.
+     */
+    references: [
+      { model: Followup, field: 'actionTypeId', label: 'follow-up' },
+      { model: SubStage, field: 'defaultActionTypeId', label: 'sub-stage default' },
+      { model: NurtureSequence, field: 'actionTypeId', label: 'nurture step' },
+    ],
   },
   'visit-outcomes': {
     model: VisitOutcome, label: 'Visit outcomes', singular: 'Visit outcome', permission: 'setup.visit_outcomes',
     help: 'Required when a site visit is completed (§24.2).',
+    references: [{ model: SiteVisit, field: 'outcomeId', label: 'site visit' }],
   },
   sources: {
     model: LeadSource, label: 'Lead sources', singular: 'Lead source', permission: 'setup.sources',
     help: 'Where your leads come from. The category drives capture and reporting (§12.1).',
     extra: { key: 'category', label: 'Category', options: LeadSource.CATEGORIES },
+    references: [
+      { model: Lead, field: 'originalSourceId', label: 'lead' },
+      { model: Lead, field: 'latestSourceId', label: 'lead' },
+      { model: LeadSubSource, field: 'sourceId', label: 'sub-source' },
+    ],
+  },
+  amenities: {
+    model: Amenity, label: 'Amenities', singular: 'Amenity', permission: 'setup.tags',
+    help: 'The amenity checklist offered on every project (§26.6).',
+    extra: { key: 'group', label: 'Group', options: Amenity.GROUPS },
+    references: [{ model: Project, field: 'amenityIds', label: 'project' }],
+  },
+  'project-types': {
+    model: ProjectType, label: 'Project types', singular: 'Project type', permission: 'setup.tags',
+    help: 'What kinds of project you sell. Reporting follows the behaviour, not the label (§26.1).',
+    extra: { key: 'semantic', label: 'Behaves as', options: ProjectType.SEMANTICS, required: true },
+    references: [{ model: Project, field: 'projectTypeId', label: 'project' }],
   },
   tags: {
     model: Tag, label: 'Contact tags', singular: 'Tag', permission: 'setup.tags',
     help: 'Dynamic tags for segmenting the contact book (§9.3).',
+    /**
+     * §9.3: a tag has to say which book it belongs to, so it cannot be created
+     * loose and then show up on a screen it was never meant for.
+     */
+    extra: { key: 'category', label: 'Applies to', options: Tag.CATEGORIES, required: true },
+    references: [{ model: Contact, field: 'tagIds', label: 'contact' }],
   },
 };
+
+/** How many live records point at this master row, and what they are. */
+async function referenceCount(spec, tenantId, id) {
+  if (!spec.references?.length) return null;
+  const counts = await Promise.all(spec.references.map(async (ref) => ({
+    label: ref.label,
+    n: await ref.model.countDocuments({ tenantId, [ref.field]: id }),
+  })));
+  const used = counts.filter((c) => c.n > 0);
+  if (!used.length) return null;
+  // Merge duplicate labels (a lead can be counted through two source fields).
+  const merged = new Map();
+  used.forEach((c) => merged.set(c.label, (merged.get(c.label) || 0) + c.n));
+  return [...merged].map(([label, n]) => `${n} ${label}${n === 1 ? '' : 's'}`).join(' and ');
+}
 
 // Express 5 has no inline regex in paths, so unknown masters fall through to
 // the dedicated routes below via next().
@@ -50,7 +102,17 @@ router.get('/app/setup/:master', async (req, res, next) => {
     if (!spec) return next();
     requireCan(req, spec.permission);
     const items = await spec.model.find({ tenantId: req.tenantId }).sort({ displayOrder: 1, name: 1 }).lean();
-    res.render('pages/setup/master', { title: spec.label, slug: req.params.master, spec, items });
+    // Whether each row can be deleted is decided here, so the button is only
+    // ever offered when it will actually work.
+    const usage = Object.fromEntries(await Promise.all(
+      items.map(async (i) => [String(i._id), await referenceCount(spec, req.tenantId, i._id)]),
+    ));
+    const subSources = req.params.master === 'sources'
+      ? await LeadSubSource.find({ tenantId: req.tenantId }).sort({ displayOrder: 1, name: 1 }).lean()
+      : [];
+    res.render('pages/setup/master', {
+      title: spec.label, slug: req.params.master, spec, items, usage, subSources,
+    });
   } catch (err) { next(err); }
 });
 
@@ -63,7 +125,11 @@ router.post('/api/setup/:master', async (req, res, next) => {
     if (!name) throw badRequest('Enter a name.');
 
     const doc = { tenantId: req.tenantId, name, displayOrder: Number(req.body.displayOrder || 0) };
-    if (spec.extra) doc[spec.extra.key] = req.body[spec.extra.key];
+    if (spec.extra) {
+      const value = String(req.body[spec.extra.key] || '').trim();
+      if (spec.extra.required && !value) throw badRequest(`Choose what this ${spec.singular.toLowerCase()} applies to.`);
+      doc[spec.extra.key] = value || undefined;
+    }
     if (spec.model === Tag) doc.createdBy = req.user._id;
 
     const created = await spec.model.create(doc);
@@ -87,6 +153,79 @@ router.post('/api/setup/:master/:id/toggle', async (req, res, next) => {
     await item.save();
     await audit.record({ tenantId: req.tenantId, actor: req.user, entity: spec.model.modelName, entityId: item._id, action: item.active ? 'ACTIVATE' : 'DEACTIVATE', req });
     res.redirect(`/app/setup/${req.params.master}`);
+  } catch (err) { next(err); }
+});
+
+/**
+ * §95, read precisely: a master that appears in history is protected, but one
+ * that has never been used is just a mistake somebody wants to take back.
+ * Deletion is refused with a count when the row is referenced — deactivating
+ * stays the answer for anything real.
+ */
+router.post('/api/setup/:master/:id/delete', async (req, res, next) => {
+  try {
+    const spec = MASTERS[req.params.master];
+    if (!spec) return next();
+    requireCan(req, spec.permission);
+    const item = await spec.model.findOne({ tenantId: req.tenantId, _id: req.params.id }).lean();
+    if (!item) throw notFound('That record no longer exists.');
+    if (item.isSystem) throw badRequest(`${item.name} is a built-in ${spec.singular.toLowerCase()} and cannot be deleted.`);
+
+    const used = await referenceCount(spec, req.tenantId, item._id);
+    if (used) {
+      throw badRequest(`${item.name} is used by ${used}, so it cannot be deleted. Deactivate it instead — history keeps the label and nobody can pick it again.`);
+    }
+
+    await spec.model.deleteOne({ tenantId: req.tenantId, _id: item._id });
+    await audit.record({ tenantId: req.tenantId, actor: req.user, entity: spec.model.modelName, entityId: item._id, action: 'DELETE', before: item, req });
+    req.session.flash = { type: 'success', message: `${item.name} deleted.` };
+    res.redirect(`/app/setup/${req.params.master}`);
+  } catch (err) { next(err); }
+});
+
+/* ------------------------------ sub-sources ------------------------------- */
+
+/** §12.1: sub-sources hang off exactly one source, like sub-stages off a stage. */
+const subSourceSchema = z.object({
+  sourceId: f.objectId,
+  name: z.string().trim().min(1, 'Enter a name.').max(80),
+  displayOrder: z.coerce.number().int().min(0).default(0),
+});
+
+router.post('/api/setup/sub-sources', requirePermission('setup.sources'), validate(subSourceSchema), async (req, res, next) => {
+  try {
+    const source = await LeadSource.findOne({ tenantId: req.tenantId, _id: req.data.sourceId }).lean();
+    if (!source) throw badRequest('Choose a source in this organization.');
+    const created = await LeadSubSource.create({ tenantId: req.tenantId, ...req.data });
+    await audit.record({ tenantId: req.tenantId, actor: req.user, entity: 'LeadSubSource', entityId: created._id, action: 'CREATE', after: req.data, req });
+    req.session.flash = { type: 'success', message: `Sub-source added under ${source.name}.` };
+    res.redirect('/app/setup/sources');
+  } catch (err) {
+    next(err.code === 11000 ? badRequest('That source already has a sub-source with this name.') : err);
+  }
+});
+
+router.post('/api/setup/sub-sources/:id/toggle', requirePermission('setup.sources'), async (req, res, next) => {
+  try {
+    const sub = await LeadSubSource.findOne({ tenantId: req.tenantId, _id: req.params.id });
+    if (!sub) throw notFound('Sub-source not found.');
+    sub.active = !sub.active;
+    await sub.save();
+    await audit.record({ tenantId: req.tenantId, actor: req.user, entity: 'LeadSubSource', entityId: sub._id, action: sub.active ? 'ACTIVATE' : 'DEACTIVATE', req });
+    res.redirect('/app/setup/sources');
+  } catch (err) { next(err); }
+});
+
+router.post('/api/setup/sub-sources/:id/delete', requirePermission('setup.sources'), async (req, res, next) => {
+  try {
+    const sub = await LeadSubSource.findOne({ tenantId: req.tenantId, _id: req.params.id }).lean();
+    if (!sub) throw notFound('Sub-source not found.');
+    const used = await Lead.countDocuments({ tenantId: req.tenantId, subSourceId: sub._id });
+    if (used) throw badRequest(`${sub.name} is recorded on ${used} lead(s). Deactivate it instead.`);
+    await LeadSubSource.deleteOne({ tenantId: req.tenantId, _id: sub._id });
+    await audit.record({ tenantId: req.tenantId, actor: req.user, entity: 'LeadSubSource', entityId: sub._id, action: 'DELETE', before: sub, req });
+    req.session.flash = { type: 'success', message: `${sub.name} deleted.` };
+    res.redirect('/app/setup/sources');
   } catch (err) { next(err); }
 });
 
@@ -163,6 +302,8 @@ router.post('/api/setup/stages/:id/toggle', requirePermission('setup.stages'), a
 
 const subStageSchema = z.object({
   stageId: z.string().regex(/^[a-f\d]{24}$/i),
+  // §11.4b: set when this is a third-level outcome under another sub-stage.
+  parentSubStageId: z.preprocess((v) => (v === '' ? undefined : v), z.string().regex(/^[a-f\d]{24}$/i).optional()),
   name: z.string().trim().min(1, 'Enter a sub-stage name.').max(60),
   displayOrder: z.coerce.number().int().min(0).default(0),
   defaultActionTypeId: z.preprocess((v) => (v === '' ? undefined : v), z.string().regex(/^[a-f\d]{24}$/i).optional()),
@@ -174,8 +315,20 @@ router.post('/api/setup/sub-stages', requirePermission('setup.substages', 'setup
   try {
     const stage = await Stage.findOne({ tenantId: req.tenantId, _id: req.data.stageId }).lean();
     if (!stage) throw badRequest('Select a valid stage.');
+
+    if (req.data.parentSubStageId) {
+      const parent = await SubStage.findOne({ tenantId: req.tenantId, _id: req.data.parentSubStageId }).lean();
+      if (!parent) throw badRequest('That parent sub-stage no longer exists.');
+      if (String(parent.stageId) !== String(stage._id)) {
+        throw badRequest('A sub-stage and its parent must belong to the same stage.');
+      }
+      // Three levels is the shape the product describes; deeper is a tree
+      // nobody can pick from in a dropdown.
+      if (parent.parentSubStageId) throw badRequest('Sub-stages go three levels deep at most.');
+    }
+
     await SubStage.create({ tenantId: req.tenantId, ...req.data });
-    req.session.flash = { type: 'success', message: 'Sub-stage added.' };
+    req.session.flash = { type: 'success', message: req.data.parentSubStageId ? 'Sub-stage added under its parent.' : 'Sub-stage added.' };
     res.redirect('/app/setup/stages');
   } catch (err) {
     next(err.code === 11000 ? badRequest('That sub-stage already exists for this stage.') : err);
@@ -188,6 +341,14 @@ router.post('/api/setup/sub-stages/:id/toggle', requirePermission('setup.substag
     if (!sub) throw notFound('Sub-stage not found.');
     sub.active = !sub.active;
     await sub.save();
+    // A child cannot outlive its parent in the picker, so deactivating a
+    // second-level outcome takes its third-level children with it.
+    if (!sub.parentSubStageId) {
+      await SubStage.updateMany(
+        { tenantId: req.tenantId, parentSubStageId: sub._id },
+        { $set: { active: sub.active } },
+      );
+    }
     res.redirect('/app/setup/stages');
   } catch (err) { next(err); }
 });
@@ -205,7 +366,7 @@ router.get('/app/setup/users', requirePermission('setup.users'), async (req, res
       users,
       roles,
       inviteLink: req.session.inviteLink || null,
-      appUrl: config.appUrl,
+      appUrl: publicUrl(req),
     });
     delete req.session.inviteLink;
   } catch (err) { next(err); }
@@ -237,7 +398,7 @@ router.post('/api/setup/users', requirePermission('setup.users'), validate(invit
     const token = await authService.createInviteToken(user);
     // No email provider is configured yet, so the invite link is handed to the
     // admin to share rather than being silently dropped (§17.4 behaviour).
-    req.session.inviteLink = `${config.appUrl}/accept-invite?token=${token}`;
+    req.session.inviteLink = `${publicUrl(req)}/accept-invite?token=${token}`;
     await audit.record({ tenantId: req.tenantId, actor: req.user, entity: 'User', entityId: user._id, action: 'INVITE', after: { email: user.email, roleId: role._id }, req });
     req.session.flash = { type: 'success', message: `${user.name} invited. Share the activation link below.` };
     res.redirect('/app/setup/users');
@@ -272,20 +433,41 @@ router.post('/api/setup/users/:id/status', requirePermission('setup.users'), asy
   } catch (err) { next(err); }
 });
 
-router.post('/api/setup/users/:id/role', requirePermission('setup.users'), async (req, res, next) => {
+const userEditSchema = z.object({
+  name: z.string().trim().min(2, 'Enter the full name.').max(100),
+  email: z.string().trim().email('Enter a valid email address.'),
+  mobile: z.preprocess((v) => (v === '' ? undefined : v), z.string().trim().optional()),
+  roleId: z.string().regex(/^[a-f\d]{24}$/i, 'Select a role.'),
+  managerId: z.preprocess((v) => (v === '' ? undefined : v), z.string().regex(/^[a-f\d]{24}$/i).optional()),
+});
+
+/** The whole profile, not just the role — name, email and mobile were previously unreachable. */
+router.post('/api/setup/users/:id/role', requirePermission('setup.users'), validate(userEditSchema), async (req, res, next) => {
   try {
-    const role = await Role.findOne({ tenantId: req.tenantId, _id: req.body.roleId, active: true }).lean();
+    const role = await Role.findOne({ tenantId: req.tenantId, _id: req.data.roleId, active: true }).lean();
     if (!role) throw badRequest('Select an active role.');
     const user = await User.findOne({ tenantId: req.tenantId, _id: req.params.id });
     if (!user) throw notFound('User not found.');
-    const before = user.roleId;
+    // A manager cannot report to themselves — that loop breaks the team data scope.
+    if (req.data.managerId && String(req.data.managerId) === String(user._id)) {
+      throw badRequest('A user cannot report to themselves.');
+    }
+    const before = { name: user.name, email: user.email, mobile: user.mobile, roleId: user.roleId };
+    user.name = req.data.name;
+    user.email = req.data.email.toLowerCase();
+    user.mobile = req.data.mobile;
+    user.normalizedMobile = req.data.mobile
+      ? phone.normalizeMobile(req.data.mobile, req.tenant.callingCode)
+      : undefined;
     user.roleId = role._id;
-    user.managerId = req.body.managerId || undefined;
+    user.managerId = req.data.managerId;
     await user.save();
-    await audit.record({ tenantId: req.tenantId, actor: req.user, entity: 'User', entityId: user._id, action: 'ROLE_CHANGE', before: { roleId: before }, after: { roleId: role._id }, req });
-    req.session.flash = { type: 'success', message: 'User updated.' };
+    await audit.record({ tenantId: req.tenantId, actor: req.user, entity: 'User', entityId: user._id, action: 'UPDATE', before, after: { name: user.name, email: user.email, mobile: user.mobile, roleId: role._id }, req });
+    req.session.flash = { type: 'success', message: `${user.name} updated.` };
     res.redirect('/app/setup/users');
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err.code === 11000 ? badRequest('Another user in this organization already uses that email address.') : err);
+  }
 });
 
 /* ---------------------------------- roles -------------------------------- */

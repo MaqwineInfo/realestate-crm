@@ -115,12 +115,23 @@ test('dashboard search access states (V1.1 §5, §123)', async (t) => {
     assert.deepEqual(res.data.results, []);
   });
 
-  await t.test('the dashboard renders the search box', async () => {
+  // The customer lookup moved from a second box on the dashboard into the top
+  // bar, so it is one search on every screen rather than two stacked on one.
+  await t.test('the search box renders on every screen, not just the dashboard', async () => {
+    const priya = h.client();
+    await priya.login('priya@alpha.test');
+    for (const path of ['/app/dashboard', '/app/leads', '/app/contacts']) {
+      const page = await priya.get(path);
+      assert.match(page.text, /data-quick-search/, `${path} has the lookup`);
+      assert.match(page.text, /data-qs-results/, `${path} has somewhere to put results`);
+    }
+  });
+
+  await t.test('the dashboard no longer renders a second search box', async () => {
     const priya = h.client();
     await priya.login('priya@alpha.test');
     const page = await priya.get('/app/dashboard');
-    assert.match(page.text, /data-quick-search/);
-    assert.match(page.text, /Search mobile, customer, lead ID/);
+    assert.equal(page.text.match(/data-quick-search/g).length, 1);
   });
 
   await t.test('an unassigned lead is not hidden from a wider scope', async () => {

@@ -22,4 +22,21 @@ if (config.env === 'production' && config.sessionSecret === 'dev-only-insecure-s
   throw new Error('SESSION_SECRET must be set in production');
 }
 
+/**
+ * Invites, password resets, payment links and walk-in QR codes are opened on
+ * somebody else's device, so a localhost APP_URL produces links that cannot
+ * work. Screens built from a request fall back to that request's own host
+ * (lib/publicUrl.js), but background sends have no request to fall back to.
+ */
+if (/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:|\/|$)/i.test(config.appUrl)) {
+  if (config.env === 'production') {
+    throw new Error('APP_URL must be a public address in production — invite, reset, payment and QR links are built from it.');
+  }
+  console.warn(JSON.stringify({
+    level: 'warn',
+    msg: 'APP_URL is localhost — links sent by SMS, WhatsApp or email will not open on a customer device. Set APP_URL before sharing anything.',
+    appUrl: config.appUrl,
+  }));
+}
+
 module.exports = config;

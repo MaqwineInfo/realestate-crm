@@ -6,7 +6,7 @@ const { User } = require('../../src/db/models');
 test('authentication and session handling (§5)', async (t) => {
   await h.startServer();
   await h.resetDb();
-  const { orgA } = await h.seedTwoOrgs();
+  const { orgA, orgB } = await h.seedTwoOrgs();
 
   t.after(async () => { await h.stopServer(); });
 
@@ -78,6 +78,88 @@ test('authentication and session handling (§5)', async (t) => {
     assert.match((await c.get('/login')).text, /not active/i);
     assert.ok(await User.findOne({ tenantId: orgA.tenant._id, _id: orgA.admin._id }), 'record survives');
     await User.updateOne({ tenantId: orgA.tenant._id, _id: orgA.admin._id }, { $set: { status: 'ACTIVE' } });
+  });
+
+  /* ---------------------------- OTP sign-in (§5.4) --------------------------- */
+
+  await t.test('a mobile code signs the user in without a password', async () => {
+    const authService = require('../../src/services/auth');
+    const user = await User.findOne({ tenantId: orgA.tenant._id, email: 'admin@alpha.test' });
+    user.mobile = '9820011111';
+    user.normalizedMobile = '+919820011111';
+    await user.save();
+
+    const { codes } = await authService.requestLoginOtp('9820011111');
+    assert.equal(codes.length, 1, 'a code was issued');
+
+    const c = h.client();
+    const token = await c.csrf('/login/otp');
+    const res = await c.post('/login/otp/verify', {
+      _csrf: token, mobile: '9820011111', code: codes[0].code,
+    });
+    assert.equal(res.status, 302);
+    assert.equal(res.location, '/app/dashboard');
+
+    const dash = await c.get('/app/dashboard');
+    assert.equal(dash.status, 200);
+  });
+
+  /**
+   * The login screen must not become a staff directory: an unregistered number
+   * has to look exactly like a registered one to whoever is typing.
+   */
+  await t.test('an unknown number is answered the same way as a known one', async () => {
+    const authService = require('../../src/services/auth');
+    const unknown = await authService.requestLoginOtp('9800000000');
+    assert.equal(unknown.sent, false);
+    assert.equal(unknown.codes.length, 0);
+
+    const c = h.client();
+    const token = await c.csrf('/login/otp');
+    const res = await c.post('/login/otp', { _csrf: token, mobile: '9800000000' });
+    assert.equal(res.status, 200);
+    assert.match(res.text, /If that number is registered/);
+  });
+
+  /**
+   * §192: six digits is a short brute force without a ceiling, so the ceiling is
+   * the security property — once it trips, even the right code is refused.
+   */
+  await t.test('the code locks out after five wrong attempts', async () => {
+    const authService = require('../../src/services/auth');
+    const user = await User.findOne({ tenantId: orgB.tenant._id, email: 'admin@beta.test' });
+    user.mobile = '9820022222';
+    user.normalizedMobile = '+919820022222';
+    await user.save();
+
+    const { codes } = await authService.requestLoginOtp('9820022222');
+    const real = codes[0].code;
+    const wrong = real === '111111' ? '222222' : '111111';
+
+    for (let i = 0; i < 5; i += 1) {
+      await assert.rejects(() => authService.verifyLoginOtp('9820022222', wrong));
+    }
+    await assert.rejects(
+      () => authService.verifyLoginOtp('9820022222', real),
+      /Too many incorrect codes/,
+      'the correct code is refused once the ceiling trips',
+    );
+  });
+
+  await t.test('a code is single use', async () => {
+    const authService = require('../../src/services/auth');
+    // Reusing the alpha admin, so the resend throttle has to be cleared first.
+    const user = await User.findOne({ tenantId: orgA.tenant._id, email: 'admin@alpha.test' });
+    user.mobile = '9820033333';
+    user.normalizedMobile = '+919820033333';
+    user.loginOtpSentAt = undefined;
+    await user.save();
+
+    const { codes } = await authService.requestLoginOtp('9820033333');
+    const code = codes[0].code;
+    const first = await authService.verifyLoginOtp('9820033333', code);
+    assert.ok(first.user || first.needsOrgChoice, 'the first use works');
+    await assert.rejects(() => authService.verifyLoginOtp('9820033333', code), /not right, or it has expired/);
   });
 
   await t.test('logout ends the session', async () => {

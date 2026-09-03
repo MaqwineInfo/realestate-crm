@@ -328,6 +328,46 @@ const sendSchema = z.object({
   returnTo: f.optionalText(300),
 });
 
+/**
+ * §288: the booking form filled from the panel. Same service, same validation
+ * as the customer's own link — only the declaration records that staff entered
+ * it, and any outstanding customer link is revoked so the two cannot race.
+ */
+router.get('/app/bookings/:id/form', requirePermission('booking.customer_link.create'), async (req, res, next) => {
+  try {
+    const booking = await Booking.findOne({ tenantId: req.tenantId, _id: req.params.id }).lean();
+    if (!booking) throw notFound('Booking not found.');
+    const view = await bookingForm.customerView({
+      link: { tenantId: req.tenantId, bookingId: booking._id, reopenSections: bookingForm.SECTIONS },
+    });
+    res.render('pages/bookings/panel-form', {
+      title: 'Fill booking form',
+      booking,
+      ...view,
+    });
+  } catch (err) { next(err); }
+});
+
+router.post('/api/bookings/:id/form', requirePermission('booking.customer_link.create'), async (req, res, next) => {
+  try {
+    // Same body shape the public form posts, so the service sees one contract.
+    await bookingForm.submitFromPanel({
+      tenantId: req.tenantId,
+      actor: req.user,
+      bookingId: req.params.id,
+      body: {
+        declaration: req.body.declaration === '1',
+        primary: req.body.primary || {},
+        coApplicants: Object.values(req.body.co || {}),
+      },
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    req.session.flash = { type: 'success', message: 'Booking form saved.' };
+    res.redirect(`/app/bookings/${req.params.id}?tab=customer`);
+  } catch (err) { next(err); }
+});
+
 router.post('/api/bookings/:id/customer-link/send', requirePermission('booking.customer_link.create'), validate(sendSchema), async (req, res, next) => {
   try {
     const token = String(req.data.url).split('/booking-form/')[1];

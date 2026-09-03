@@ -12,7 +12,10 @@ module.exports = {
   ActionType: require('./ActionType'),
   VisitOutcome: require('./VisitOutcome'),
   LeadSource: require('./LeadSource'),
+  LeadSubSource: require('./LeadSubSource'),
   Tag: require('./Tag'),
+  Amenity: require('./Amenity'),
+  ProjectType: require('./ProjectType'),
 
   // Contact & lead
   Contact: require('./Contact'),

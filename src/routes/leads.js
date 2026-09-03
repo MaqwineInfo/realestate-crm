@@ -4,7 +4,11 @@ const { requireAuth, requirePermission } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { scopeFilter } = require('../lib/access');
 const { forbidden, badRequest } = require('../lib/errors');
-const { Lead, Project, User, Followup } = require('../db/models');
+const { Lead, Project, User, Followup, Contact, ChannelPartner, Tag } = require('../db/models');
+const phone = require('../lib/phone');
+const multer = require('multer');
+const config = require('../config');
+const privateFiles = require('../lib/privateFiles');
 const leadsService = require('../services/leads');
 const contactsService = require('../services/contacts');
 const stagesService = require('../services/stages');
@@ -27,6 +31,14 @@ const POSSESSION = ['READY', 'NEAR_POSSESSION', 'UNDER_CONSTRUCTION', 'ANY'];
 const AREA_BASIS = ['CARPET', 'BUILT_UP', 'SALEABLE'];
 
 const createSchema = z.object({
+  // §7: the capture form now sets the opening stage and the first follow-up,
+  // so a lead is never created into the gap §55.3 exists to prevent.
+  stageId: f.optionalId,
+  subStageId: f.optionalId,
+  nextActionTypeId: f.optionalId,
+  nextDate: f.optionalText(10),
+  nextTime: f.optionalText(5),
+  nextNote: f.optionalText(500),
   contactId: f.optionalId,
   firstName: f.optionalText(80),
   lastName: f.optionalText(80),
@@ -42,6 +54,10 @@ const createSchema = z.object({
   sourceId: f.objectId,
   sourceDetail: f.optionalText(120),
   campaignId: f.optionalId,
+  // §9.1: what kind of referrer, and which record they resolve to.
+  referralType: f.enumField(['MEMBER', 'LEAD', 'CHANNEL_PARTNER', 'INVESTOR']),
+  referrerContactId: f.optionalId,
+  referrerChannelPartnerId: f.optionalId,
   referrerName: f.optionalText(120),
   referrerMobile: f.optionalText(20),
   portalLeadId: f.optionalText(80),
@@ -122,12 +138,16 @@ router.get('/app/leads', requirePermission('lead.view'), async (req, res, next) 
 /** Everything the capture form needs to render, with or without a prefill. */
 async function newLeadContext(req, values = {}) {
   const { MarketingCampaign } = require('../db/models');
-  const [sources, projects, owners, campaigns] = await Promise.all([
+  const { ActionType } = require('../db/models');
+  const [sources, projects, owners, campaigns, stages, subStages, actionTypes] = await Promise.all([
     stagesService.listSources({ tenantId: req.tenantId }),
     Project.find({ tenantId: req.tenantId, status: { $ne: 'ARCHIVED' } })
       .select('name configurations').sort({ name: 1 }).lean(),
     User.find({ tenantId: req.tenantId, status: 'ACTIVE' }).select('name').sort({ name: 1 }).lean(),
     MarketingCampaign.find({ tenantId: req.tenantId }).select('name platform').sort({ startDate: -1 }).limit(50).lean(),
+    stagesService.listStages({ tenantId: req.tenantId }),
+    stagesService.listSubStages({ tenantId: req.tenantId }),
+    ActionType.find({ tenantId: req.tenantId, active: true }).sort({ displayOrder: 1, name: 1 }).lean(),
   ]);
   return {
     title: 'New lead',
@@ -135,6 +155,9 @@ async function newLeadContext(req, values = {}) {
     projects,
     owners,
     campaigns,
+    stages,
+    subStages,
+    actionTypes,
     // §11.3: manual assignment is a permission, not a default.
     canAssign: require('../lib/access').can(req.user, 'lead.transfer') || req.user.role?.isAdmin,
     values,
@@ -172,6 +195,67 @@ router.get('/api/contacts/lookup', requireAuth, requirePermission('lead.create')
       leadCount: found.leadCount,
       bookedHere: found.bookedHere,
       lead: found.lead ? { id: String(found.lead._id), status: found.lead.status } : null,
+    });
+  } catch (err) { next(err); }
+});
+
+/**
+ * §9.1: who referred this customer. The type decides the book — a channel
+ * partner resolves against the partner module, every other type against the
+ * contact book — so a referral points at a real record instead of a typed name
+ * nobody can trace when it is time to pay it.
+ */
+router.get('/api/referrers', requireAuth, requirePermission('lead.create'), async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const type = String(req.query.type || '');
+    if (q.length < 2) return res.json({ results: [] });
+
+    const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const normalized = phone.normalizeMobile(q, req.tenant?.callingCode);
+
+    if (type === 'CHANNEL_PARTNER') {
+      const partners = await ChannelPartner.find({
+        tenantId: req.tenantId,
+        status: 'ACTIVE',
+        $or: [
+          { 'profile.tradeName': rx }, { 'profile.legalName': rx },
+          { 'profile.primaryContactName': rx }, { partnerCode: rx },
+          ...(normalized ? [{ 'profile.normalizedMobile': normalized }] : []),
+        ],
+      }).select('profile partnerCode').limit(10).lean();
+      return res.json({
+        results: partners.map((p) => ({
+          id: String(p._id),
+          label: p.profile?.tradeName || p.profile?.legalName || p.profile?.primaryContactName || 'Channel partner',
+          sub: [p.partnerCode, p.profile?.mobile].filter(Boolean).join(' · '),
+          mobile: p.profile?.mobile || '',
+        })),
+      });
+    }
+
+    // Member, Lead and Investor all live in the contact book (§9.3).
+    const filter = { tenantId: req.tenantId, status: 'ACTIVE' };
+    const tag = await Tag.findOne({
+      tenantId: req.tenantId, active: true,
+      nameLower: type === 'MEMBER' ? 'member' : (type === 'INVESTOR' ? 'investor' : ''),
+    }).select('_id').lean();
+    if (tag) filter.tagIds = tag._id;
+    filter.$or = [
+      { displayName: rx }, { email: rx },
+      ...(normalized ? [{ normalizedMobile: normalized }] : []),
+      { primaryMobile: rx },
+    ];
+
+    const contacts = await Contact.find(filter)
+      .select('displayName primaryMobile city').limit(10).lean();
+    res.json({
+      results: contacts.map((c) => ({
+        id: String(c._id),
+        label: c.displayName,
+        sub: [phone.formatMobile(c.primaryMobile, req.tenant?.callingCode), c.city].filter(Boolean).join(' · '),
+        mobile: c.primaryMobile || '',
+      })),
     });
   } catch (err) { next(err); }
 });
@@ -258,8 +342,32 @@ router.post('/api/leads', requirePermission('lead.create'), validate(createSchem
       });
     }
 
+    /**
+     * §55.3: the next action is scheduled through the same service every other
+     * path uses, so the "an open lead always has a next action" rule holds
+     * whichever screen created it — and the SLA clock is not stopped, because
+     * scheduling a call is not yet a genuine action.
+     */
+    if (d.nextActionTypeId && d.nextDate) {
+      const tzLib = require('../lib/tz');
+      await require('../services/followups').create({
+        tenantId: req.tenantId,
+        actor: req.user,
+        leadId: lead._id,
+        actionTypeId: d.nextActionTypeId,
+        dueAt: tzLib.fromLocalInput(d.nextDate, d.nextTime || '10:00', res.locals.zone),
+        note: d.nextNote,
+        createdVia: 'MANUAL',
+      });
+    }
+
     if (wantsJson(req)) return res.status(201).json({ ok: true, leadId: lead._id });
-    req.session.flash = { type: 'success', message: 'Lead created. Log your first action to clear it from New Leads.' };
+    req.session.flash = {
+      type: 'success',
+      message: d.nextActionTypeId && d.nextDate
+        ? 'Lead created and the first follow-up is scheduled.'
+        : 'Lead created. Log your first action to clear it from New Leads.',
+    };
     res.redirect(`/app/leads/${lead._id}`);
   } catch (err) { next(err); }
 });
@@ -445,15 +553,67 @@ router.post('/api/leads/:id/temperature', requirePermission('lead.edit'), valida
   } catch (err) { next(err); }
 });
 
-const noteSchema = z.object({ body: f.requiredText(5000, 'Write a note first.') });
+/**
+ * §18.7: a note, optionally with files and a voice recording.
+ *
+ * Multipart, because the browser records straight to a blob and posts it with
+ * the text. Attachments land in the private upload directory — a note can name
+ * a customer, so its files are no more public than a KYC document.
+ */
+const noteUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: config.maxUploadBytes, files: 6 },
+}).fields([{ name: 'attachments', maxCount: 5 }, { name: 'voiceNote', maxCount: 1 }]);
 
-router.post('/api/leads/:id/notes', requirePermission('note.create'), validate(noteSchema), async (req, res, next) => {
+router.post('/api/leads/:id/notes', requirePermission('note.create'), (req, res, next) => {
+  noteUpload(req, res, (err) => {
+    // §68: a raw multer error is not a message a user should ever read.
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return next(badRequest(`Files must be under ${Math.max(1, Math.round(config.maxUploadBytes / 1024 / 1024))} MB.`));
+    }
+    if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return next(badRequest('Attach at most five files and one voice note.'));
+    }
+    return next(err);
+  });
+}, async (req, res, next) => {
   try {
+    // The multipart body only exists now, so this is where its CSRF token can
+    // finally be checked (see middleware/csrf.js).
+    require('../middleware/csrf').verify(req);
     const lead = await assertOwnedAccess(req, req.params.id, 'lead.view');
-    const mentionUserIds = await timeline.resolveMentions({ tenantId: req.tenantId, body: req.data.body });
+    const body = String(req.body.body || '').trim();
+    const uploads = [
+      ...(req.files?.attachments || []).map((file) => ({ file, kind: 'FILE' })),
+      ...(req.files?.voiceNote || []).map((file) => ({ file, kind: 'VOICE' })),
+    ];
+    // A note has to say something — text, a file, or a recording.
+    if (!body && !uploads.length) throw badRequest('Write a note, attach a file, or record a voice note.');
+    if (body.length > 5000) throw badRequest('Notes are limited to 5000 characters.');
+
+    const attachments = [];
+    for (const { file, kind } of uploads) {
+      privateFiles.assertAcceptable({
+        mimeType: file.mimetype, size: file.size, allowed: privateFiles.NOTE_ALLOWED,
+      });
+      const stored = await privateFiles.store({
+        tenantId: req.tenantId, scope: 'notes', mimeType: file.mimetype, buffer: file.buffer,
+      });
+      attachments.push({
+        name: kind === 'VOICE' ? 'Voice note' : (file.originalname || 'attachment'),
+        storageKey: stored.storageKey,
+        mime: file.mimetype,
+        size: stored.bytes,
+        kind,
+        durationSeconds: kind === 'VOICE' ? Number(req.body.voiceSeconds) || undefined : undefined,
+      });
+    }
+
+    const mentionUserIds = await timeline.resolveMentions({ tenantId: req.tenantId, body });
     await timeline.addNote({
       tenantId: req.tenantId, leadId: lead._id, contactId: lead.contactId,
-      actor: req.user, body: req.data.body, mentionUserIds,
+      actor: req.user, body, mentionUserIds, attachments,
     });
     respond(req, res, 'Note added.', `/app/leads/${req.params.id}`);
   } catch (err) { next(err); }

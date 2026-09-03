@@ -1,0 +1,118 @@
+<%#
+  The one contact form. Rendered as a full page for "New contact" and inside the
+  edit drawer on the detail page, so the two can never drift apart again — they
+  previously carried different field sets, and edit silently could not reach
+  address or pincode.
+
+  Locals: c (contact or {}), tags, owners, currentUser, idPrefix.
+%>
+<%
+  const c = typeof contact !== 'undefined' && contact ? contact : {};
+  const pfx = typeof idPrefix !== 'undefined' ? idPrefix : 'c';
+  const split = h.splitMobile(c.primaryMobile || '');
+  const altSplit = h.splitMobile(c.altMobile || '');
+  const selectedTagIds = (c.tagIds || []).map(function (t) { return String(t._id || t); });
+  const ownerId = String((c.ownerUserId && (c.ownerUserId._id || c.ownerUserId)) || currentUser._id);
+  const id = function (n) { return pfx + '-' + n; };
+%>
+
+<div class="field-row">
+  <div class="field">
+    <label for="<%= id('firstName') %>">First name</label>
+    <input type="text" id="<%= id('firstName') %>" name="firstName" required maxlength="80" value="<%= c.firstName || '' %>">
+  </div>
+  <div class="field">
+    <label for="<%= id('lastName') %>">Last name <span class="opt">optional</span></label>
+    <input type="text" id="<%= id('lastName') %>" name="lastName" maxlength="80" value="<%= c.lastName || '' %>">
+  </div>
+</div>
+
+<%# §9.2: the mobile number is the duplicate key, so the country is part of it. %>
+<div class="field">
+  <label for="<%= id('primaryMobile') %>">Primary mobile</label>
+  <div class="phone-input">
+    <select name="callingCode" aria-label="Country code" data-calling-code>
+      <% countryCodes.forEach(function (cc) { %>
+        <option value="<%= cc.code %>" data-lengths="<%= cc.lengths.join(',') %>" <%= split.callingCode === cc.code ? 'selected' : '' %>>+<%= cc.code %> <%= cc.label %></option>
+      <% }) %>
+    </select>
+    <input type="tel" id="<%= id('primaryMobile') %>" name="primaryMobile" required inputmode="numeric"
+           autocomplete="off" value="<%= split.national %>" data-phone-national>
+  </div>
+  <div class="hint" data-phone-hint></div>
+</div>
+
+<div class="field">
+  <label for="<%= id('altMobile') %>">Alternate mobile <span class="opt">optional</span></label>
+  <div class="phone-input">
+    <select name="altCallingCode" aria-label="Alternate country code" data-calling-code>
+      <% countryCodes.forEach(function (cc) { %>
+        <option value="<%= cc.code %>" data-lengths="<%= cc.lengths.join(',') %>" <%= altSplit.callingCode === cc.code ? 'selected' : '' %>>+<%= cc.code %> <%= cc.label %></option>
+      <% }) %>
+    </select>
+    <input type="tel" id="<%= id('altMobile') %>" name="altMobile" inputmode="numeric"
+           autocomplete="off" value="<%= altSplit.national %>" data-phone-national>
+  </div>
+  <div class="hint" data-phone-hint></div>
+</div>
+
+<div class="field">
+  <label for="<%= id('email') %>">Email <span class="opt">optional</span></label>
+  <input type="email" id="<%= id('email') %>" name="email" value="<%= c.email || '' %>">
+</div>
+
+<%# §37: an ownerless contact belongs to nobody and gets worked by nobody. %>
+<div class="field">
+  <label for="<%= id('ownerUserId') %>">Owner</label>
+  <select id="<%= id('ownerUserId') %>" name="ownerUserId" required>
+    <% owners.forEach(function (o) { %>
+      <option value="<%= o._id %>" <%= ownerId === String(o._id) ? 'selected' : '' %>><%= o.name %></option>
+    <% }) %>
+  </select>
+  <div class="hint">Every contact has an owner — this is who works it and who sees it in their scope.</div>
+</div>
+
+<div class="field-row three">
+  <div class="field">
+    <label for="<%= id('city') %>">City <span class="opt">optional</span></label>
+    <input type="text" id="<%= id('city') %>" name="city" maxlength="80" value="<%= c.city || '' %>">
+  </div>
+  <div class="field">
+    <label for="<%= id('state') %>">State <span class="opt">optional</span></label>
+    <input type="text" id="<%= id('state') %>" name="state" maxlength="80" value="<%= c.state || '' %>">
+  </div>
+  <div class="field">
+    <label for="<%= id('pincode') %>">Pincode <span class="opt">optional</span></label>
+    <input type="text" id="<%= id('pincode') %>" name="pincode" maxlength="12" value="<%= c.pincode || '' %>">
+  </div>
+</div>
+
+<div class="field">
+  <label for="<%= id('address') %>">Address <span class="opt">optional</span></label>
+  <textarea id="<%= id('address') %>" name="address" maxlength="500" rows="2"><%= c.address || '' %></textarea>
+</div>
+
+<%#
+  §9.3: a contact carries many tags. A plain multi-select was unusable past a
+  handful, so this is a checkbox set with a filter — and it degrades to plain
+  checkboxes with JavaScript off.
+%>
+<div class="field">
+  <label for="<%= id('tagFilter') %>">Tags <span class="opt">optional</span></label>
+  <div class="tag-picker" data-tag-picker>
+    <input type="search" class="tag-filter" id="<%= id('tagFilter') %>" data-tag-filter
+           placeholder="Filter tags…" autocomplete="off" aria-label="Filter tags">
+    <div class="tag-options">
+      <% tags.forEach(function (t) { %>
+        <label class="tag-option" data-tag-name="<%= t.name.toLowerCase() %>">
+          <input type="checkbox" name="tagIds" value="<%= t._id %>" <%= selectedTagIds.indexOf(String(t._id)) > -1 ? 'checked' : '' %>>
+          <span><%= t.name %></span>
+        </label>
+      <% }) %>
+      <% if (!tags.length) { %>
+        <p class="small muted mb-0">No tags configured yet — add them in Setup → Contact tags.</p>
+      <% } %>
+    </div>
+    <p class="small muted mb-0" data-tag-empty hidden>No tag matches that.</p>
+  </div>
+</div>

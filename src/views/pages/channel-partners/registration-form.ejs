@@ -181,7 +181,15 @@
       <form method="post" action="<%= action %>">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <input type="hidden" name="step" value="<%= step %>">
-        <input type="hidden" name="partnerType" value="<%= p.partnerType || '' %>">
+        <%#
+          Only carry partnerType forward on the steps that do not ask for it.
+          Rendering the hidden input alongside the step-1 select posted the field
+          twice, which Express parses as an array — so every submission failed
+          validation and no partner could be created at all.
+        %>
+        <% if (!(step === 1 || isNew)) { %>
+          <input type="hidden" name="partnerType" value="<%= p.partnerType || '' %>">
+        <% } %>
 
         <% if (step === 1 || isNew) { %>
           <h2>Partner type &amp; contact</h2>
@@ -191,6 +199,16 @@
               <option value="INDIVIDUAL" <%= p.partnerType === 'INDIVIDUAL' ? 'selected' : '' %>>Individual</option>
               <option value="COMPANY" <%= p.partnerType === 'COMPANY' ? 'selected' : '' %>>Company</option>
             </select>
+          </div>
+          <%#
+            A company partner cannot be saved without its legal name (§17), so the
+            field has to be on the step that enforces it. Previously it only
+            appeared on step 2, which made "Company" an unreachable dead end.
+          %>
+          <div class="field" data-company-only <%= p.partnerType === 'COMPANY' ? '' : 'hidden' %>>
+            <label for="legalNameStep1">Company legal name</label>
+            <input type="text" id="legalNameStep1" name="legalName" maxlength="200" value="<%= val(p.legalName) %>">
+            <div class="hint">As registered — this is the name that appears on invoices and payouts.</div>
           </div>
           <div class="field-row">
             <div class="field"><label for="primaryContactName">Primary contact name</label><input type="text" id="primaryContactName" name="primaryContactName" maxlength="150" required value="<%= val(p.primaryContactName) %>"></div>

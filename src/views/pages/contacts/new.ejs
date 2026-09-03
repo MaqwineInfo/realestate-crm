@@ -1,7 +1,11 @@
 <%- include('../../partials/app-head') %>
 
 <div class="page-head">
-  <div class="grow"><h1>New contact</h1></div>
+  <div class="grow">
+    <%- include('../../partials/back-link', { href: '/app/contacts', label: 'Contacts' }) %>
+    <h1>New contact</h1>
+    <div class="sub">One person, one record. The mobile number is what keeps it that way.</div>
+  </div>
   <a class="btn btn-ghost" href="/app/contacts">Cancel</a>
 </div>
 
@@ -9,57 +13,8 @@
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <div class="card" style="max-width:680px">
     <div class="card-body">
-      <div class="field-row">
-        <div class="field">
-          <label for="firstName">First name</label>
-          <input type="text" id="firstName" name="firstName" required maxlength="80" autofocus>
-        </div>
-        <div class="field">
-          <label for="lastName">Last name <span class="opt">optional</span></label>
-          <input type="text" id="lastName" name="lastName" maxlength="80">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="primaryMobile">Primary mobile</label>
-          <input type="tel" id="primaryMobile" name="primaryMobile" required>
-        </div>
-        <div class="field">
-          <label for="altMobile">Alternate mobile <span class="opt">optional</span></label>
-          <input type="tel" id="altMobile" name="altMobile">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="email">Email <span class="opt">optional</span></label>
-          <input type="email" id="email" name="email">
-        </div>
-        <div class="field">
-          <label for="city">City <span class="opt">optional</span></label>
-          <input type="text" id="city" name="city" maxlength="80">
-        </div>
-      </div>
-      <div class="field-row three">
-        <div class="field">
-          <label for="state">State <span class="opt">optional</span></label>
-          <input type="text" id="state" name="state" maxlength="80">
-        </div>
-        <div class="field">
-          <label for="pincode">Pincode <span class="opt">optional</span></label>
-          <input type="text" id="pincode" name="pincode" maxlength="12">
-        </div>
-        <div class="field">
-          <label for="tagIds">Tags <span class="opt">optional</span></label>
-          <select id="tagIds" name="tagIds" multiple size="4">
-            <% tags.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %></option><% }) %>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label for="address">Address <span class="opt">optional</span></label>
-        <textarea id="address" name="address" maxlength="500"></textarea>
-      </div>
-      <div class="btn-group">
+      <%- include('../../partials/contact-form', { contact: null, idPrefix: 'new' }) %>
+      <div class="btn-group mt-2">
         <button class="btn btn-primary" type="submit">Create contact</button>
         <a class="btn btn-ghost" href="/app/contacts">Cancel</a>
       </div>

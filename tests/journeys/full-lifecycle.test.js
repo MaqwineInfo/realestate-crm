@@ -199,7 +199,8 @@ test('END-TO-END: a real estate company runs its whole sales operation', async (
       ['action-types', 'Send Payment Plan', ActionType, { semantic: 'OTHER' }],
       ['visit-outcomes', 'Wants a second visit', VisitOutcome, {}],
       ['sources', 'Hoarding', LeadSource, { category: 'OTHER' }],
-      ['tags', 'Site Visit Done', Tag, {}],
+      // §9.3: a tag must declare which book it belongs to before it can be saved.
+      ['tags', 'Site Visit Done', Tag, { category: 'CONTACT' }],
     ]) {
       await admin.get(`/app/setup/${slug}`);
       const res = await admin.submit(`/api/setup/${slug}`, { name, displayOrder: '20', ...extra }, `/app/setup/${slug}`);

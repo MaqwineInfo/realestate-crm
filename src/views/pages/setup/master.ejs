@@ -1,5 +1,6 @@
 <%- include('../../partials/app-head') %>
 <%- include('../../partials/setup-nav') %>
+<% const isSources = slug === 'sources'; %>
 
 <div class="page-head">
   <div class="grow"><h1><%= spec.label %></h1><div class="sub"><%= spec.help %></div></div>
@@ -10,28 +11,80 @@
     <div class="card-head"><h2 class="grow">Current list</h2></div>
     <% if (!items.length) { %>
       <div class="card-body"><p class="muted mb-0">Nothing configured yet. Add the first one on the right.</p></div>
+    <% } else if (isSources) { %>
+      <%# §12.1: source → sub-source is a parent/child tree, same as stages. %>
+      <div class="card-body">
+        <% items.forEach(function (item) {
+             const subs = subSources.filter(function (s) { return String(s.sourceId) === String(item._id); }); %>
+          <details class="stage-node" <%= subs.length ? 'open' : '' %>>
+            <summary>
+              <span class="t-name"><%= item.name %></span>
+              <span class="muted small"><%= item.category %></span>
+              <% if (!item.active) { %><span class="badge b-red">Inactive</span><% } %>
+              <span class="grow"></span>
+              <span class="muted small">order <%= item.displayOrder %> · <%= subs.length %> sub-source<%= subs.length === 1 ? '' : 's' %></span>
+            </summary>
+            <div class="stage-body">
+              <div class="btn-group mb-1">
+                <button class="btn btn-sm" data-drawer="drawer-subsource-<%= item._id %>">Add sub-source</button>
+                <form method="post" action="/api/setup/<%= slug %>/<%= item._id %>/toggle">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm" type="submit"><%= item.active ? 'Deactivate' : 'Activate' %></button>
+                </form>
+                <%- include('../../partials/master-delete', { slug: slug, item: item, usage: usage[String(item._id)], singular: spec.singular }) %>
+              </div>
+              <% if (!subs.length) { %>
+                <p class="small muted mb-0">No sub-sources. Leads from here record the source only.</p>
+              <% } else { %>
+                <ul class="substage-tree">
+                  <% subs.forEach(function (s, i) { %>
+                    <li>
+                      <span class="branch" aria-hidden="true"><%= i === subs.length - 1 ? '└──' : '├──' %></span>
+                      <span class="grow"><%= s.name %></span>
+                      <% if (!s.active) { %><span class="badge b-red">Inactive</span><% } %>
+                      <form method="post" action="/api/setup/sub-sources/<%= s._id %>/toggle">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-ghost btn-sm" type="submit"><%= s.active ? 'Deactivate' : 'Activate' %></button>
+                      </form>
+                      <form method="post" action="/api/setup/sub-sources/<%= s._id %>/delete"
+                            data-confirm="Delete <%= s.name %>? This cannot be undone.">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-ghost btn-sm text-danger" type="submit">Delete</button>
+                      </form>
+                    </li>
+                  <% }) %>
+                </ul>
+              <% } %>
+            </div>
+          </details>
+        <% }) %>
+      </div>
     <% } else { %>
-      <table>
+      <div class="table-wrap"><table class="responsive">
         <thead>
           <tr><th>Name</th><% if (spec.extra) { %><th><%= spec.extra.label %></th><% } %><th>Order</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
           <% items.forEach(function (item) { %>
             <tr>
-              <td><span class="t-name"><%= item.name %></span></td>
-              <% if (spec.extra) { %><td class="muted small"><%= item[spec.extra.key] || '—' %></td><% } %>
-              <td class="muted"><%= item.displayOrder %></td>
-              <td><span class="badge <%= item.active ? 'b-green' : 'b-slate' %>"><%= item.active ? 'Active' : 'Inactive' %></span></td>
+              <td data-label="Name">
+                <span class="t-name"><%= item.name %></span>
+                <% if (usage[String(item._id)]) { %><div class="t-sub">Used by <%= usage[String(item._id)] %></div><% } %>
+              </td>
+              <% if (spec.extra) { %><td data-label="<%= spec.extra.label %>" class="muted small"><%= item[spec.extra.key] || '—' %></td><% } %>
+              <td data-label="Order" class="muted"><%= item.displayOrder %></td>
+              <td data-label="Status"><span class="badge <%= item.active ? 'b-green' : 'b-slate' %>"><%= item.active ? 'Active' : 'Inactive' %></span></td>
               <td class="row-actions">
                 <form method="post" action="/api/setup/<%= slug %>/<%= item._id %>/toggle">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <button class="btn btn-sm" type="submit"><%= item.active ? 'Deactivate' : 'Activate' %></button>
                 </form>
+                <%- include('../../partials/master-delete', { slug: slug, item: item, usage: usage[String(item._id)], singular: spec.singular }) %>
               </td>
             </tr>
           <% }) %>
         </tbody>
-      </table>
+      </table></div>
     <% } %>
   </div>
 
@@ -47,9 +100,16 @@
         <% if (spec.extra) { %>
           <div class="field">
             <label for="<%= spec.extra.key %>"><%= spec.extra.label %></label>
-            <select id="<%= spec.extra.key %>" name="<%= spec.extra.key %>">
-              <% spec.extra.options.forEach(function (o) { %><option value="<%= o %>"><%= o %></option><% }) %>
+            <select id="<%= spec.extra.key %>" name="<%= spec.extra.key %>" <%= spec.extra.required ? 'required' : '' %>>
+              <%# A required master field starts unchosen, so it is a decision rather than a default. %>
+              <% if (spec.extra.required) { %><option value="">Select <%= spec.extra.label.toLowerCase() %></option><% } %>
+              <% spec.extra.options.forEach(function (o) { %>
+                <option value="<%= o %>"><%= String(o).toLowerCase().replace(/_/g, ' ') %></option>
+              <% }) %>
             </select>
+            <% if (spec.extra.required) { %>
+              <div class="hint">A <%= spec.singular.toLowerCase() %> only appears where it belongs, so this has to be chosen.</div>
+            <% } %>
           </div>
         <% } %>
         <div class="field">
@@ -57,10 +117,28 @@
           <input type="number" id="displayOrder" name="displayOrder" value="0" min="0">
         </div>
         <button class="btn btn-primary" type="submit">Add <%= spec.singular.toLowerCase() %></button>
-        <div class="hint mt-1">Items used in history are deactivated rather than deleted (§95).</div>
+        <div class="hint mt-1">Anything already used in history can be deactivated but not deleted (§95).</div>
       </form>
     </div>
   </div>
 </div>
+
+<% if (isSources) { %>
+  <%# One drawer per source, so the parent is never a guess. %>
+  <% items.forEach(function (item) { %>
+    <%- include('../../partials/drawer-open', { id: 'drawer-subsource-' + item._id, heading: 'Add sub-source to ' + item.name, action: '/api/setup/sub-sources' }) %>
+      <input type="hidden" name="sourceId" value="<%= item._id %>">
+      <div class="read-only-summary">Parent source: <strong><%= item.name %></strong></div>
+      <div class="field">
+        <label for="ss-name-<%= item._id %>">Name</label>
+        <input type="text" id="ss-name-<%= item._id %>" name="name" required maxlength="80" placeholder="e.g. Diwali campaign">
+      </div>
+      <div class="field">
+        <label for="ss-order-<%= item._id %>">Display order</label>
+        <input type="number" id="ss-order-<%= item._id %>" name="displayOrder" value="0" min="0">
+      </div>
+    <%- include('../../partials/drawer-close', { cta: 'Add sub-source' }) %>
+  <% }) %>
+<% } %>
 
 <%- include('../../partials/app-foot') %>

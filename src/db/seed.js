@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const db = require('./index');
 const {
   Tenant, User, Role, Stage, SubStage, ActionType, VisitOutcome, LeadSource, Tag, AssignmentPool,
+  Amenity, ProjectType,
   Template, AckRule, Integration,
 } = require('./models');
 const permissions = require('../lib/permissions');
@@ -52,6 +53,20 @@ const DEFAULT_SOURCES = [
 
 const DEFAULT_TAGS = ['Investor', 'Member', 'Channel Partner', 'Past Customer', 'NRI', 'High Intent'];
 
+const DEFAULT_PROJECT_TYPES = [
+  ['Residential Apartment', 'RESIDENTIAL'], ['Villa / Row House', 'VILLA'],
+  ['Commercial', 'COMMERCIAL'], ['Plotting', 'PLOTTING'], ['Mixed Use', 'MIXED_USE'],
+];
+
+const DEFAULT_AMENITIES = [
+  ['Clubhouse', 'LEISURE'], ['Swimming Pool', 'LEISURE'], ['Party Lawn', 'LEISURE'], ['Indoor Games', 'LEISURE'],
+  ['Gymnasium', 'SPORTS'], ['Jogging Track', 'SPORTS'], ['Children Play Area', 'SPORTS'], ['Cricket Net', 'SPORTS'],
+  ['Landscaped Garden', 'GREEN'], ['Rainwater Harvesting', 'GREEN'], ['Solar Panels', 'GREEN'],
+  ['CCTV Surveillance', 'SAFETY'], ['Gated Security', 'SAFETY'], ['Fire Fighting System', 'SAFETY'],
+  ['Covered Parking', 'PARKING'], ['Visitor Parking', 'PARKING'], ['EV Charging', 'PARKING'],
+  ['Power Backup', 'CONVENIENCE'], ['Lift', 'CONVENIENCE'], ['Intercom', 'CONVENIENCE'], ['Water Softener', 'CONVENIENCE'],
+];
+
 /** Creates the masters a tenant needs. Safe to re-run: it only fills gaps. */
 async function seedTenantDefaults(tenantId) {
   const stageDocs = {};
@@ -78,7 +93,15 @@ async function seedTenantDefaults(tenantId) {
     await upsert(LeadSource, { tenantId, name }, { tenantId, name, category, displayOrder: order++, isSystem: true });
   }
   for (const name of DEFAULT_TAGS) {
-    await upsert(Tag, { tenantId, nameLower: name.toLowerCase() }, { tenantId, name });
+    await upsert(Tag, { tenantId, nameLower: name.toLowerCase() }, { tenantId, name, category: 'CONTACT' });
+  }
+  order = 1;
+  for (const [name, semantic] of DEFAULT_PROJECT_TYPES) {
+    await upsert(ProjectType, { tenantId, name }, { tenantId, name, semantic, displayOrder: order++, isSystem: true });
+  }
+  order = 1;
+  for (const [name, group] of DEFAULT_AMENITIES) {
+    await upsert(Amenity, { tenantId, name }, { tenantId, name, group, displayOrder: order++ });
   }
   await seedCommunicationDefaults(tenantId);
   await seedPostBookingDefaults(tenantId);
