@@ -1,0 +1,92 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/society-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Society enquiries</h1>
+    <div class="sub">Societies asking to join the platform. Work the overdue ones first.</div>
+  </div>
+  <a class="btn" href="/app/society/enquiries/export<%= exportQuery %>">Export CSV</a>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="num"><%= counts.total %></div><div class="lbl">All enquiries</div></div>
+  <div class="tile"><div class="num"><%= counts.pending %></div><div class="lbl">Pending</div></div>
+  <div class="tile warn"><div class="num"><%= counts.dueToday %></div><div class="lbl">Follow-up due today</div></div>
+  <div class="tile bad"><div class="num"><%= counts.overdue %></div><div class="lbl">Overdue</div></div>
+</div>
+
+<form class="filters" method="get" action="/app/society/enquiries">
+  <div class="field">
+    <label for="e-q">Search</label>
+    <input type="search" id="e-q" name="search" value="<%= filters.search %>" placeholder="Society, contact, mobile or email">
+  </div>
+  <div class="field">
+    <label for="e-status">Status</label>
+    <select id="e-status" name="status">
+      <option value="">Any status</option>
+      <% ['Pending', 'Approve', 'Reject'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= s %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="e-stage">Stage</label>
+    <select id="e-stage" name="stageId">
+      <option value="">Any stage</option>
+      <% stages.forEach(function (s) { %>
+        <option value="<%= s._id %>" <%= String(filters.stageId) === String(s._id) ? 'selected' : '' %>><%= s.title %></option>
+      <% }); %>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <% if (!inquiries.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No enquiries',
+      message: 'Enquiries submitted from the app or website land here.'
+    }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Society</th><th>Contact</th><th class="num">Units</th>
+          <th>Stage</th><th>Follow-up</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% inquiries.forEach(function (i) { %>
+          <tr>
+            <td data-label="Society">
+              <a href="/app/society/enquiries/<%= i._id %>"><strong><%= i.societyName %></strong></a>
+              <div class="small muted"><%= i.societyAddress || '' %></div>
+            </td>
+            <td data-label="Contact">
+              <%= [i.firstName, i.lastName].filter(Boolean).join(' ') || '—' %>
+              <div class="small muted"><%= (i.countryCode || '') + (i.mobileNumber || '') %></div>
+            </td>
+            <td data-label="Units" class="num"><%= i.noOfUnit || '—' %></td>
+            <td data-label="Stage">
+              <%= i.stageId && i.stageId.title || '—' %>
+              <% if (i.subStageId) { %><div class="small muted"><%= i.subStageId.title %></div><% } %>
+            </td>
+            <td data-label="Follow-up">
+              <% if (i.followupDate) { %>
+                <span class="<%= i.isOverdue ? 'badge b-red' : '' %>"><%= h.date(i.followupDate) %></span>
+              <% } else { %>—<% } %>
+            </td>
+            <td data-label="Status">
+              <span class="badge <%= i.status === 'Approve' ? 'b-green' : (i.status === 'Reject' ? 'b-red' : 'b-amber') %>"><%= i.status %></span>
+            </td>
+            <td data-label=""><a class="btn btn-sm" href="/app/society/enquiries/<%= i._id %>">Open</a></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: filters }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

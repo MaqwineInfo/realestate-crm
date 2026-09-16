@@ -153,6 +153,25 @@ const CATALOG = {
     { key: 'setup.collection_allocation', label: 'Manage collection allocation' },
     { key: 'setup.post_booking', label: 'Manage post-booking settings and KYC types' },
   ],
+  /**
+   * Society (SOCIETY-PLAN.md §3.2). These gate the EJS admin at `/app/society/*`
+   * only. The society API surfaces carry their own RBAC in `SocietyRole`, which
+   * is a different catalog for a different population — a chairman is not a CRM
+   * user and never appears here.
+   */
+  Society: [
+    { key: 'society.view', label: 'View societies' },
+    { key: 'society.create', label: 'Create society' },
+    { key: 'society.edit', label: 'Edit society' },
+    { key: 'society.delete', label: 'Delete society' },
+    { key: 'society.enquiry.view', label: 'View society enquiries' },
+    { key: 'society.enquiry.manage', label: 'Work society enquiries' },
+    { key: 'society.developer.manage', label: 'Manage developers' },
+    { key: 'society.role.manage', label: 'Manage society roles' },
+    { key: 'society.admin.manage', label: 'Manage society admins' },
+    { key: 'society.stage.manage', label: 'Manage enquiry pipeline' },
+    { key: 'society.report.view', label: 'View society analytics' },
+  ],
 };
 
 const ALL = Object.values(CATALOG).flat();

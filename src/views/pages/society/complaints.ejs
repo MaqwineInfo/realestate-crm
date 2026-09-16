@@ -1,0 +1,87 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — complaints</h1>
+    <div class="sub">Unassigned and open first. Every change is recorded on the complaint.</div>
+  </div>
+</div>
+
+<div class="tiles">
+  <a class="tile <%= filters.status === '' ? 'active' : '' %>" href="?">
+    <div class="num"><%= stats.total %></div><div class="lbl">All</div>
+  </a>
+  <a class="tile warn <%= filters.status === 'Open' ? 'active' : '' %>" href="?status=Open">
+    <div class="num"><%= stats.byStatus.Open || 0 %></div><div class="lbl">Open</div>
+  </a>
+  <a class="tile <%= filters.status === 'In Progress' ? 'active' : '' %>" href="?status=In+Progress">
+    <div class="num"><%= stats.byStatus['In Progress'] || 0 %></div><div class="lbl">In progress</div>
+  </a>
+  <div class="tile bad"><div class="num"><%= stats.unassigned %></div><div class="lbl">Unassigned</div></div>
+  <div class="tile"><div class="num"><%= stats.closed %></div><div class="lbl">Closed</div></div>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="c-q">Search</label>
+    <input type="search" id="c-q" name="search" value="<%= filters.search %>" placeholder="Title, description or CM-001">
+  </div>
+  <div class="field">
+    <label for="c-type">Type</label>
+    <select id="c-type" name="complaintTypeId">
+      <option value="">Any type</option>
+      <% types.forEach(function (t) { %>
+        <option value="<%= t._id %>" <%= String(filters.complaintTypeId) === String(t._id) ? 'selected' : '' %>><%= t.typeName %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="c-priority">Priority</label>
+    <select id="c-priority" name="priority">
+      <option value="">Any</option>
+      <% ['Low', 'Medium', 'High', 'Urgent'].forEach(function (p) { %>
+        <option value="<%= p %>" <%= filters.priority === p ? 'selected' : '' %>><%= p %></option>
+      <% }); %>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <% if (!complaints.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No complaints',
+      message: 'Residents raise these from the app; you can also log one on their behalf.'
+    }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Ref</th><th>Complaint</th><th>Unit</th><th>Type</th><th>Priority</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% complaints.forEach(function (x) { %>
+          <tr>
+            <td data-label="Ref"><code><%= x.complaintId %></code></td>
+            <td data-label="Complaint">
+              <a href="/app/society/societies/<%= society._id %>/complaints/<%= x._id %>"><strong><%= x.title %></strong></a>
+              <div class="small muted"><%= h.rel(x.createdAt) %></div>
+            </td>
+            <td data-label="Unit"><%= x.unitNumber || '—' %></td>
+            <td data-label="Type"><%= x.complaintTypeId ? x.complaintTypeId.typeName : '—' %></td>
+            <td data-label="Priority">
+              <span class="badge <%= x.priority === 'Urgent' ? 'b-red' : (x.priority === 'High' ? 'b-amber' : 'b-slate') %>"><%= x.priority %></span>
+            </td>
+            <td data-label="Assigned"><%= x.assigneeName || '—' %></td>
+            <td data-label="Status">
+              <span class="badge <%= ['Close', 'Dismiss'].indexOf(x.status) >= 0 ? 'b-slate' : (x.status === 'Open' ? 'b-amber' : 'b-green') %>"><%= x.status %></span>
+            </td>
+            <td data-label=""><a class="btn btn-sm" href="/app/society/societies/<%= society._id %>/complaints/<%= x._id %>">Open</a></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: filters }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

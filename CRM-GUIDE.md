@@ -256,6 +256,8 @@ cp .env.example .env
 npm run seed     # creates the "Skyline Developers" demo organization
 npm run dev      # http://localhost:3000  (auto-restarts on change)
 npm start        # production start
+
+npm run society:openapi   # regenerate docs/society-openapi.json
 ```
 
 `npm run seed` is safe to re-run — it does nothing if the demo tenant already exists.

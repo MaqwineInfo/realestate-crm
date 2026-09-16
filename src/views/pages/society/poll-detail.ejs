@@ -1,0 +1,59 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies/' + society._id + '/polls', label: 'Polls' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= poll.title %></h1>
+    <div class="sub">
+      <code><%= poll.pollId %></code> ·
+      <%= poll.totalVoters %> of <%= poll.eligibleVotersCount %> voted (<%= poll.turnout %>%)
+      <span class="badge <%= poll.publishStatus === 'PUBLISHED' ? 'b-green' : (poll.publishStatus === 'CLOSED' ? 'b-slate' : 'b-amber') %>"><%= poll.publishStatus %></span>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Results</h2></div>
+  <div class="card-body">
+    <% if (poll.description) { %><p class="muted"><%= poll.description %></p><% } %>
+    <% poll.options.forEach(function (o) { %>
+      <% var pct = poll.totalVotes ? Math.round((o.voteCount / poll.totalVotes) * 100) : 0; %>
+      <div class="mb-1">
+        <div class="inline">
+          <strong class="grow"><%= o.text %></strong>
+          <span class="muted small"><%= o.voteCount %> vote<%= o.voteCount === 1 ? '' : 's' %> · <%= pct %>%</span>
+        </div>
+        <div class="pc-meter" role="img" aria-label="<%= o.text %>: <%= pct %> percent">
+          <span class="seg is-booked" style="width:<%= pct %>%"></span>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Who voted</h2>
+    <span class="muted small">Anonymous votes are counted, not attributed</span>
+  </div>
+  <% if (!voters.length) { %>
+    <%- include('../../partials/empty', { heading: 'No votes yet', message: 'Results appear here as residents vote.' }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>Unit</th><th>Choice</th><th>When</th></tr></thead>
+      <tbody>
+        <% voters.forEach(function (v) { %>
+          <tr>
+            <td data-label="Unit"><%= v.anonymous ? 'Anonymous' : (v.unitId ? v.unitId.unitNumber : '—') %></td>
+            <td data-label="Choice">
+              <span class="small"><%= (v.selectedOptions || []).map(function (id) { return optionText(id); }).join(', ') %></span>
+            </td>
+            <td data-label="When"><%= h.dateTime(v.votedAt) %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

@@ -1,0 +1,75 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — members</h1>
+    <div class="sub">One row per household. Family members are counted, not listed.</div>
+  </div>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="num"><%= counts.total %></div><div class="lbl">Households</div></div>
+  <div class="tile"><div class="num"><%= counts.owners %></div><div class="lbl">Owners</div></div>
+  <div class="tile"><div class="num"><%= counts.tenants %></div><div class="lbl">Tenants</div></div>
+  <div class="tile"><div class="num"><%= counts.family %></div><div class="lbl">Family members</div></div>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="m-q">Search</label>
+    <input type="search" id="m-q" name="search" value="<%= filters.search %>" placeholder="Name or mobile">
+  </div>
+  <div class="field">
+    <label for="m-type">Resident type</label>
+    <select id="m-type" name="residentType">
+      <option value="">Any</option>
+      <option value="Owner" <%= filters.residentType === 'Owner' ? 'selected' : '' %>>Owner</option>
+      <option value="Tenant" <%= filters.residentType === 'Tenant' ? 'selected' : '' %>>Tenant</option>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <% if (!members.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No residents yet',
+      message: 'Assign someone to a unit, or approve an onboarding request.'
+    }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Resident</th><th>Unit</th><th>Type</th><th class="num">Family</th><th>Since</th><th></th></tr></thead>
+      <tbody>
+        <% members.forEach(function (m) { %>
+          <tr>
+            <td data-label="Resident">
+              <strong><%= [m.firstName, m.lastName].filter(Boolean).join(' ') || '—' %></strong>
+              <div class="small muted"><%= m.mobileNumber || '' %></div>
+            </td>
+            <td data-label="Unit">
+              <% if (m.unitId) { %>
+                <a href="/app/society/societies/<%= society._id %>/units/<%= m.unitId._id %>"><%= m.unitId.unitNumber %></a>
+                <div class="small muted"><%= m.unitId.blockNumber || '' %></div>
+              <% } else { %>—<% } %>
+            </td>
+            <td data-label="Type">
+              <span class="badge <%= m.residentType === 'Owner' ? 'b-green' : 'b-amber' %>"><%= m.residentType %></span>
+            </td>
+            <td data-label="Family" class="num"><%= m.familyCount %></td>
+            <td data-label="Since"><%= h.date(m.startDate) %></td>
+            <td data-label="">
+              <% if (m.unitId) { %>
+                <a class="btn btn-sm" href="/app/society/societies/<%= society._id %>/units/<%= m.unitId._id %>">Open unit</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: filters }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

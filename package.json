@@ -11,7 +11,8 @@
     "db:dump": "node scripts/db-snapshot.js dump",
     "db:restore": "node scripts/db-snapshot.js restore",
     "test:watch": "node --test --watch --test-concurrency=4",
-    "smoke": "node scripts/smoke-screens.js && node scripts/smoke-wiring.js"
+    "smoke": "node scripts/smoke-screens.js && node scripts/smoke-wiring.js",
+    "society:openapi": "node scripts/society-openapi/index.js"
   },
   "keywords": [],
   "author": "",
@@ -26,9 +27,11 @@
     "express-session": "^1.19.0",
     "helmet": "^8.3.0",
     "jpeg-js": "^0.4.4",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.2",
     "multer": "^2.2.0",
     "qrcode": "^1.5.4",
+    "swagger-ui-dist": "^5.32.15",
     "zod": "^4.4.3"
   }
 }

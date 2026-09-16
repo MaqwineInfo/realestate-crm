@@ -1,0 +1,99 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/enquiries', label: 'Enquiries' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= inquiry.societyName %></h1>
+    <div class="sub">
+      <%= [inquiry.firstName, inquiry.lastName].filter(Boolean).join(' ') %>
+      · <%= (inquiry.countryCode || '') + (inquiry.mobileNumber || '') %>
+      <span class="badge <%= inquiry.status === 'Approve' ? 'b-green' : (inquiry.status === 'Reject' ? 'b-red' : 'b-amber') %>"><%= inquiry.status %></span>
+    </div>
+  </div>
+  <% if (inquiry.status === 'Approve' && can('society.create')) { %>
+    <a class="btn btn-primary" href="/app/society/societies/new?fromEnquiry=<%= inquiry._id %>">Onboard society</a>
+  <% } %>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Enquiry</h2></div>
+    <div class="card-body">
+      <dl class="kv">
+        <dt>Address</dt><dd><%= inquiry.societyAddress || '—' %></dd>
+        <dt>Units</dt><dd><%= inquiry.noOfUnit || '—' %></dd>
+        <dt>Email</dt><dd><%= inquiry.email || '—' %></dd>
+        <dt>Source</dt><dd><%= inquiry.sourceName || '—' %></dd>
+        <dt>Notes</dt><dd><%= inquiry.notes || '—' %></dd>
+        <dt>Received</dt><dd><%= h.date(inquiry.createdAt) %></dd>
+      </dl>
+    </div>
+  </div>
+
+  <% if (can('society.enquiry.manage')) { %>
+    <div class="card mb-2">
+      <div class="card-head"><h2 class="grow">Log a follow-up</h2></div>
+      <div class="card-body">
+        <form method="post" action="/app/society/enquiries/<%= inquiry._id %>/followup">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="fu-stage">Move to stage</label>
+            <select id="fu-stage" name="stageId">
+              <option value="">Leave unchanged</option>
+              <% stages.forEach(function (s) { %>
+                <option value="<%= s._id %>" <%= String(inquiry.stageId && inquiry.stageId._id) === String(s._id) ? 'selected' : '' %>><%= s.title %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fu-date">Next follow-up</label>
+            <input id="fu-date" name="followupDate" type="date"
+                   value="<%= inquiry.followupDate ? h.dateInput(inquiry.followupDate) : '' %>">
+          </div>
+          <div class="field">
+            <label for="fu-comments">What happened?</label>
+            <textarea id="fu-comments" name="comments" rows="3" required placeholder="Spoke to the secretary; sending a proposal."></textarea>
+          </div>
+          <div class="field">
+            <label for="fu-status">Decision</label>
+            <select id="fu-status" name="status">
+              <% ['Pending', 'Approve', 'Reject'].forEach(function (s) { %>
+                <option value="<%= s %>" <%= inquiry.status === s ? 'selected' : '' %>><%= s %></option>
+              <% }); %>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="submit">Save follow-up</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">History</h2></div>
+  <% if (!history.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing logged yet', message: 'Follow-ups and stage changes appear here.' }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>When</th><th>Action</th><th>Change</th><th>Note</th></tr></thead>
+      <tbody>
+        <% history.forEach(function (hrow) { %>
+          <tr>
+            <td data-label="When"><%= h.dateTime(hrow.createdAt) %></td>
+            <td data-label="Action"><span class="badge b-slate"><%= hrow.actionType || '—' %></span></td>
+            <td data-label="Change">
+              <% if (String(hrow.previousStageId || '') !== String(hrow.newStageId || '')) { %>
+                <span class="small"><%= stageName(hrow.previousStageId) %> → <%= stageName(hrow.newStageId) %></span>
+              <% } else { %><span class="muted small">—</span><% } %>
+            </td>
+            <td data-label="Note">
+              <span class="small"><%= hrow.updatedObject && hrow.updatedObject.comments || hrow.comment || '' %></span>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

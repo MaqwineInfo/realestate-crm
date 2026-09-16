@@ -1,0 +1,117 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — staff</h1>
+    <div class="sub">Each posting gets its own gate MPIN, unique within this society.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Employee types</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/employee-types" class="mb-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="t-name">Type name *</label>
+          <input id="t-name" name="typeName" required minlength="2" maxlength="50" placeholder="Housekeeping">
+        </div>
+        <button class="btn" type="submit">Add type</button>
+      </form>
+
+      <table class="responsive">
+        <thead><tr><th>Type</th><th></th></tr></thead>
+        <tbody>
+          <% types.forEach(function (t) { %>
+            <tr>
+              <td data-label="Type">
+                <%= t.typeName %>
+                <% if (t.isSystem) { %> <span class="badge b-slate">System</span><% } %>
+              </td>
+              <td data-label="">
+                <% if (!t.isSystem) { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/employee-types/<%= t._id %>/delete" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Hire someone</h2></div>
+    <div class="card-body">
+      <% if (!types.length) { %>
+        <p class="muted small mb-0">Add an employee type first.</p>
+      <% } else { %>
+        <form method="post" action="/app/society/societies/<%= society._id %>/employees">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="e-name">Name *</label>
+            <input id="e-name" name="employeeName" required minlength="2" maxlength="100">
+          </div>
+          <div class="field">
+            <label for="e-mobile">Mobile *</label>
+            <input id="e-mobile" name="mobileNumber" required maxlength="20">
+          </div>
+          <div class="field">
+            <label for="e-type">Employee type *</label>
+            <select id="e-type" name="employeeTypeId" required>
+              <% types.forEach(function (t) { %>
+                <option value="<%= t._id %>"><%= t.typeName %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="e-doj">Date of joining</label>
+            <input id="e-doj" name="dateOfJoining" type="date">
+          </div>
+          <button class="btn btn-primary" type="submit">Hire</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Staff</h2>
+    <span class="muted small"><%= pagination.total %> on the books</span>
+  </div>
+  <% if (!employees.length) { %>
+    <%- include('../../partials/empty', { heading: 'No staff yet', message: 'Hire a guard or a technician to get started.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Name</th><th>Type</th><th>Mobile</th><th>MPIN</th><th>Joined</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% employees.forEach(function (e) { %>
+          <tr>
+            <td data-label="Name"><strong><%= e.employeeName %></strong></td>
+            <td data-label="Type"><%= e.employeeType || '—' %></td>
+            <td data-label="Mobile"><%= e.mobileNumber %></td>
+            <td data-label="MPIN"><code><%= e.mpin || '—' %></code></td>
+            <td data-label="Joined"><%= e.dateOfJoining ? h.date(e.dateOfJoining) : '—' %></td>
+            <td data-label="Status"><span class="badge <%= e.status === 'ACTIVE' ? 'b-green' : 'b-slate' %>"><%= e.status %></span></td>
+            <td data-label="">
+              <form method="post" action="/app/society/societies/<%= society._id %>/employees/<%= e._id %>/delete" style="display:inline"
+                    onsubmit="return confirm('End <%= e.employeeName %>&rsquo;s posting at this society?')">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm btn-ghost" type="submit">End posting</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

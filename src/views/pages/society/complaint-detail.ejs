@@ -1,0 +1,102 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies/' + society._id + '/complaints', label: 'Complaints' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= complaint.title %></h1>
+    <div class="sub">
+      <code><%= complaint.complaintId %></code> ·
+      <%= complaint.complaintTypeId ? complaint.complaintTypeId.typeName : '' %> ·
+      raised <%= h.rel(complaint.createdAt) %>
+      <span class="badge <%= ['Close', 'Dismiss'].indexOf(complaint.status) >= 0 ? 'b-slate' : (complaint.status === 'Open' ? 'b-amber' : 'b-green') %>"><%= complaint.status %></span>
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Detail</h2></div>
+    <div class="card-body">
+      <dl class="kv">
+        <dt>Description</dt><dd><%= complaint.description %></dd>
+        <dt>Unit</dt><dd><%= unitNumber || '—' %></dd>
+        <dt>Priority</dt><dd><%= complaint.priority %></dd>
+        <dt>Raised by</dt><dd><%= complaint.createdByRole === 'MEMBER' ? 'Resident' : 'Admin' %></dd>
+        <dt>Assigned to</dt><dd><%= assigneeName || 'Nobody yet' %></dd>
+        <% if (complaint.resolution && complaint.resolution.notes) { %>
+          <dt>Resolution</dt><dd><%= complaint.resolution.notes %></dd>
+        <% } %>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Work it</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/complaints/<%= complaint._id %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="x-status">Status</label>
+          <select id="x-status" name="status">
+            <% statuses.forEach(function (s) { %>
+              <option value="<%= s %>" <%= complaint.status === s ? 'selected' : '' %>><%= s %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="x-assign">Assign to</label>
+          <select id="x-assign" name="assignedTo">
+            <option value="">Nobody</option>
+            <% employees.forEach(function (e) { %>
+              <option value="<%= e._id %>" <%= String(complaint.assignedTo) === String(e._id) ? 'selected' : '' %>><%= e.employeeName %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="x-priority">Priority</label>
+          <select id="x-priority" name="priority">
+            <% ['Low', 'Medium', 'High', 'Urgent'].forEach(function (p) { %>
+              <option value="<%= p %>" <%= complaint.priority === p ? 'selected' : '' %>><%= p %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="x-note">Note</label>
+          <textarea id="x-note" name="comment" rows="2" placeholder="What changed, and why."></textarea>
+        </div>
+        <div class="field">
+          <label for="x-res">Resolution notes</label>
+          <textarea id="x-res" name="resolutionNotes" rows="2" placeholder="Fill this in when closing."></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Save</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">History</h2>
+    <span class="muted small">Every change, whoever made it</span>
+  </div>
+  <div class="table-wrap"><table class="responsive">
+    <thead><tr><th>When</th><th>Action</th><th>Change</th><th>By</th><th>Note</th></tr></thead>
+    <tbody>
+      <% complaint.history.forEach(function (row) { %>
+        <tr>
+          <td data-label="When"><%= h.dateTime(row.createdAt) %></td>
+          <td data-label="Action"><span class="badge b-slate"><%= row.action.replace(/_/g, ' ') %></span></td>
+          <td data-label="Change">
+            <% if (row.previousStatus && row.newStatus && row.previousStatus !== row.newStatus) { %>
+              <span class="small"><%= row.previousStatus %> → <%= row.newStatus %></span>
+            <% } else { %><span class="muted small">—</span><% } %>
+          </td>
+          <td data-label="By"><span class="small"><%= row.changedByName || row.changedByRole %></span></td>
+          <td data-label="Note"><span class="small"><%= row.comment || '' %></span></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table></div>
+</div>
+
+<%- include('../../partials/app-foot') %>

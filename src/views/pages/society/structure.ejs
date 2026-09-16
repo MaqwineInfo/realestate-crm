@@ -1,0 +1,103 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — blocks &amp; floors</h1>
+    <div class="sub">A block with occupied units cannot be removed; its floors and units go with it when it is.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Add a block</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/blocks">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="b-name">Block name *</label>
+          <input id="b-name" name="blockName" required minlength="2" maxlength="100" placeholder="Block C">
+          <div class="small muted">Its position in the list is assigned automatically.</div>
+        </div>
+        <button class="btn btn-primary" type="submit">Add block</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Add a run of floors</h2></div>
+    <div class="card-body">
+      <% if (!blocks.length) { %>
+        <p class="muted small mb-0">Add a block first.</p>
+      <% } else { %>
+        <form method="post" action="/app/society/societies/<%= society._id %>/floors/bulk">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label for="f-block">Block *</label>
+            <select id="f-block" name="blockId" required>
+              <% blocks.forEach(function (b) { %>
+                <option value="<%= b._id %>"><%= b.blockName %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="grid cols-3">
+            <div class="field">
+              <label for="f-from">From floor</label>
+              <input id="f-from" name="from" type="number" value="1" min="0" max="200" required>
+            </div>
+            <div class="field">
+              <label for="f-to">To floor</label>
+              <input id="f-to" name="to" type="number" value="5" min="0" max="200" required>
+            </div>
+            <div class="field">
+              <label for="f-upf">Units per floor</label>
+              <input id="f-upf" name="unitsPerFloor" type="number" value="4" min="0" max="100">
+            </div>
+          </div>
+          <div class="small muted mb-1">Re-running an overlapping range adds only the missing floors.</div>
+          <button class="btn btn-primary" type="submit">Add floors</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Structure</h2>
+    <span class="muted small"><%= stats.totalBlocks %> blocks · <%= stats.totalFloors %> floors · <%= stats.totalUnits %> units</span>
+  </div>
+  <% if (!blocks.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No blocks yet',
+      message: 'Add a block, then a run of floors, then units.'
+    }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Block</th><th class="num">Order</th><th class="num">Floors</th><th>Floor numbers</th><th class="num">Units</th><th></th></tr></thead>
+      <tbody>
+        <% blocks.forEach(function (b) { %>
+          <tr>
+            <td data-label="Block"><strong><%= b.blockName %></strong></td>
+            <td data-label="Order" class="num"><%= b.orderNo %></td>
+            <td data-label="Floors" class="num"><%= b.floors.length %></td>
+            <td data-label="Floor numbers">
+              <span class="small muted"><%= b.floors.map(function (f) { return f.floorNumber === 0 ? 'G' : f.floorNumber; }).join(', ') || '—' %></span>
+            </td>
+            <td data-label="Units" class="num"><%= b.unitCount %></td>
+            <td data-label="">
+              <form method="post" action="/app/society/societies/<%= society._id %>/blocks/<%= b._id %>/delete" style="display:inline"
+                    onsubmit="return confirm('Delete <%= b.blockName %> and everything under it?')">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

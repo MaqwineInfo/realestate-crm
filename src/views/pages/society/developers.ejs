@@ -1,0 +1,80 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/society-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Developers</h1>
+    <div class="sub">The builders whose societies run on the platform.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Add a developer</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/developers">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="grid cols-2">
+          <div class="field">
+            <label for="d-first">First name *</label>
+            <input id="d-first" name="firstName" required maxlength="80">
+          </div>
+          <div class="field">
+            <label for="d-last">Last name *</label>
+            <input id="d-last" name="lastName" required maxlength="80">
+          </div>
+          <div class="field">
+            <label for="d-mobile">Mobile *</label>
+            <input id="d-mobile" name="mobileNumber" required maxlength="20">
+          </div>
+          <div class="field">
+            <label for="d-email">Email *</label>
+            <input id="d-email" name="email" type="email" required maxlength="150">
+          </div>
+          <div class="field span-2">
+            <label for="d-company">Company</label>
+            <input id="d-company" name="companyName" maxlength="150">
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Add developer</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head">
+      <h2 class="grow">Developers</h2>
+      <span class="muted small"><%= pagination.total %> total</span>
+    </div>
+    <% if (!developers.length) { %>
+      <%- include('../../partials/empty', { heading: 'No developers yet', message: 'Add one to attach societies to it.' }) %>
+    <% } else { %>
+      <div class="table-wrap"><table class="responsive">
+        <thead><tr><th>Name</th><th>Company</th><th>Contact</th><th class="num">Societies</th><th></th></tr></thead>
+        <tbody>
+          <% developers.forEach(function (d) { %>
+            <tr>
+              <td data-label="Name"><strong><%= d.firstName %> <%= d.lastName %></strong></td>
+              <td data-label="Company"><%= d.companyName || '—' %></td>
+              <td data-label="Contact">
+                <%= d.mobileNumber %>
+                <div class="small muted"><%= d.email %></div>
+              </td>
+              <td data-label="Societies" class="num"><%= d.societyCount %></td>
+              <td data-label="">
+                <form method="post" action="/app/society/developers/<%= d._id %>/delete" style="display:inline"
+                      onsubmit="return confirm('Remove <%= d.firstName %> <%= d.lastName %>?')">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-ghost" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table></div>
+      <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: {} }) %>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

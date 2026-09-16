@@ -3,6 +3,21 @@ const config = require('../config');
 
 mongoose.set('strictQuery', true);
 
+/**
+ * Index creation is explicit, not lazy.
+ *
+ * Mongoose's default `autoIndex` fires a `createIndex` for every index on every
+ * model the moment that model is first used. With the society module the app
+ * declares ~130 models and several hundred indexes, and the test runner gives
+ * each of two dozen suites its own database — so the default has every suite
+ * independently rebuilding the whole index set, in parallel, in the background.
+ * That is enough to take a local `mongod` down mid-run, which is the failure
+ * the `--test-concurrency=4` cap already exists to avoid.
+ *
+ * `ensureIndexes()` below builds them once per boot instead, and waits.
+ */
+mongoose.set('autoIndex', false);
+
 let transactionsSupported = null;
 
 async function connect(uri = config.mongoUri) {
@@ -18,9 +33,61 @@ async function connect(uri = config.mongoUri) {
  * rules here are business rules (§9.2 one contact per mobile, §27 unique unit
  * number), so boot waits for them.
  */
-async function ensureIndexes() {
-  const models = require('./models');
-  await Promise.all(Object.values(models).map((Model) => Model.init()));
+/**
+ * Builds the indexes for a model set, once, and waits.
+ *
+ * `include` selects which sets to build: `'crm'`, `'society'`, or both (the
+ * default, which is what `server.js` uses — production needs every index).
+ *
+ * Tests pass a narrower set deliberately. WiredTiger holds an open file handle
+ * per collection and per index in use, and macOS hands launchd services a low
+ * file-descriptor budget (`launchctl limit maxfiles` is 256 by default). Four
+ * suites in parallel, each with a database containing every model in the app,
+ * exhausts it — and the first thing that fails is mongod's own diagnostics
+ * subsystem creating a temp file, which it treats as fatal. Building only the
+ * models a suite actually uses keeps that budget in reach.
+ */
+async function ensureIndexes({ include = ['crm', 'society'], uniqueOnly = false } = {}) {
+  const sets = { crm: () => require('./models'), society: () => require('./models/society') };
+  const models = {};
+  for (const key of include) {
+    if (sets[key]) Object.assign(models, sets[key]());
+  }
+
+  /**
+   * `createIndexes()` rather than `init()`: with `autoIndex` off, `init()` no
+   * longer creates anything, and the uniqueness rules here are business rules
+   * (§9.2 one contact per mobile, §27 unique unit number, and the society
+   * module's double-booking guard) — boot waits for them.
+   *
+   * Sequential, not `Promise.all`: a few hundred concurrent index builds is
+   * what this is here to stop doing.
+   */
+  if (!uniqueOnly) {
+    for (const Model of Object.values(models)) await Model.createIndexes();
+    return;
+  }
+
+  /**
+   * `uniqueOnly` builds just the indexes that ENFORCE something.
+   *
+   * Both model sets together declare ~795 indexes, of which ~70 are unique.
+   * The other 725 are query plans: they change how fast a read is, never
+   * whether a write is allowed, so no test outcome depends on them. Building
+   * them in every one of two dozen test databases costs minutes of wall clock
+   * and — because WiredTiger holds a file handle per index — exhausts the
+   * file-descriptor budget macOS gives a launchd service, which takes mongod
+   * down entirely.
+   *
+   * Production still builds everything; `server.js` passes no options.
+   */
+  for (const Model of Object.values(models)) {
+    for (const [spec, options = {}] of Model.schema.indexes()) {
+      if (!options.unique) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await Model.collection.createIndex(spec, { ...options, background: false });
+    }
+  }
 }
 
 async function detectTransactionSupport() {

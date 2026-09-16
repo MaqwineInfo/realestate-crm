@@ -1,0 +1,124 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — amenities</h1>
+    <div class="sub">Slots are what residents book. A facility with no slots cannot be booked at all.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Amenity types</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/amenity-types" class="mb-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="t-name">Type name *</label>
+          <input id="t-name" name="name" required minlength="2" maxlength="100" placeholder="Clubhouse">
+        </div>
+        <button class="btn" type="submit">Add type</button>
+      </form>
+      <% if (types.length) { %>
+        <div class="inline">
+          <% types.forEach(function (t) { %><span class="badge b-slate"><%= t.name %></span><% }); %>
+        </div>
+      <% } else { %>
+        <p class="muted small mb-0">None yet.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Add an amenity</h2></div>
+    <div class="card-body">
+      <% if (!types.length) { %>
+        <p class="muted small mb-0">Add an amenity type first.</p>
+      <% } else { %>
+        <form method="post" action="/app/society/societies/<%= society._id %>/amenities">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="grid cols-2">
+            <div class="field">
+              <label for="a-name">Name *</label>
+              <input id="a-name" name="name" required maxlength="100">
+            </div>
+            <div class="field">
+              <label for="a-type">Type *</label>
+              <select id="a-type" name="amenityTypeId" required>
+                <% types.forEach(function (t) { %><option value="<%= t._id %>"><%= t.name %></option><% }); %>
+              </select>
+            </div>
+            <div class="field span-2">
+              <label for="a-desc">Description *</label>
+              <textarea id="a-desc" name="description" rows="2" required maxlength="2000"></textarea>
+            </div>
+            <div class="field">
+              <label for="a-pricing">Pricing</label>
+              <select id="a-pricing" name="pricingType">
+                <option value="FREE">Free</option>
+                <option value="PAID">Paid</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="a-adv">Advance booking (days)</label>
+              <input id="a-adv" name="advanceBookingDays" type="number" min="1" max="365" value="7">
+            </div>
+            <div class="field">
+              <label for="a-gst">GST %</label>
+              <select id="a-gst" name="taxValue">
+                <% [0, 5, 12, 18, 28].forEach(function (v) { %>
+                  <option value="<%= v %>" <%= v === 18 ? 'selected' : '' %>><%= v %>%</option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="a-gsttype">GST is</label>
+              <select id="a-gsttype" name="gstAmountType">
+                <option value="INCLUDED">Included in the price</option>
+                <option value="EXCLUDED">Added on top</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">Add amenity</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Amenities</h2>
+    <span class="muted small"><%= pagination.total %> total</span>
+  </div>
+  <% if (!amenities.length) { %>
+    <%- include('../../partials/empty', { heading: 'No amenities', message: 'Add a facility residents can book.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Amenity</th><th>Type</th><th>Pricing</th><th class="num">Slots</th><th class="num">Packages</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% amenities.forEach(function (a) { %>
+          <tr>
+            <td data-label="Amenity">
+              <a href="/app/society/societies/<%= society._id %>/amenities/<%= a._id %>"><strong><%= a.name %></strong></a>
+              <div class="small muted"><%= a.description %></div>
+            </td>
+            <td data-label="Type"><%= a.amenityTypeId ? a.amenityTypeId.name : '—' %></td>
+            <td data-label="Pricing">
+              <span class="badge <%= a.pricingType === 'PAID' ? 'b-amber' : 'b-green' %>"><%= a.pricingType %></span>
+              <% if (a.pricingType === 'PAID') { %><div class="small muted"><%= a.taxValue %>% <%= a.gstAmountType.toLowerCase() %></div><% } %>
+            </td>
+            <td data-label="Slots" class="num"><%= a.slotCount %></td>
+            <td data-label="Packages" class="num"><%= a.packageCount %></td>
+            <td data-label="Status"><span class="badge <%= a.status === 'ACTIVE' ? 'b-green' : 'b-slate' %>"><%= a.status %></span></td>
+            <td data-label=""><a class="btn btn-sm" href="/app/society/societies/<%= society._id %>/amenities/<%= a._id %>">Open</a></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

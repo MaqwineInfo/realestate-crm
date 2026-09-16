@@ -1,0 +1,108 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/society-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Societies</h1>
+    <div class="sub">Every society on the platform. Creating one generates its blocks, floors and units.</div>
+  </div>
+  <% if (can('society.create')) { %>
+    <a class="btn btn-primary" href="/app/society/societies/new">New society</a>
+  <% } %>
+</div>
+
+<div class="tiles">
+  <a class="tile <%= filters.status === '' ? 'active' : '' %>" href="/app/society/societies">
+    <div class="num"><%= stats.totalSocieties %></div><div class="lbl">All societies</div>
+  </a>
+  <a class="tile <%= filters.status === 'Active' ? 'active' : '' %>" href="/app/society/societies?status=Active">
+    <div class="num"><%= stats.activeSocieties %></div><div class="lbl">Active</div>
+  </a>
+  <a class="tile warn <%= filters.status === 'Pending' ? 'active' : '' %>" href="/app/society/societies?status=Pending">
+    <div class="num"><%= stats.pendingSocieties %></div><div class="lbl">Pending</div>
+  </a>
+  <a class="tile <%= filters.status === 'Inactive' ? 'active' : '' %>" href="/app/society/societies?status=Inactive">
+    <div class="num"><%= stats.inactiveSocieties %></div><div class="lbl">Inactive</div>
+  </a>
+  <div class="tile"><div class="num"><%= stats.totalUnits %></div><div class="lbl">Units under management</div></div>
+</div>
+
+<form class="filters" method="get" action="/app/society/societies">
+  <div class="field">
+    <label for="s-q">Search</label>
+    <input type="search" id="s-q" name="search" value="<%= filters.search %>" placeholder="Name, code, city or contact">
+  </div>
+  <div class="field">
+    <label for="s-status">Status</label>
+    <select id="s-status" name="status">
+      <option value="">Any status</option>
+      <% ['Active', 'Pending', 'Inactive'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= s %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="s-type">Type</label>
+    <select id="s-type" name="projectType">
+      <option value="">Any type</option>
+      <% ['Residential', 'Commercial', 'Mixed Use'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= filters.projectType === s ? 'selected' : '' %>><%= s %></option>
+      <% }); %>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <% if (!societies.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No societies yet',
+      message: 'Onboard a society to generate its structure and give its chairman access.',
+      ctaHref: can('society.create') ? '/app/society/societies/new' : null,
+      ctaLabel: 'New society'
+    }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Society</th><th>Code</th><th>City</th><th>Type</th>
+          <th class="num">Blocks</th><th class="num">Units</th>
+          <th>Contact</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% societies.forEach(function (s) { %>
+          <tr>
+            <td data-label="Society">
+              <a href="/app/society/societies/<%= s._id %>"><strong><%= s.societyName %></strong></a>
+              <% if (s.developerName) { %><div class="small muted"><%= s.developerName %></div><% } %>
+            </td>
+            <td data-label="Code"><code><%= s.societyCode %></code></td>
+            <td data-label="City"><%= s.address && s.address.city || '—' %></td>
+            <td data-label="Type"><%= s.projectType %></td>
+            <td data-label="Blocks" class="num"><%= s.totalBlocks || 0 %></td>
+            <td data-label="Units" class="num"><%= s.unitCount %></td>
+            <td data-label="Contact">
+              <%= s.contactPersonName || '—' %>
+              <div class="small muted"><%= s.contactNumber || '' %></div>
+            </td>
+            <td data-label="Status">
+              <span class="badge <%= s.status === 'Active' ? 'b-green' : (s.status === 'Pending' ? 'b-amber' : 'b-slate') %>"><%= s.status %></span>
+            </td>
+            <td data-label="">
+              <div class="btn-group">
+                <a class="btn btn-sm" href="/app/society/societies/<%= s._id %>">Open</a>
+                <% if (can('society.edit')) { %>
+                  <a class="btn btn-sm" href="/app/society/societies/<%= s._id %>/edit">Edit</a>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: filters }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

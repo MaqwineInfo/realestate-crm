@@ -1,0 +1,161 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society ? 'Edit ' + society.societyName : 'New society' %></h1>
+    <div class="sub">
+      <% if (society) { %>
+        Structure is generated once, on creation. Changing block or floor counts here does not regenerate it.
+      <% } else { %>
+        Blocks, floors and units are generated from these counts. The contact person becomes the chairman.
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="<%= society ? '/app/society/societies/' + society._id : '/app/society/societies' %>">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Identity</h2></div>
+    <div class="card-body grid cols-2">
+      <div class="field">
+        <label for="f-name">Society name *</label>
+        <input id="f-name" name="societyName" required maxlength="150" value="<%= society ? society.societyName : '' %>">
+      </div>
+      <div class="field">
+        <label for="f-code">Society code</label>
+        <input id="f-code" name="societyCode" maxlength="20"
+               value="<%= society ? society.societyCode : '' %>"
+               <%= society ? 'readonly' : '' %>
+               placeholder="Generated automatically if left blank">
+        <% if (society) { %><div class="small muted">The code is the society's permanent identifier and cannot change.</div><% } %>
+      </div>
+      <div class="field">
+        <label for="f-type">Project type *</label>
+        <select id="f-type" name="projectType" required>
+          <% ['Residential', 'Commercial', 'Mixed Use'].forEach(function (t) { %>
+            <option value="<%= t %>" <%= society && society.projectType === t ? 'selected' : '' %>><%= t %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-developer">Developer</label>
+        <select id="f-developer" name="developerId">
+          <option value="">None</option>
+          <% developers.forEach(function (d) { %>
+            <option value="<%= d._id %>" <%= society && String(society.developerId) === String(d._id) ? 'selected' : '' %>>
+              <%= d.companyName || (d.firstName + ' ' + d.lastName) %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="field span-2">
+        <label for="f-desc">Description</label>
+        <textarea id="f-desc" name="description" rows="2" maxlength="500"><%= society ? society.description || '' : '' %></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head">
+      <h2 class="grow">Structure</h2>
+      <% if (society) { %><span class="muted small">Generated on creation</span><% } %>
+    </div>
+    <div class="card-body grid cols-4">
+      <div class="field">
+        <label for="f-blocks">Blocks</label>
+        <input id="f-blocks" name="totalBlocks" type="number" min="0" max="702"
+               value="<%= society ? society.totalBlocks : 1 %>">
+      </div>
+      <div class="field">
+        <label for="f-floors">Floors per block</label>
+        <input id="f-floors" name="totalFloors" type="number" min="0" max="200"
+               value="<%= society ? society.totalFloors : 1 %>">
+      </div>
+      <div class="field">
+        <label for="f-units">Units per floor</label>
+        <input id="f-units" name="totalUnits" type="number" min="0" max="100"
+               value="<%= society ? society.totalUnits : 1 %>">
+      </div>
+      <div class="field">
+        <label for="f-ground">Ground floor</label>
+        <select id="f-ground" name="includeGroundFloor">
+          <option value="false" <%= society && !society.includeGroundFloor ? 'selected' : '' %>>Numbering starts at 1</option>
+          <option value="true" <%= society && society.includeGroundFloor ? 'selected' : '' %>>Include a ground floor (0)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Chairman &amp; contact</h2></div>
+    <div class="card-body grid cols-2">
+      <div class="field">
+        <label for="f-contact">Contact person *</label>
+        <input id="f-contact" name="contactPersonName" required maxlength="120"
+               value="<%= society ? society.contactPersonName : '' %>">
+        <% if (!society) { %>
+          <div class="small muted">This person is created as the society's chairman and signs in by OTP.</div>
+        <% } %>
+      </div>
+      <div class="field">
+        <label for="f-mobile">Contact number *</label>
+        <input id="f-mobile" name="contactNumber" required maxlength="20"
+               value="<%= society ? society.contactNumber : '' %>">
+      </div>
+      <div class="field">
+        <label for="f-email">Email *</label>
+        <input id="f-email" name="email" type="email" required maxlength="150"
+               value="<%= society ? society.email : '' %>">
+      </div>
+      <div class="field">
+        <label for="f-alt">Alternate contact</label>
+        <input id="f-alt" name="alternateContact" maxlength="20"
+               value="<%= society ? society.alternateContact || '' : '' %>">
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Address</h2></div>
+    <div class="card-body grid cols-2">
+      <div class="field span-2">
+        <label for="f-street">Street *</label>
+        <input id="f-street" name="address.street" required maxlength="200"
+               value="<%= society && society.address ? society.address.street : '' %>">
+      </div>
+      <div class="field">
+        <label for="f-city">City *</label>
+        <input id="f-city" name="address.city" required maxlength="80"
+               value="<%= society && society.address ? society.address.city : '' %>">
+      </div>
+      <div class="field">
+        <label for="f-state">State *</label>
+        <input id="f-state" name="address.state" required maxlength="80"
+               value="<%= society && society.address ? society.address.state : '' %>">
+      </div>
+      <div class="field">
+        <label for="f-pin">Pincode *</label>
+        <input id="f-pin" name="address.pincode" required maxlength="12"
+               value="<%= society && society.address ? society.address.pincode : '' %>">
+      </div>
+      <div class="field">
+        <label for="f-status">Status</label>
+        <select id="f-status" name="status">
+          <% ['Active', 'Pending', 'Inactive'].forEach(function (s) { %>
+            <option value="<%= s %>" <%= society && society.status === s ? 'selected' : '' %>><%= s %></option>
+          <% }); %>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-primary" type="submit"><%= society ? 'Save changes' : 'Create society' %></button>
+    <a class="btn" href="/app/society/societies">Cancel</a>
+  </div>
+</form>
+
+<%- include('../../partials/app-foot') %>

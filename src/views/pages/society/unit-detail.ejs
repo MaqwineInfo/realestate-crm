@@ -1,0 +1,114 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies/' + society._id + '/units', label: 'Units' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= unit.unitNumber %></h1>
+    <div class="sub">
+      <%= society.societyName %> · <%= unit.blockNumber || '—' %> ·
+      Floor <%= unit.floorNumber === 0 ? 'G' : unit.floorNumber %>
+      <span class="badge <%= unit.occupancyStatus === 'OCCUPIED' ? 'b-green' : 'b-slate' %>"><%= unit.occupancyStatus %></span>
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head">
+      <h2 class="grow">Residents</h2>
+      <span class="muted small"><%= residents.length %> current</span>
+    </div>
+    <% if (!residents.length) { %>
+      <%- include('../../partials/empty', { heading: 'Vacant', message: 'Assign a resident to occupy this unit.' }) %>
+    <% } else { %>
+      <div class="table-wrap"><table class="responsive">
+        <thead><tr><th>Name</th><th>Type</th><th>Role</th><th>Since</th><th></th></tr></thead>
+        <tbody>
+          <% residents.forEach(function (r) { %>
+            <tr>
+              <td data-label="Name">
+                <%= [r.firstName, r.lastName].filter(Boolean).join(' ') || '—' %>
+                <% if (r.mobileNumber) { %><div class="small muted"><%= r.mobileNumber %></div><% } %>
+                <% if (r.relation) { %><div class="small muted"><%= r.relation %></div><% } %>
+              </td>
+              <td data-label="Type"><span class="badge <%= r.residentType === 'Owner' ? 'b-green' : 'b-amber' %>"><%= r.residentType %></span></td>
+              <td data-label="Role"><span class="badge b-slate"><%= r.memberRole %></span></td>
+              <td data-label="Since"><%= h.date(r.startDate) %></td>
+              <td data-label="">
+                <% if (r.memberRole === 'PRIMARY') { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/units/<%= unit._id %>/release" style="display:inline"
+                        onsubmit="return confirm('End this tenure? Their family members end with it.')">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="occupancyId" value="<%= r._id %>">
+                    <button class="btn btn-sm btn-ghost" type="submit">Move out</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Assign a resident</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/units/<%= unit._id %>/assign">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="grid cols-2">
+          <div class="field">
+            <label for="r-first">First name *</label>
+            <input id="r-first" name="firstName" required maxlength="80">
+          </div>
+          <div class="field">
+            <label for="r-last">Last name</label>
+            <input id="r-last" name="lastName" maxlength="80">
+          </div>
+          <div class="field">
+            <label for="r-mobile">Mobile *</label>
+            <input id="r-mobile" name="mobileNumber" required maxlength="20">
+          </div>
+          <div class="field">
+            <label for="r-type">Resident type *</label>
+            <select id="r-type" name="residentType" required>
+              <option value="Owner">Owner</option>
+              <option value="Tenant">Tenant</option>
+            </select>
+          </div>
+          <div class="field span-2">
+            <label for="r-email">Email</label>
+            <input id="r-email" name="email" type="email" maxlength="150">
+          </div>
+        </div>
+        <div class="small muted mb-1">
+          A unit has at most one owner. A new tenant ends the previous tenancy.
+        </div>
+        <button class="btn btn-primary" type="submit">Assign</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Occupancy history</h2></div>
+  <% if (!history.length) { %>
+    <%- include('../../partials/empty', { heading: 'No history', message: 'Past tenures appear here once someone moves out.' }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>Name</th><th>Type</th><th>From</th><th>To</th></tr></thead>
+      <tbody>
+        <% history.forEach(function (r) { %>
+          <tr>
+            <td data-label="Name"><%= [r.firstName, r.lastName].filter(Boolean).join(' ') || '—' %></td>
+            <td data-label="Type"><%= r.residentType %></td>
+            <td data-label="From"><%= h.date(r.startDate) %></td>
+            <td data-label="To"><%= r.endDate ? h.date(r.endDate) : '—' %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

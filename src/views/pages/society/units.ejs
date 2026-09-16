@@ -1,0 +1,81 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — units</h1>
+    <div class="sub">Occupancy is set by assigning a resident, never edited directly.</div>
+  </div>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="num"><%= stats.totalUnits %></div><div class="lbl">Units</div></div>
+  <div class="tile"><div class="num"><%= stats.occupiedUnits %></div><div class="lbl">Occupied</div></div>
+  <div class="tile"><div class="num"><%= stats.vacantUnits %></div><div class="lbl">Vacant</div></div>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="u-q">Search</label>
+    <input type="search" id="u-q" name="search" value="<%= filters.search %>" placeholder="Unit number">
+  </div>
+  <div class="field">
+    <label for="u-block">Block</label>
+    <select id="u-block" name="blockId">
+      <option value="">All blocks</option>
+      <% blocks.forEach(function (b) { %>
+        <option value="<%= b._id %>" <%= String(filters.blockId) === String(b._id) ? 'selected' : '' %>><%= b.blockName %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="u-occ">Occupancy</label>
+    <select id="u-occ" name="occupancyStatus">
+      <option value="">Any</option>
+      <option value="OCCUPIED" <%= filters.occupancyStatus === 'OCCUPIED' ? 'selected' : '' %>>Occupied</option>
+      <option value="VACANT" <%= filters.occupancyStatus === 'VACANT' ? 'selected' : '' %>>Vacant</option>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <% if (!units.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No units',
+      message: 'Generate the structure on the blocks and floors screen.'
+    }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Unit</th><th>Block</th><th class="num">Floor</th><th>Residents</th><th>Occupancy</th><th></th></tr></thead>
+      <tbody>
+        <% units.forEach(function (u) { %>
+          <tr>
+            <td data-label="Unit"><a href="/app/society/societies/<%= society._id %>/units/<%= u._id %>"><strong><%= u.unitNumber %></strong></a></td>
+            <td data-label="Block"><%= u.blockNumber || '—' %></td>
+            <td data-label="Floor" class="num"><%= u.floorNumber === 0 ? 'G' : u.floorNumber %></td>
+            <td data-label="Residents">
+              <% if (!u.residents.length) { %><span class="muted small">—</span><% } %>
+              <% u.residents.filter(function (r) { return r.memberRole === 'PRIMARY'; }).forEach(function (r) { %>
+                <div class="small">
+                  <%= [r.firstName, r.lastName].filter(Boolean).join(' ') %>
+                  <span class="badge <%= r.residentType === 'Owner' ? 'b-green' : 'b-amber' %>"><%= r.residentType %></span>
+                </div>
+              <% }); %>
+              <% const family = u.residents.filter(function (r) { return r.memberRole === 'FAMILY'; }).length; %>
+              <% if (family) { %><div class="small muted">+<%= family %> family</div><% } %>
+            </td>
+            <td data-label="Occupancy">
+              <span class="badge <%= u.occupancyStatus === 'OCCUPIED' ? 'b-green' : 'b-slate' %>"><%= u.occupancyStatus %></span>
+            </td>
+            <td data-label=""><a class="btn btn-sm" href="/app/society/societies/<%= society._id %>/units/<%= u._id %>">Open</a></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: filters }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

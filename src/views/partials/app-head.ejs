@@ -43,6 +43,9 @@
       <% if (can('report.view')) { %>
         <a href="/app/reports/leads" class="<%= path.startsWith('/app/reports') ? 'active' : '' %>"><span class="ico">◑</span> Reports</a>
       <% } %>
+      <% if (can('society.view')) { %>
+        <a href="/app/society/societies" class="<%= path.startsWith('/app/society') ? 'active' : '' %>"><span class="ico">⌂</span> Societies</a>
+      <% } %>
       <% if (can('setup.users') || can('setup.stages') || can('setup.organization')) { %>
         <a href="/app/setup/users" class="<%= path.startsWith('/app/setup') ? 'active' : '' %>"><span class="ico">⚙</span> Setup</a>
       <% } %>

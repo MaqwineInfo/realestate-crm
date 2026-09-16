@@ -1,0 +1,127 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — notices</h1>
+    <div class="sub">Publishing notifies the targeted residents once. Scheduling hands that to the job runner.</div>
+  </div>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="num"><%= stats.total %></div><div class="lbl">All</div></div>
+  <div class="tile"><div class="num"><%= stats.draft %></div><div class="lbl">Draft</div></div>
+  <div class="tile warn"><div class="num"><%= stats.scheduled %></div><div class="lbl">Scheduled</div></div>
+  <div class="tile"><div class="num"><%= stats.published %></div><div class="lbl">Published</div></div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Post a notice</h2></div>
+  <div class="card-body">
+    <form method="post" action="/app/society/societies/<%= society._id %>/notices">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="grid cols-2">
+        <div class="field">
+          <label for="n-title">Title</label>
+          <input id="n-title" name="title" maxlength="200" placeholder="Water supply interruption">
+        </div>
+        <div class="field">
+          <label for="n-cat">Category</label>
+          <select id="n-cat" name="category">
+            <% categories.forEach(function (x) { %><option value="<%= x %>"><%= x %></option><% }); %>
+          </select>
+        </div>
+        <div class="field span-2">
+          <label for="n-text">Notice *</label>
+          <textarea id="n-text" name="text" rows="3" required></textarea>
+        </div>
+        <div class="field">
+          <label for="n-audience">Audience</label>
+          <select id="n-audience" name="residentType">
+            <option value="ALL">Everyone</option>
+            <option value="OWNER">Owners only</option>
+            <option value="TENANT">Tenants only</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="n-block">Block</label>
+          <select id="n-block" name="targetBlocks">
+            <option value="All">All blocks</option>
+            <% blocks.forEach(function (b) { %>
+              <option value="<%= b._id %>"><%= b.blockName %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="n-when">Publish</label>
+          <select id="n-when" name="publishStatus">
+            <option value="PUBLISHED">Now</option>
+            <option value="DRAFT">Save as draft</option>
+            <option value="SCHEDULED">Schedule</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="n-at">Scheduled for</label>
+          <input id="n-at" name="scheduledAt" type="datetime-local">
+          <div class="small muted">Only used when scheduling.</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">Post</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Noticeboard</h2></div>
+  <% if (!notices.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing posted', message: 'Residents see published notices in the app.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Notice</th><th>Category</th><th>Audience</th><th>When</th><th>State</th><th></th></tr></thead>
+      <tbody>
+        <% notices.forEach(function (n) { %>
+          <tr>
+            <td data-label="Notice">
+              <strong><%= n.title || '(untitled)' %></strong>
+              <div class="small muted"><%= n.text.length > 90 ? n.text.slice(0, 90) + '…' : n.text %></div>
+            </td>
+            <td data-label="Category"><%= n.category %></td>
+            <td data-label="Audience">
+              <%= n.residentType %>
+              <% if (n.targetBlocks && n.targetBlocks.length && String(n.targetBlocks[0]).toLowerCase() !== 'all') { %>
+                <div class="small muted">specific blocks</div>
+              <% } %>
+            </td>
+            <td data-label="When">
+              <% if (n.publishStatus === 'PUBLISHED') { %><%= h.rel(n.publishedAt || n.createdAt) %>
+              <% } else if (n.publishStatus === 'SCHEDULED') { %><%= h.dateTime(n.scheduledAt) %>
+              <% } else { %>—<% } %>
+            </td>
+            <td data-label="State">
+              <span class="badge <%= n.publishStatus === 'PUBLISHED' ? 'b-green' : (n.publishStatus === 'SCHEDULED' ? 'b-amber' : 'b-slate') %>"><%= n.publishStatus %></span>
+            </td>
+            <td data-label="">
+              <div class="btn-group">
+                <% if (n.publishStatus !== 'PUBLISHED') { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/notices/<%= n._id %>/publish" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-primary" type="submit">Publish</button>
+                  </form>
+                <% } %>
+                <form method="post" action="/app/society/societies/<%= society._id %>/notices/<%= n._id %>/delete" style="display:inline"
+                      onsubmit="return confirm('Delete this notice?')">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: {} }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

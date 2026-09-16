@@ -1,0 +1,139 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %></h1>
+    <div class="sub">
+      <code><%= society.societyCode %></code> ·
+      <%= society.projectType %> ·
+      <%= society.address ? society.address.city : '' %>
+      <span class="badge <%= society.status === 'Active' ? 'b-green' : (society.status === 'Pending' ? 'b-amber' : 'b-slate') %>"><%= society.status %></span>
+    </div>
+  </div>
+  <div class="btn-group">
+    <% if (can('society.edit')) { %><a class="btn" href="/app/society/societies/<%= society._id %>/edit">Edit</a><% } %>
+    <% if (can('society.delete')) { %>
+      <form method="post" action="/app/society/societies/<%= society._id %>/delete" style="display:inline"
+            onsubmit="return confirm('Deactivate <%= society.societyName %>? Residents lose access immediately.')">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="btn btn-danger" type="submit">Deactivate</button>
+      </form>
+    <% } %>
+  </div>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.totalBlocks %></div><div class="stat-lbl">Blocks</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.totalUnits %></div><div class="stat-lbl">Units</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.occupiedUnits %></div><div class="stat-lbl">Occupied</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.occupancyRate %>%</div><div class="stat-lbl">Occupancy</div>
+  </div></div>
+</div>
+
+<%
+  const b = '/app/society/societies/' + society._id;
+  const queues = [
+    ['Onboarding requests', attention.onboarding, b + '/onboarding'],
+    ['Open complaints', attention.complaints, b + '/complaints'],
+    ['Unpaid bills', attention.unpaidBills, b + '/billing'],
+    ['Visitors waiting', attention.visitorsWaiting, b + '/visitors'],
+    ['Parking requests', attention.parkingRequests, b + '/parking'],
+  ];
+  const waiting = queues.filter(function (q) { return q[1] > 0; });
+%>
+<div class="card mb-2">
+  <div class="card-head">
+    <h2 class="grow">Needs attention</h2>
+    <% if (attention.outstandingMinor > 0) { %>
+      <span class="muted small"><%= h.money(attention.outstandingMinor) %> outstanding</span>
+    <% } %>
+  </div>
+  <div class="card-body">
+    <% if (!waiting.length) { %>
+      <p class="muted small mb-0">Nothing is waiting on you.<% if (attention.visitorsInside) { %>
+        <%= attention.visitorsInside %> visitor(s) are inside.<% } %></p>
+    <% } else { %>
+      <div class="inline">
+        <% waiting.forEach(function (q) { %>
+          <a class="btn btn-sm" href="<%= q[2] %>"><%= q[0] %>: <strong><%= q[1] %></strong></a>
+        <% }); %>
+      </div>
+      <% if (attention.unassignedComplaints) { %>
+        <div class="muted small mt-1"><%= attention.unassignedComplaints %> open complaint(s) have nobody assigned.</div>
+      <% } %>
+    <% } %>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Contact</h2></div>
+    <div class="card-body">
+      <dl class="kv">
+        <dt>Contact person</dt><dd><%= society.contactPersonName || '—' %></dd>
+        <dt>Mobile</dt><dd><%= society.contactNumber || '—' %></dd>
+        <dt>Email</dt><dd><%= society.email || '—' %></dd>
+        <dt>Developer</dt><dd><%= society.developerName || '—' %></dd>
+        <dt>Address</dt>
+        <dd>
+          <% if (society.address) { %>
+            <%= society.address.street %>, <%= society.address.city %>,
+            <%= society.address.state %> — <%= society.address.pincode %>
+          <% } else { %>—<% } %>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Residents</h2></div>
+    <div class="card-body">
+      <dl class="kv">
+        <dt>Owners</dt><dd><%= stats.owners %></dd>
+        <dt>Tenants</dt><dd><%= stats.tenants %></dd>
+        <dt>Vacant units</dt><dd><%= stats.vacantUnits %></dd>
+        <dt>Registered members</dt><dd><%= society.registeredMembersCount || 0 %></dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Structure</h2>
+    <span class="muted small"><%= blocks.length %> block<%= blocks.length === 1 ? '' : 's' %></span>
+  </div>
+  <% if (!blocks.length) { %>
+    <%- include('../../partials/empty', {
+      heading: 'No structure generated',
+      message: 'This society was created without block, floor or unit counts.'
+    }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>Block</th><th class="num">Floors</th><th>Floor numbers</th></tr></thead>
+      <tbody>
+        <% blocks.forEach(function (b) { %>
+          <tr>
+            <td data-label="Block"><strong><%= b.blockName %></strong></td>
+            <td data-label="Floors" class="num"><%= b.floors.length %></td>
+            <td data-label="Floor numbers">
+              <span class="small muted">
+                <%= b.floors.map(function (f) { return f.floorNumber === 0 ? 'G' : f.floorNumber; }).join(', ') || '—' %>
+              </span>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

@@ -1,0 +1,21 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/society-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Society API</h1>
+    <div class="sub">
+      All 460 endpoints, generated from the mounted routes and the models —
+      <a href="/app/society/api-docs/openapi.json">download the OpenAPI document</a>
+      to import into Postman or Insomnia.
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="/app/society/api-docs/swagger-ui.css">
+<div id="swagger" class="card" style="padding:0"></div>
+
+<script src="/app/society/api-docs/swagger-ui-bundle.js"></script>
+<script src="/js/society-api-docs.js"></script>
+
+<%- include('../../partials/app-foot') %>

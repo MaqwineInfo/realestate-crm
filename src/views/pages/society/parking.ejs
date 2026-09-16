@@ -1,0 +1,159 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — parking</h1>
+    <div class="sub">A slot has one holder. Requests are approved here; releasing frees it immediately.</div>
+  </div>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="num"><%= totals.total %></div><div class="lbl">Slots</div></div>
+  <div class="tile"><div class="num"><%= totals.available %></div><div class="lbl">Available</div></div>
+  <div class="tile"><div class="num"><%= totals.allocated %></div><div class="lbl">Allocated</div></div>
+  <div class="tile warn"><div class="num"><%= totals.pending %></div><div class="lbl">Awaiting approval</div></div>
+</div>
+
+<% if (requests.length) { %>
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Requests awaiting a decision</h2></div>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>Slot</th><th>Level</th><th>Requested</th><th></th></tr></thead>
+      <tbody>
+        <% requests.forEach(function (r) { %>
+          <tr>
+            <td data-label="Slot"><strong><%= r.slotNumber %></strong></td>
+            <td data-label="Level"><%= r.parkingLevelId ? r.parkingLevelId.levelName : '—' %></td>
+            <td data-label="Requested"><%= h.rel(r.updatedAt) %></td>
+            <td data-label="">
+              <div class="btn-group">
+                <form method="post" action="/app/society/societies/<%= society._id %>/parking/<%= r._id %>/approve" style="display:inline">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-primary" type="submit">Approve</button>
+                </form>
+                <form method="post" action="/app/society/societies/<%= society._id %>/parking/<%= r._id %>/reject" style="display:inline">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-ghost" type="submit">Reject</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  </div>
+<% } %>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Add a level, then its slots</h2></div>
+  <div class="card-body">
+    <div class="grid cols-2">
+      <form method="post" action="/app/society/societies/<%= society._id %>/parking/levels">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="grid cols-2">
+          <div class="field">
+            <label for="pl-name">Level name *</label>
+            <input id="pl-name" name="levelName" required maxlength="60" placeholder="Basement 1">
+          </div>
+          <div class="field">
+            <label for="pl-type">Type</label>
+            <select id="pl-type" name="levelType">
+              <% ['Basement', 'Ground', 'Upper'].forEach(function (x) { %>
+                <option value="<%= x %>"><%= x %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+        <button class="btn" type="submit">Add level</button>
+      </form>
+
+      <% if (levels.length) { %>
+        <form method="post" action="/app/society/societies/<%= society._id %>/parking/slots">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="grid cols-2">
+            <div class="field">
+              <label for="ps-level">Level *</label>
+              <select id="ps-level" name="levelId" required>
+                <% levels.forEach(function (l) { %><option value="<%= l._id %>"><%= l.levelName %></option><% }); %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ps-type">Slot type</label>
+              <select id="ps-type" name="slotType">
+                <% ['CAR', 'BIKE', 'BICYCLE', 'HANDICAPPED', 'EV_CHARGING'].forEach(function (x) { %>
+                  <option value="<%= x %>"><%= x.replace('_', ' ') %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ps-from">From</label>
+              <input id="ps-from" name="from" type="number" min="1" value="1" required>
+            </div>
+            <div class="field">
+              <label for="ps-to">To</label>
+              <input id="ps-to" name="to" type="number" min="1" value="20" required>
+            </div>
+          </div>
+          <div class="small muted mb-1">Re-running an overlapping range adds only the missing slots.</div>
+          <button class="btn" type="submit">Add slots</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<% if (!levels.length) { %>
+  <div class="card">
+    <%- include('../../partials/empty', { heading: 'No parking yet', message: 'Add a level, then a run of slots.' }) %>
+  </div>
+<% } %>
+
+<% levels.forEach(function (l) { %>
+  <div class="card mb-2">
+    <div class="card-head">
+      <h2 class="grow"><%= l.levelName %></h2>
+      <span class="muted small">
+        <%= l.counts.available %> free · <%= l.counts.allocated %> taken · <%= l.counts.pending %> pending
+      </span>
+    </div>
+    <% if (!l.slots.length) { %>
+      <div class="card-body"><p class="muted small mb-0">No slots on this level yet.</p></div>
+    <% } else { %>
+      <div class="table-wrap wide"><table class="responsive">
+        <thead><tr><th>Slot</th><th>Type</th><th>Status</th><th>Held by</th><th></th></tr></thead>
+        <tbody>
+          <% l.slots.forEach(function (s) { %>
+            <tr>
+              <td data-label="Slot"><strong><%= s.slotNumber %></strong></td>
+              <td data-label="Type"><%= (s.slotType || 'CAR').replace('_', ' ') %></td>
+              <td data-label="Status">
+                <span class="badge <%= s.status === 'AVAILABLE' ? 'b-green' : (s.status === 'ALLOCATED' ? 'b-amber' : 'b-slate') %>"><%= s.status.replace('_', ' ') %></span>
+              </td>
+              <td data-label="Held by"><%= s.unitId ? s.unitId.unitNumber : '—' %></td>
+              <td data-label="">
+                <% if (s.status === 'ALLOCATED' || s.status === 'PENDING_REQUEST') { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/parking/<%= s._id %>/release" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-ghost" type="submit">Release</button>
+                  </form>
+                <% } else { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/parking/<%= s._id %>/allocate" class="inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <select name="unitId" aria-label="Unit" style="max-width:130px">
+                      <% units.forEach(function (u) { %><option value="<%= u._id %>"><%= u.unitNumber %></option><% }); %>
+                    </select>
+                    <button class="btn btn-sm" type="submit">Allocate</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+<% }); %>
+
+<%- include('../../partials/app-foot') %>
