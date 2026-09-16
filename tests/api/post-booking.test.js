@@ -1,6 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const h = require('../helpers');
+const tz = require('../../src/lib/tz');
+
+/** Matches `Tenant.timezone`'s default, which the seeded org uses. */
+const TENANT_TZ = 'Asia/Kolkata';
 const {
   Booking, BookingInstallment, CollectionFollowUp, CollectionPromise, Activity, AuditLog,
   LeadSource, Project, Tower, UnitType, Unit, PricingComponent, PaymentPlan, Stage, ActionType,
@@ -79,7 +83,14 @@ test('post-booking, payment schedule and collections (V2 §108–§161)', async 
   }, '/app/leads/new');
   const leadId = created.location.split('?')[0].split('/').pop();
 
-  const soon = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  /**
+   * "Tomorrow" has to mean tomorrow in the TENANT's timezone, which is what
+   * every "today" boundary in the app resolves through (§72). Adding 24h to
+   * `Date.now()` and slicing the UTC date silently returns *today* whenever UTC
+   * is still on the previous day — after 18:30 UTC for the default
+   * Asia/Kolkata — so this suite failed every evening.
+   */
+  const soon = tz.toDateInput(tz.addLocalDays(new Date(), 1, TENANT_TZ), TENANT_TZ);
   await rep.submit(`/api/leads/${leadId}/log-action`, {
     actionTypeId: String(actions.CALL._id),
     stageId: String(stages.CONNECTED._id),

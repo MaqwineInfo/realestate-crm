@@ -1,0 +1,4214 @@
+[
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/adminRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society-admins",
+    "route": "/profile",
+    "path": "/api/v1/super-admin/society-admins/profile",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/adminRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society-admins",
+    "route": "/society-admins",
+    "path": "/api/v1/super-admin/society-admins/society-admins",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/adminRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society-admins",
+    "route": "/society-admin/:id",
+    "path": "/api/v1/super-admin/society-admins/society-admin/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/adminRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/society-admins",
+    "route": "/society-admin",
+    "path": "/api/v1/super-admin/society-admins/society-admin",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/adminRoutes.js",
+    "method": "PUT",
+    "mount": "/super-admin/society-admins",
+    "route": "/society-admin/:id",
+    "path": "/api/v1/super-admin/society-admins/society-admin/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/adminRoutes.js",
+    "method": "DELETE",
+    "mount": "/super-admin/society-admins",
+    "route": "/society-admin/:id",
+    "path": "/api/v1/super-admin/society-admins/society-admin/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/developerRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/developers",
+    "route": "/create",
+    "path": "/api/v1/super-admin/developers/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/developerRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/developers",
+    "route": "/list",
+    "path": "/api/v1/super-admin/developers/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/developerRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/developers",
+    "route": "/detail/:developerId",
+    "path": "/api/v1/super-admin/developers/detail/:developerId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/developerRoutes.js",
+    "method": "PUT",
+    "mount": "/super-admin/developers",
+    "route": "/update/:developerId",
+    "path": "/api/v1/super-admin/developers/update/:developerId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/developerRoutes.js",
+    "method": "DELETE",
+    "mount": "/super-admin/developers",
+    "route": "/delete/:developerId",
+    "path": "/api/v1/super-admin/developers/delete/:developerId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/roleRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/roles",
+    "route": "/list",
+    "path": "/api/v1/super-admin/roles/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/roleRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/roles",
+    "route": "/create",
+    "path": "/api/v1/super-admin/roles/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/roleRoutes.js",
+    "method": "PUT",
+    "mount": "/super-admin/roles",
+    "route": "/update/:roleId",
+    "path": "/api/v1/super-admin/roles/update/:roleId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/roleRoutes.js",
+    "method": "DELETE",
+    "mount": "/super-admin/roles",
+    "route": "/delete/:roleId",
+    "path": "/api/v1/super-admin/roles/delete/:roleId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyInquiryLeadsRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/leads",
+    "route": "/detail/:inquiryId",
+    "path": "/api/v1/super-admin/leads/detail/:inquiryId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyInquiryLeadsRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/leads",
+    "route": "/list",
+    "path": "/api/v1/super-admin/leads/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyInquiryLeadsRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/leads",
+    "route": "/download-excel",
+    "path": "/api/v1/super-admin/leads/download-excel",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyInquiryLeadsRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/leads",
+    "route": "/add-followup",
+    "path": "/api/v1/super-admin/leads/add-followup",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyInquiryLeadsRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/leads",
+    "route": "/followup-count",
+    "path": "/api/v1/super-admin/leads/followup-count",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/inquiry-detail/:id",
+    "path": "/api/v1/super-admin/society/inquiry-detail/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/inquiry-list",
+    "path": "/api/v1/super-admin/society/inquiry-list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/super-admin/society",
+    "route": "/update-society-request/:id",
+    "path": "/api/v1/super-admin/society/update-society-request/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/society",
+    "route": "/generate-code",
+    "path": "/api/v1/super-admin/society/generate-code",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/stats",
+    "path": "/api/v1/super-admin/society/stats",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/",
+    "path": "/api/v1/super-admin/society",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/society",
+    "route": "/",
+    "path": "/api/v1/super-admin/society",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/code/:code",
+    "path": "/api/v1/super-admin/society/code/:code",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/stats",
+    "path": "/api/v1/super-admin/society/stats",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/:id/details",
+    "path": "/api/v1/super-admin/society/:id/details",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/society-details/pincode",
+    "path": "/api/v1/super-admin/society/society-details/pincode",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/:id/statistics",
+    "path": "/api/v1/super-admin/society/:id/statistics",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/:id/blocks/:blockLetter",
+    "path": "/api/v1/super-admin/society/:id/blocks/:blockLetter",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/:id/blocks/:blockLetter/floors/:floorNumber",
+    "path": "/api/v1/super-admin/society/:id/blocks/:blockLetter/floors/:floorNumber",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/society",
+    "route": "/:id",
+    "path": "/api/v1/super-admin/society/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/super-admin/society",
+    "route": "/:id",
+    "path": "/api/v1/super-admin/society/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyRoutes.js",
+    "method": "DELETE",
+    "mount": "/super-admin/society",
+    "route": "/:id",
+    "path": "/api/v1/super-admin/society/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyStagesRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/stages",
+    "route": "/create",
+    "path": "/api/v1/super-admin/stages/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyStagesRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/stages",
+    "route": "/sub-stages/create",
+    "path": "/api/v1/super-admin/stages/sub-stages/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyStagesRoutes.js",
+    "method": "POST",
+    "mount": "/super-admin/stages",
+    "route": "/child-stages/create",
+    "path": "/api/v1/super-admin/stages/child-stages/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/societyStagesRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/stages",
+    "route": "/list",
+    "path": "/api/v1/super-admin/stages/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/users",
+    "route": "/society/:societyId",
+    "path": "/api/v1/super-admin/users/society/:societyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/users",
+    "route": "/society/:societyId/all",
+    "path": "/api/v1/super-admin/users/society/:societyId/all",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/users",
+    "route": "/society/:societyId/stats",
+    "path": "/api/v1/super-admin/users/society/:societyId/stats",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/users",
+    "route": "/society/:societyId/unit/:unitNumber",
+    "path": "/api/v1/super-admin/users/society/:societyId/unit/:unitNumber",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/users",
+    "route": "/:id",
+    "path": "/api/v1/super-admin/users/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "PUT",
+    "mount": "/super-admin/users",
+    "route": "/:id",
+    "path": "/api/v1/super-admin/users/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/users",
+    "route": "/service-users",
+    "path": "/api/v1/super-admin/users/service-users",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/super-admin/users",
+    "route": "/service-users/:userId",
+    "path": "/api/v1/super-admin/users/service-users/:userId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "PUT",
+    "mount": "/super-admin/users",
+    "route": "/:userId/society-admin",
+    "path": "/api/v1/super-admin/users/:userId/society-admin",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/adminRoutes/userRoutes.js",
+    "method": "DELETE",
+    "mount": "/super-admin/users",
+    "route": "/:userId/society-admin",
+    "path": "/api/v1/super-admin/users/:userId/society-admin",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/attendanceRoutes.js",
+    "method": "POST",
+    "mount": "/attendance",
+    "route": "/clock-in",
+    "path": "/api/v1/attendance/clock-in",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/attendanceRoutes.js",
+    "method": "PUT",
+    "mount": "/attendance",
+    "route": "/clock-out",
+    "path": "/api/v1/attendance/clock-out",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/attendanceRoutes.js",
+    "method": "GET",
+    "mount": "/attendance",
+    "route": "/status",
+    "path": "/api/v1/attendance/status",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/attendanceRoutes.js",
+    "method": "GET",
+    "mount": "/attendance",
+    "route": "/employees",
+    "path": "/api/v1/attendance/employees",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/attendanceRoutes.js",
+    "method": "GET",
+    "mount": "/attendance",
+    "route": "/monthly-report",
+    "path": "/api/v1/attendance/monthly-report",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/authRoutes.js",
+    "method": "POST",
+    "mount": "/auth",
+    "route": "/send-otp",
+    "path": "/api/v1/auth/send-otp",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/authRoutes.js",
+    "method": "POST",
+    "mount": "/auth",
+    "route": "/verify-otp",
+    "path": "/api/v1/auth/verify-otp",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/authRoutes.js",
+    "method": "POST",
+    "mount": "/auth",
+    "route": "/resend-otp",
+    "path": "/api/v1/auth/resend-otp",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/authRoutes.js",
+    "method": "POST",
+    "mount": "/auth",
+    "route": "/logout",
+    "path": "/api/v1/auth/logout",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/gatekeeperRoutes.js",
+    "method": "GET",
+    "mount": "/gatekeeper",
+    "route": "/members",
+    "path": "/api/v1/gatekeeper/members",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/gatekeeperRoutes.js",
+    "method": "GET",
+    "mount": "/gatekeeper",
+    "route": "/lost-found/list",
+    "path": "/api/v1/gatekeeper/lost-found/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/gatekeeperRoutes.js",
+    "method": "GET",
+    "mount": "/gatekeeper",
+    "route": "/lost-found/get-details/:id",
+    "path": "/api/v1/gatekeeper/lost-found/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/gatekeeperRoutes.js",
+    "method": "POST",
+    "mount": "/gatekeeper",
+    "route": "/lost-found/create",
+    "path": "/api/v1/gatekeeper/lost-found/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/gatekeeperRoutes.js",
+    "method": "PUT",
+    "mount": "/gatekeeper",
+    "route": "/lost-found/update/:id",
+    "path": "/api/v1/gatekeeper/lost-found/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/gatekeeperRoutes.js",
+    "method": "DELETE",
+    "mount": "/gatekeeper",
+    "route": "/lost-found/delete/:id",
+    "path": "/api/v1/gatekeeper/lost-found/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/adminRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society-admins",
+    "route": "/profile",
+    "path": "/api/v1/society-admin/society-admins/profile",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/adminRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society-admins",
+    "route": "/society-admins",
+    "path": "/api/v1/society-admin/society-admins/society-admins",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/adminRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society-admins",
+    "route": "/society-admin/:id",
+    "path": "/api/v1/society-admin/society-admins/society-admin/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/adminRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society-admins",
+    "route": "/society-admin",
+    "path": "/api/v1/society-admin/society-admins/society-admin",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/adminRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society-admins",
+    "route": "/society-admin/:id",
+    "path": "/api/v1/society-admin/society-admins/society-admin/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/adminRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society-admins",
+    "route": "/society-admin/:id",
+    "path": "/api/v1/society-admin/society-admins/society-admin/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/amenities",
+    "route": "/type/create",
+    "path": "/api/v1/society-admin/amenities/type/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/type/list",
+    "path": "/api/v1/society-admin/amenities/type/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/type/get-details/:id",
+    "path": "/api/v1/society-admin/amenities/type/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/amenities",
+    "route": "/type/:id",
+    "path": "/api/v1/society-admin/amenities/type/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/amenities",
+    "route": "/type/:id",
+    "path": "/api/v1/society-admin/amenities/type/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/amenities",
+    "route": "/create",
+    "path": "/api/v1/society-admin/amenities/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/list",
+    "path": "/api/v1/society-admin/amenities/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/get-details/:id",
+    "path": "/api/v1/society-admin/amenities/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/amenities",
+    "route": "/:id",
+    "path": "/api/v1/society-admin/amenities/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/amenities",
+    "route": "/:id",
+    "path": "/api/v1/society-admin/amenities/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/status",
+    "path": "/api/v1/society-admin/amenities/:id/status",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/slots",
+    "path": "/api/v1/society-admin/amenities/:id/slots",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/slots",
+    "path": "/api/v1/society-admin/amenities/:id/slots",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/slots/:slotId",
+    "path": "/api/v1/society-admin/amenities/:id/slots/:slotId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/slots/:slotId",
+    "path": "/api/v1/society-admin/amenities/:id/slots/:slotId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/packages",
+    "path": "/api/v1/society-admin/amenities/:id/packages",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/packages",
+    "path": "/api/v1/society-admin/amenities/:id/packages",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/packages/:packageId",
+    "path": "/api/v1/society-admin/amenities/:id/packages/:packageId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/packages/:packageId",
+    "path": "/api/v1/society-admin/amenities/:id/packages/:packageId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/amenities",
+    "route": "/:id/packages/:packageId",
+    "path": "/api/v1/society-admin/amenities/:id/packages/:packageId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/amenities",
+    "route": "/bookings/create",
+    "path": "/api/v1/society-admin/amenities/bookings/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/check-availability/:id",
+    "path": "/api/v1/society-admin/amenities/check-availability/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/bookings/calendar",
+    "path": "/api/v1/society-admin/amenities/bookings/calendar",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/bookings",
+    "path": "/api/v1/society-admin/amenities/bookings",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/amenities",
+    "route": "/bookings/:id",
+    "path": "/api/v1/society-admin/amenities/bookings/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/amenities",
+    "route": "/bookings/:id/cancel",
+    "path": "/api/v1/society-admin/amenities/bookings/:id/cancel",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/amenities",
+    "route": "/bookings/:id/status",
+    "path": "/api/v1/society-admin/amenities/bookings/:id/status",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/amenityRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/amenities",
+    "route": "/bookings/:id/verify-payment",
+    "path": "/api/v1/society-admin/amenities/bookings/:id/verify-payment",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/balanceSheetRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/balance-sheet",
+    "route": "/list",
+    "path": "/api/v1/society-admin/balance-sheet/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/balanceSheetRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/balance-sheet",
+    "route": "/get-details/:id",
+    "path": "/api/v1/society-admin/balance-sheet/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/balanceSheetRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/balance-sheet",
+    "route": "/create",
+    "path": "/api/v1/society-admin/balance-sheet/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/balanceSheetRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/balance-sheet",
+    "route": "/update/:id",
+    "path": "/api/v1/society-admin/balance-sheet/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/balanceSheetRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/balance-sheet",
+    "route": "/delete/:id",
+    "path": "/api/v1/society-admin/balance-sheet/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billCategoryRoutes.js",
+    "method": "GET",
+    "mount": "",
+    "route": "/list",
+    "path": "/api/v1/list",
+    "reachable": false
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billCategoryRoutes.js",
+    "method": "GET",
+    "mount": "",
+    "route": "/get-details/:id",
+    "path": "/api/v1/get-details/:id",
+    "reachable": false
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billCategoryRoutes.js",
+    "method": "POST",
+    "mount": "",
+    "route": "/create",
+    "path": "/api/v1/create",
+    "reachable": false
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billCategoryRoutes.js",
+    "method": "PUT",
+    "mount": "",
+    "route": "/update/:id",
+    "path": "/api/v1/update/:id",
+    "reachable": false
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billCategoryRoutes.js",
+    "method": "DELETE",
+    "mount": "",
+    "route": "/delete/:id",
+    "path": "/api/v1/delete/:id",
+    "reachable": false
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/bill",
+    "route": "/list",
+    "path": "/api/v1/society-admin/bill/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/bill",
+    "route": "/get-details/:id",
+    "path": "/api/v1/society-admin/bill/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/bill",
+    "route": "/create",
+    "path": "/api/v1/society-admin/bill/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/bill",
+    "route": "/update/:id",
+    "path": "/api/v1/society-admin/bill/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/bill",
+    "route": "/delete/:id",
+    "path": "/api/v1/society-admin/bill/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/bill",
+    "route": "/payment-status/:id",
+    "path": "/api/v1/society-admin/bill/payment-status/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/bill",
+    "route": "/category/list",
+    "path": "/api/v1/society-admin/bill/category/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/bill",
+    "route": "/category/get-details/:id",
+    "path": "/api/v1/society-admin/bill/category/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/bill",
+    "route": "/category/create",
+    "path": "/api/v1/society-admin/bill/category/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/bill",
+    "route": "/category/update/:id",
+    "path": "/api/v1/society-admin/bill/category/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/billRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/bill",
+    "route": "/category/delete/:id",
+    "path": "/api/v1/society-admin/bill/category/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/committeeRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/committee-members",
+    "route": "/create",
+    "path": "/api/v1/society-admin/committee-members/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/committeeRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/committee-members",
+    "route": "/list",
+    "path": "/api/v1/society-admin/committee-members/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/committeeRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/committee-members",
+    "route": "/update/:id",
+    "path": "/api/v1/society-admin/committee-members/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/committeeRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/committee-members",
+    "route": "/delete/:id",
+    "path": "/api/v1/society-admin/committee-members/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/committeeRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/committee-members",
+    "route": "/roles",
+    "path": "/api/v1/society-admin/committee-members/roles",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/complaints",
+    "route": "/type/create",
+    "path": "/api/v1/society-admin/complaints/type/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/complaints",
+    "route": "/type/getAll",
+    "path": "/api/v1/society-admin/complaints/type/getAll",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/complaints",
+    "route": "/type/getById/:id",
+    "path": "/api/v1/society-admin/complaints/type/getById/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/complaints",
+    "route": "/type/update/:id",
+    "path": "/api/v1/society-admin/complaints/type/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/complaints",
+    "route": "/type/delete/:id",
+    "path": "/api/v1/society-admin/complaints/type/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/complaints",
+    "route": "/generate-id",
+    "path": "/api/v1/society-admin/complaints/generate-id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/complaints",
+    "route": "/",
+    "path": "/api/v1/society-admin/complaints",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/complaints",
+    "route": "/",
+    "path": "/api/v1/society-admin/complaints",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/complaints",
+    "route": "/stats",
+    "path": "/api/v1/society-admin/complaints/stats",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/complaints",
+    "route": "/code/:complaintId",
+    "path": "/api/v1/society-admin/complaints/code/:complaintId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/complaints",
+    "route": "/:id",
+    "path": "/api/v1/society-admin/complaints/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/complaints",
+    "route": "/:id",
+    "path": "/api/v1/society-admin/complaints/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/complaints",
+    "route": "/:id/status",
+    "path": "/api/v1/society-admin/complaints/:id/status",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/complaintRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/complaints",
+    "route": "/:id",
+    "path": "/api/v1/society-admin/complaints/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/emergencyNumberRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/emergency-numbers",
+    "route": "/create",
+    "path": "/api/v1/society-admin/emergency-numbers/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/emergencyNumberRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/emergency-numbers",
+    "route": "/list",
+    "path": "/api/v1/society-admin/emergency-numbers/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/emergencyNumberRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/emergency-numbers",
+    "route": "/detail/:emergencyId",
+    "path": "/api/v1/society-admin/emergency-numbers/detail/:emergencyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/emergencyNumberRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/emergency-numbers",
+    "route": "/update/:emergencyId",
+    "path": "/api/v1/society-admin/emergency-numbers/update/:emergencyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/emergencyNumberRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/emergency-numbers",
+    "route": "/delete/:emergencyId",
+    "path": "/api/v1/society-admin/emergency-numbers/delete/:emergencyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/eventRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/events",
+    "route": "/event-list",
+    "path": "/api/v1/society-admin/events/event-list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/feedbackRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/feedbacks",
+    "route": "/feedback-list",
+    "path": "/api/v1/society-admin/feedbacks/feedback-list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/galleryRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/building-galleries",
+    "route": "/create-gallary",
+    "path": "/api/v1/society-admin/building-galleries/create-gallary",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/galleryRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/building-galleries",
+    "route": "/list",
+    "path": "/api/v1/society-admin/building-galleries/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/galleryRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/building-galleries",
+    "route": "/remove-image/:galleryId",
+    "path": "/api/v1/society-admin/building-galleries/remove-image/:galleryId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/lostAndFoundRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/lost-found",
+    "route": "/add",
+    "path": "/api/v1/society-admin/lost-found/add",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/lostAndFoundRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/lost-found",
+    "route": "/list",
+    "path": "/api/v1/society-admin/lost-found/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/lostAndFoundRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/lost-found",
+    "route": "/update/:id",
+    "path": "/api/v1/society-admin/lost-found/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/lostAndFoundRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/lost-found",
+    "route": "/delete/:id",
+    "path": "/api/v1/society-admin/lost-found/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/maintenanceRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/maintenance",
+    "route": "/list",
+    "path": "/api/v1/society-admin/maintenance/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/maintenanceRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/maintenance",
+    "route": "/get-details/:id",
+    "path": "/api/v1/society-admin/maintenance/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/maintenanceRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/maintenance",
+    "route": "/create",
+    "path": "/api/v1/society-admin/maintenance/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/maintenanceRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/maintenance",
+    "route": "/update/:id",
+    "path": "/api/v1/society-admin/maintenance/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/maintenanceRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/maintenance",
+    "route": "/delete/:id",
+    "path": "/api/v1/society-admin/maintenance/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/maintenanceRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/maintenance",
+    "route": "/payment-status/:id",
+    "path": "/api/v1/society-admin/maintenance/payment-status/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/noticeRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/notices",
+    "route": "/",
+    "path": "/api/v1/society-admin/notices",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/noticeRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/notices",
+    "route": "/",
+    "path": "/api/v1/society-admin/notices",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/noticeRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/notices",
+    "route": "/:noticeId",
+    "path": "/api/v1/society-admin/notices/:noticeId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/noticeRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/notices",
+    "route": "/:noticeId",
+    "path": "/api/v1/society-admin/notices/:noticeId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/noticeRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/notices",
+    "route": "/:noticeId/publish",
+    "path": "/api/v1/society-admin/notices/:noticeId/publish",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/noticeRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/notices",
+    "route": "/:noticeId",
+    "path": "/api/v1/society-admin/notices/:noticeId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/parking",
+    "route": "/levels",
+    "path": "/api/v1/society-admin/parking/levels",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/parking",
+    "route": "/levels",
+    "path": "/api/v1/society-admin/parking/levels",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/parking",
+    "route": "/levels/:id",
+    "path": "/api/v1/society-admin/parking/levels/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/parking",
+    "route": "/levels/:id",
+    "path": "/api/v1/society-admin/parking/levels/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/parking",
+    "route": "/levels/:id",
+    "path": "/api/v1/society-admin/parking/levels/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/parking",
+    "route": "/spot/grid",
+    "path": "/api/v1/society-admin/parking/spot/grid",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/parking",
+    "route": "/requests",
+    "path": "/api/v1/society-admin/parking/requests",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/parking",
+    "route": "/spot/:id/process",
+    "path": "/api/v1/society-admin/parking/spot/:id/process",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/parking",
+    "route": "/spot/:id/deallocate",
+    "path": "/api/v1/society-admin/parking/spot/:id/deallocate",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/penaltyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/penalties",
+    "route": "/create",
+    "path": "/api/v1/society-admin/penalties/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/penaltyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/penalties",
+    "route": "/list",
+    "path": "/api/v1/society-admin/penalties/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/penaltyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/penalties",
+    "route": "/detail/:penaltyId",
+    "path": "/api/v1/society-admin/penalties/detail/:penaltyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/penaltyRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/penalties",
+    "route": "/update/:penaltyId",
+    "path": "/api/v1/society-admin/penalties/update/:penaltyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/penaltyRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/penalties",
+    "route": "/delete/:penaltyId",
+    "path": "/api/v1/society-admin/penalties/delete/:penaltyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/penaltyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/penalties",
+    "route": "/resend-notification/:penaltyId",
+    "path": "/api/v1/society-admin/penalties/resend-notification/:penaltyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/polls",
+    "route": "/create",
+    "path": "/api/v1/society-admin/polls/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/polls",
+    "route": "/getAll",
+    "path": "/api/v1/society-admin/polls/getAll",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/polls",
+    "route": "/getById/:id",
+    "path": "/api/v1/society-admin/polls/getById/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/polls",
+    "route": "/update/:id",
+    "path": "/api/v1/society-admin/polls/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/polls",
+    "route": "/delete/:id",
+    "path": "/api/v1/society-admin/polls/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/polls",
+    "route": "/publish/:id",
+    "path": "/api/v1/society-admin/polls/publish/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "PATCH",
+    "mount": "/society-admin/polls",
+    "route": "/close/:id",
+    "path": "/api/v1/society-admin/polls/close/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/polls",
+    "route": "/analytics/:id",
+    "path": "/api/v1/society-admin/polls/analytics/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/pollRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/polls",
+    "route": "/votes/:id",
+    "path": "/api/v1/society-admin/polls/votes/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/propertyListingRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/property-listing",
+    "route": "/list",
+    "path": "/api/v1/society-admin/property-listing/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society-documents",
+    "route": "/type/create",
+    "path": "/api/v1/society-admin/society-documents/type/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society-documents",
+    "route": "/type/list",
+    "path": "/api/v1/society-admin/society-documents/type/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society-documents",
+    "route": "/type/detail/:typeId",
+    "path": "/api/v1/society-admin/society-documents/type/detail/:typeId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society-documents",
+    "route": "/type/update/:typeId",
+    "path": "/api/v1/society-admin/society-documents/type/update/:typeId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society-documents",
+    "route": "/type/delete/:typeId",
+    "path": "/api/v1/society-admin/society-documents/type/delete/:typeId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society-documents",
+    "route": "/document/create",
+    "path": "/api/v1/society-admin/society-documents/document/create",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society-documents",
+    "route": "/document/list",
+    "path": "/api/v1/society-admin/society-documents/document/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society-documents",
+    "route": "/document/detail/:documentId",
+    "path": "/api/v1/society-admin/society-documents/document/detail/:documentId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society-documents",
+    "route": "/document/update/:documentId",
+    "path": "/api/v1/society-admin/society-documents/document/update/:documentId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyDocumentRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society-documents",
+    "route": "/document/delete/:documentId",
+    "path": "/api/v1/society-admin/society-documents/document/delete/:documentId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/assigned-societies",
+    "path": "/api/v1/society-admin/society/assigned-societies",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/stats",
+    "path": "/api/v1/society-admin/society/stats",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/attendance/monthly-report",
+    "path": "/api/v1/society-admin/society/attendance/monthly-report",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/details",
+    "path": "/api/v1/society-admin/society/details",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society",
+    "route": "/blocks",
+    "path": "/api/v1/society-admin/society/blocks",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/blocks",
+    "path": "/api/v1/society-admin/society/blocks",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/blocks/:id",
+    "path": "/api/v1/society-admin/society/blocks/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society",
+    "route": "/blocks/:id",
+    "path": "/api/v1/society-admin/society/blocks/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society",
+    "route": "/blocks/:id",
+    "path": "/api/v1/society-admin/society/blocks/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/blocks-with-floors",
+    "path": "/api/v1/society-admin/society/blocks-with-floors",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/floors/by-blocks",
+    "path": "/api/v1/society-admin/society/floors/by-blocks",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society",
+    "route": "/floors",
+    "path": "/api/v1/society-admin/society/floors",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/floors",
+    "path": "/api/v1/society-admin/society/floors",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/floors/:id",
+    "path": "/api/v1/society-admin/society/floors/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society",
+    "route": "/floors/:id",
+    "path": "/api/v1/society-admin/society/floors/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society",
+    "route": "/floors/:id",
+    "path": "/api/v1/society-admin/society/floors/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society",
+    "route": "/floors/bulk",
+    "path": "/api/v1/society-admin/society/floors/bulk",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/units/dropdown",
+    "path": "/api/v1/society-admin/society/units/dropdown",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/units/by-floors",
+    "path": "/api/v1/society-admin/society/units/by-floors",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/units",
+    "path": "/api/v1/society-admin/society/units",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/units/:id",
+    "path": "/api/v1/society-admin/society/units/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society",
+    "route": "/units",
+    "path": "/api/v1/society-admin/society/units",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society",
+    "route": "/units",
+    "path": "/api/v1/society-admin/society/units",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society",
+    "route": "/units/:id",
+    "path": "/api/v1/society-admin/society/units/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society",
+    "route": "/employee-types",
+    "path": "/api/v1/society-admin/society/employee-types",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/employee-types",
+    "path": "/api/v1/society-admin/society/employee-types",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/employee-types/:id",
+    "path": "/api/v1/society-admin/society/employee-types/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society",
+    "route": "/employee-types/:id",
+    "path": "/api/v1/society-admin/society/employee-types/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society",
+    "route": "/employee-types/:id",
+    "path": "/api/v1/society-admin/society/employee-types/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/society-admin/society",
+    "route": "/employees",
+    "path": "/api/v1/society-admin/society/employees",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/employees",
+    "path": "/api/v1/society-admin/society/employees",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/employees/:id",
+    "path": "/api/v1/society-admin/society/employees/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society",
+    "route": "/employees/:id",
+    "path": "/api/v1/society-admin/society/employees/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/society",
+    "route": "/employees/:id",
+    "path": "/api/v1/society-admin/society/employees/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/employees/:employeeId/attendance/monthly",
+    "path": "/api/v1/society-admin/society/employees/:employeeId/attendance/monthly",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/resident-onboarding-requests",
+    "path": "/api/v1/society-admin/society/resident-onboarding-requests",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/society",
+    "route": "/resident-onboarding-requests/:requestId",
+    "path": "/api/v1/society-admin/society/resident-onboarding-requests/:requestId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/society",
+    "route": "/tenants",
+    "path": "/api/v1/society-admin/society/tenants",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/society/:societyId",
+    "path": "/api/v1/society-admin/users/society/:societyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/society/:societyId/all",
+    "path": "/api/v1/society-admin/users/society/:societyId/all",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/society/:societyId/stats",
+    "path": "/api/v1/society-admin/users/society/:societyId/stats",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/society/:societyId/unit/:unitNumber",
+    "path": "/api/v1/society-admin/users/society/:societyId/unit/:unitNumber",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/:id",
+    "path": "/api/v1/society-admin/users/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/users",
+    "route": "/:id",
+    "path": "/api/v1/society-admin/users/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/users",
+    "route": "/assign-member/:id",
+    "path": "/api/v1/society-admin/users/assign-member/:id",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/service-users",
+    "path": "/api/v1/society-admin/users/service-users",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/service-users/:userId",
+    "path": "/api/v1/society-admin/users/service-users/:userId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "PUT",
+    "mount": "/society-admin/users",
+    "route": "/:userId/society-admin",
+    "path": "/api/v1/society-admin/users/:userId/society-admin",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-admin/users",
+    "route": "/:userId/society-admin",
+    "path": "/api/v1/society-admin/users/:userId/society-admin",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/internal-users/get-society-user-ids/:societyId",
+    "path": "/api/v1/society-admin/users/internal-users/get-society-user-ids/:societyId",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/userRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/users",
+    "route": "/internal-users/get-user-occupancy",
+    "path": "/api/v1/society-admin/users/internal-users/get-user-occupancy",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/societyAdminRoutes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/society-admin/visitors",
+    "route": "/list",
+    "path": "/api/v1/society-admin/visitors/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/gatekeeper",
+    "route": "/stats",
+    "path": "/api/v1/gatekeeper/stats",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/gatekeeper",
+    "route": "/expected",
+    "path": "/api/v1/gatekeeper/expected",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/visitorRoutes.js",
+    "method": "POST",
+    "mount": "/gatekeeper",
+    "route": "/entry",
+    "path": "/api/v1/gatekeeper/entry",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/gatekeeper",
+    "route": "/exit",
+    "path": "/api/v1/gatekeeper/exit",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/gatekeeper",
+    "route": "/allow-entry",
+    "path": "/api/v1/gatekeeper/allow-entry",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/gatekeeper",
+    "route": "/list",
+    "path": "/api/v1/gatekeeper/list",
+    "reachable": true
+  },
+  {
+    "service": "admin",
+    "file": "society-admin-services/src/routes/visitorRoutes.js",
+    "method": "DELETE",
+    "mount": "/gatekeeper",
+    "route": "/entry",
+    "path": "/api/v1/gatekeeper/entry",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/amenity",
+    "route": "/amenities",
+    "path": "/api/v1/amenity/amenities",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/amenities",
+    "path": "/api/v1/amenity/amenities",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/amenities/:id",
+    "path": "/api/v1/amenity/amenities/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/amenity",
+    "route": "/amenities/:id",
+    "path": "/api/v1/amenity/amenities/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "DELETE",
+    "mount": "/amenity",
+    "route": "/amenities/:id",
+    "path": "/api/v1/amenity/amenities/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/amenity",
+    "route": "/pricing",
+    "path": "/api/v1/amenity/pricing",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/pricing",
+    "path": "/api/v1/amenity/pricing",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/amenity",
+    "route": "/pricing/:id",
+    "path": "/api/v1/amenity/pricing/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/amenity",
+    "route": "/terms",
+    "path": "/api/v1/amenity/terms",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/terms",
+    "path": "/api/v1/amenity/terms",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/amenity",
+    "route": "/terms/:id",
+    "path": "/api/v1/amenity/terms/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "POST",
+    "mount": "/amenity",
+    "route": "/bookings",
+    "path": "/api/v1/amenity/bookings",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/bookings",
+    "path": "/api/v1/amenity/bookings",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/bookings/:id",
+    "path": "/api/v1/amenity/bookings/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/amenity",
+    "route": "/bookings/:id/action",
+    "path": "/api/v1/amenity/bookings/:id/action",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/amenity",
+    "route": "/bookings/:id/accept-modification",
+    "path": "/api/v1/amenity/bookings/:id/accept-modification",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "PUT",
+    "mount": "/amenity",
+    "route": "/bookings/:id/cancel",
+    "path": "/api/v1/amenity/bookings/:id/cancel",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/calculate-price",
+    "path": "/api/v1/amenity/calculate-price",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/amenityRoutes.js",
+    "method": "GET",
+    "mount": "/amenity",
+    "route": "/check-availability",
+    "path": "/api/v1/amenity/check-availability",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/blockRoutes.js",
+    "method": "POST",
+    "mount": "/blocks",
+    "route": "/create",
+    "path": "/api/v1/blocks/create",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/blockRoutes.js",
+    "method": "GET",
+    "mount": "/blocks",
+    "route": "/",
+    "path": "/api/v1/blocks",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/blockRoutes.js",
+    "method": "GET",
+    "mount": "/blocks",
+    "route": "/stats",
+    "path": "/api/v1/blocks/stats",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/blockRoutes.js",
+    "method": "GET",
+    "mount": "/blocks",
+    "route": "/dropdown",
+    "path": "/api/v1/blocks/dropdown",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/blockRoutes.js",
+    "method": "GET",
+    "mount": "/blocks",
+    "route": "/:blockId",
+    "path": "/api/v1/blocks/:blockId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/blockRoutes.js",
+    "method": "PUT",
+    "mount": "/blocks",
+    "route": "/:blockId",
+    "path": "/api/v1/blocks/:blockId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/blockRoutes.js",
+    "method": "DELETE",
+    "mount": "/blocks",
+    "route": "/:blockId",
+    "path": "/api/v1/blocks/:blockId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "POST",
+    "mount": "/complaints",
+    "route": "/",
+    "path": "/api/v1/complaints",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/complaints",
+    "route": "/units/dropdown",
+    "path": "/api/v1/complaints/units/dropdown",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/complaints",
+    "route": "/",
+    "path": "/api/v1/complaints",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/complaints",
+    "route": "/stats",
+    "path": "/api/v1/complaints/stats",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/complaints",
+    "route": "/:complaintId",
+    "path": "/api/v1/complaints/:complaintId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "PUT",
+    "mount": "/complaints",
+    "route": "/:complaintId",
+    "path": "/api/v1/complaints/:complaintId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "PUT",
+    "mount": "/complaints",
+    "route": "/:complaintId/assign",
+    "path": "/api/v1/complaints/:complaintId/assign",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "PUT",
+    "mount": "/complaints",
+    "route": "/:complaintId/status",
+    "path": "/api/v1/complaints/:complaintId/status",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "PUT",
+    "mount": "/complaints",
+    "route": "/:complaintId/resolve",
+    "path": "/api/v1/complaints/:complaintId/resolve",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "POST",
+    "mount": "/complaints",
+    "route": "/:complaintId/comments",
+    "path": "/api/v1/complaints/:complaintId/comments",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/complaintRoutes.js",
+    "method": "DELETE",
+    "mount": "/complaints",
+    "route": "/:complaintId",
+    "path": "/api/v1/complaints/:complaintId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "POST",
+    "mount": "/floors",
+    "route": "/create",
+    "path": "/api/v1/floors/create",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "GET",
+    "mount": "/floors",
+    "route": "/",
+    "path": "/api/v1/floors",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "GET",
+    "mount": "/floors",
+    "route": "/stats",
+    "path": "/api/v1/floors/stats",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "GET",
+    "mount": "/floors",
+    "route": "/block/:blockId",
+    "path": "/api/v1/floors/block/:blockId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "GET",
+    "mount": "/floors",
+    "route": "/dropdown",
+    "path": "/api/v1/floors/dropdown",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "GET",
+    "mount": "/floors",
+    "route": "/:floorId",
+    "path": "/api/v1/floors/:floorId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "PUT",
+    "mount": "/floors",
+    "route": "/:floorId",
+    "path": "/api/v1/floors/:floorId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/floorRoutes.js",
+    "method": "DELETE",
+    "mount": "/floors",
+    "route": "/:floorId",
+    "path": "/api/v1/floors/:floorId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/galleryRoutes.js",
+    "method": "POST",
+    "mount": "/society-galleries",
+    "route": "/blocks",
+    "path": "/api/v1/society-galleries/blocks",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/galleryRoutes.js",
+    "method": "GET",
+    "mount": "/society-galleries",
+    "route": "/blocks",
+    "path": "/api/v1/society-galleries/blocks",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/galleryRoutes.js",
+    "method": "GET",
+    "mount": "/society-galleries",
+    "route": "/blocks/:galleryId",
+    "path": "/api/v1/society-galleries/blocks/:galleryId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/galleryRoutes.js",
+    "method": "PUT",
+    "mount": "/society-galleries",
+    "route": "/blocks/:galleryId",
+    "path": "/api/v1/society-galleries/blocks/:galleryId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/galleryRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-galleries",
+    "route": "/blocks/:galleryId",
+    "path": "/api/v1/society-galleries/blocks/:galleryId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "POST",
+    "mount": "/maintenances",
+    "route": "/",
+    "path": "/api/v1/maintenances",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "GET",
+    "mount": "/maintenances",
+    "route": "/statistics",
+    "path": "/api/v1/maintenances/statistics",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "GET",
+    "mount": "/maintenances",
+    "route": "/unit/",
+    "path": "/api/v1/maintenances/unit",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "GET",
+    "mount": "/maintenances",
+    "route": "/",
+    "path": "/api/v1/maintenances",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "GET",
+    "mount": "/maintenances",
+    "route": "/:id",
+    "path": "/api/v1/maintenances/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "PUT",
+    "mount": "/maintenances",
+    "route": "/:id",
+    "path": "/api/v1/maintenances/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "POST",
+    "mount": "/maintenances",
+    "route": "/:id/publish",
+    "path": "/api/v1/maintenances/:id/publish",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/maintenanceRoutes.js",
+    "method": "DELETE",
+    "mount": "/maintenances",
+    "route": "/:id",
+    "path": "/api/v1/maintenances/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "POST",
+    "mount": "/notices",
+    "route": "/",
+    "path": "/api/v1/notices",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "GET",
+    "mount": "/notices",
+    "route": "/",
+    "path": "/api/v1/notices",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "GET",
+    "mount": "/notices",
+    "route": "/stats",
+    "path": "/api/v1/notices/stats",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "GET",
+    "mount": "/notices",
+    "route": "/:noticeId",
+    "path": "/api/v1/notices/:noticeId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "PUT",
+    "mount": "/notices",
+    "route": "/:noticeId",
+    "path": "/api/v1/notices/:noticeId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "PUT",
+    "mount": "/notices",
+    "route": "/:noticeId/publish",
+    "path": "/api/v1/notices/:noticeId/publish",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "PUT",
+    "mount": "/notices",
+    "route": "/:noticeId/archive",
+    "path": "/api/v1/notices/:noticeId/archive",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "POST",
+    "mount": "/notices",
+    "route": "/:noticeId/acknowledge",
+    "path": "/api/v1/notices/:noticeId/acknowledge",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/noticeRoutes.js",
+    "method": "DELETE",
+    "mount": "/notices",
+    "route": "/:noticeId",
+    "path": "/api/v1/notices/:noticeId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/parking",
+    "route": "/levels",
+    "path": "/api/v1/parking/levels",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/levels",
+    "path": "/api/v1/parking/levels",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/levels/:id",
+    "path": "/api/v1/parking/levels/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "PUT",
+    "mount": "/parking",
+    "route": "/levels/:id",
+    "path": "/api/v1/parking/levels/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "DELETE",
+    "mount": "/parking",
+    "route": "/levels/:id",
+    "path": "/api/v1/parking/levels/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/parking",
+    "route": "/slots",
+    "path": "/api/v1/parking/slots",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/slots",
+    "path": "/api/v1/parking/slots",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/slots/:id",
+    "path": "/api/v1/parking/slots/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "PUT",
+    "mount": "/parking",
+    "route": "/slots/:id",
+    "path": "/api/v1/parking/slots/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "DELETE",
+    "mount": "/parking",
+    "route": "/slots/:id",
+    "path": "/api/v1/parking/slots/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/parking",
+    "route": "/vehicles",
+    "path": "/api/v1/parking/vehicles",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/vehicles",
+    "path": "/api/v1/parking/vehicles",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "PUT",
+    "mount": "/parking",
+    "route": "/vehicles/:id/location",
+    "path": "/api/v1/parking/vehicles/:id/location",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/vehicles/:id/location",
+    "path": "/api/v1/parking/vehicles/:id/location",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/parking",
+    "route": "/allocations",
+    "path": "/api/v1/parking/allocations",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "PUT",
+    "mount": "/parking",
+    "route": "/allocations/:id/release",
+    "path": "/api/v1/parking/allocations/:id/release",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/allocations",
+    "path": "/api/v1/parking/allocations",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/tracking",
+    "path": "/api/v1/parking/tracking",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/expired-allocations",
+    "path": "/api/v1/parking/expired-allocations",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/parking",
+    "route": "/pending-locations",
+    "path": "/api/v1/parking/pending-locations",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/penaltyRoutes.js",
+    "method": "POST",
+    "mount": "/penalties",
+    "route": "/",
+    "path": "/api/v1/penalties",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/penaltyRoutes.js",
+    "method": "PUT",
+    "mount": "/penalties",
+    "route": "/:id",
+    "path": "/api/v1/penalties/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/penaltyRoutes.js",
+    "method": "GET",
+    "mount": "/penalties",
+    "route": "/",
+    "path": "/api/v1/penalties",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/penaltyRoutes.js",
+    "method": "GET",
+    "mount": "/penalties",
+    "route": "/:id",
+    "path": "/api/v1/penalties/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/society",
+    "route": "/create",
+    "path": "/api/v1/society/create",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society",
+    "route": "/",
+    "path": "/api/v1/society",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/society",
+    "route": "/:societyId",
+    "path": "/api/v1/society/:societyId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyRoutes.js",
+    "method": "PUT",
+    "mount": "/society",
+    "route": "/:societyId",
+    "path": "/api/v1/society/:societyId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyRoutes.js",
+    "method": "DELETE",
+    "mount": "/society",
+    "route": "/:societyId",
+    "path": "/api/v1/society/:societyId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "POST",
+    "mount": "/society-users",
+    "route": "/create",
+    "path": "/api/v1/society-users/create",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "GET",
+    "mount": "/society-users",
+    "route": "/members",
+    "path": "/api/v1/society-users/members",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "GET",
+    "mount": "/society-users",
+    "route": "/employees",
+    "path": "/api/v1/society-users/employees",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "GET",
+    "mount": "/society-users",
+    "route": "/committee",
+    "path": "/api/v1/society-users/committee",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "GET",
+    "mount": "/society-users",
+    "route": "/",
+    "path": "/api/v1/society-users",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "GET",
+    "mount": "/society-users",
+    "route": "/:userId",
+    "path": "/api/v1/society-users/:userId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "PUT",
+    "mount": "/society-users",
+    "route": "/:userId",
+    "path": "/api/v1/society-users/:userId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/societyUserRoutes.js",
+    "method": "DELETE",
+    "mount": "/society-users",
+    "route": "/:userId",
+    "path": "/api/v1/society-users/:userId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "POST",
+    "mount": "/units",
+    "route": "/create",
+    "path": "/api/v1/units/create",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "POST",
+    "mount": "/units",
+    "route": "/:unitId/assign",
+    "path": "/api/v1/units/:unitId/assign",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "POST",
+    "mount": "/units",
+    "route": "/:unitId/unassign",
+    "path": "/api/v1/units/:unitId/unassign",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "GET",
+    "mount": "/units",
+    "route": "/",
+    "path": "/api/v1/units",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "GET",
+    "mount": "/units",
+    "route": "/dropdown",
+    "path": "/api/v1/units/dropdown",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "GET",
+    "mount": "/units",
+    "route": "/:unitId",
+    "path": "/api/v1/units/:unitId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "PUT",
+    "mount": "/units",
+    "route": "/:unitId",
+    "path": "/api/v1/units/:unitId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "DELETE",
+    "mount": "/units",
+    "route": "/:unitId",
+    "path": "/api/v1/units/:unitId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "PUT",
+    "mount": "/units",
+    "route": "/:unitId",
+    "path": "/api/v1/units/:unitId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/unitRoutes.js",
+    "method": "DELETE",
+    "mount": "/units",
+    "route": "/:unitId",
+    "path": "/api/v1/units/:unitId",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "POST",
+    "mount": "/visitor",
+    "route": "/",
+    "path": "/api/v1/visitor",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/visitor",
+    "route": "/",
+    "path": "/api/v1/visitor",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/visitor",
+    "route": "/:id",
+    "path": "/api/v1/visitor/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/visitor",
+    "route": "/:id/approve-reject",
+    "path": "/api/v1/visitor/:id/approve-reject",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/visitor",
+    "route": "/:id/check-in",
+    "path": "/api/v1/visitor/:id/check-in",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/visitor",
+    "route": "/:id/check-out",
+    "path": "/api/v1/visitor/:id/check-out",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/visitor",
+    "route": "/:id",
+    "path": "/api/v1/visitor/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "DELETE",
+    "mount": "/visitor",
+    "route": "/:id",
+    "path": "/api/v1/visitor/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/visitor",
+    "route": "/passes/:id",
+    "path": "/api/v1/visitor/passes/:id",
+    "reachable": true
+  },
+  {
+    "service": "legacy",
+    "file": "society-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/visitor",
+    "route": "/passes/number/:passNumber",
+    "path": "/api/v1/visitor/passes/number/:passNumber",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/amenityBookingRoutes.js",
+    "method": "GET",
+    "mount": "/app/amenity",
+    "route": "/types/list",
+    "path": "/api/v1/app/amenity/types/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/amenityBookingRoutes.js",
+    "method": "GET",
+    "mount": "/app/amenity",
+    "route": "/list",
+    "path": "/api/v1/app/amenity/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/amenityBookingRoutes.js",
+    "method": "GET",
+    "mount": "/app/amenity",
+    "route": "/get-details/:id",
+    "path": "/api/v1/app/amenity/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/amenityBookingRoutes.js",
+    "method": "GET",
+    "mount": "/app/amenity",
+    "route": "/availability/:id",
+    "path": "/api/v1/app/amenity/availability/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/amenityBookingRoutes.js",
+    "method": "POST",
+    "mount": "/app/amenity",
+    "route": "/create-booking",
+    "path": "/api/v1/app/amenity/create-booking",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/amenityBookingRoutes.js",
+    "method": "GET",
+    "mount": "/app/amenity",
+    "route": "/list-bookings",
+    "path": "/api/v1/app/amenity/list-bookings",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/amenityBookingRoutes.js",
+    "method": "GET",
+    "mount": "/app/amenity",
+    "route": "/bookings/:id/invoice",
+    "path": "/api/v1/app/amenity/bookings/:id/invoice",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/billRoutes.js",
+    "method": "GET",
+    "mount": "/app/bills",
+    "route": "/list",
+    "path": "/api/v1/app/bills/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/billRoutes.js",
+    "method": "GET",
+    "mount": "/app/bills",
+    "route": "/get-details/:id",
+    "path": "/api/v1/app/bills/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/billRoutes.js",
+    "method": "GET",
+    "mount": "/app/bills",
+    "route": "/download-invoice/:id",
+    "path": "/api/v1/app/bills/download-invoice/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/complaintRoutes.js",
+    "method": "POST",
+    "mount": "/app/complaints",
+    "route": "/create",
+    "path": "/api/v1/app/complaints/create",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/app/complaints",
+    "route": "/getMyComplaints",
+    "path": "/api/v1/app/complaints/getMyComplaints",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/app/complaints",
+    "route": "/stats",
+    "path": "/api/v1/app/complaints/stats",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/app/complaints",
+    "route": "/types",
+    "path": "/api/v1/app/complaints/types",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/complaintRoutes.js",
+    "method": "GET",
+    "mount": "/app/complaints",
+    "route": "/:id",
+    "path": "/api/v1/app/complaints/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/complaintRoutes.js",
+    "method": "PUT",
+    "mount": "/app/complaints",
+    "route": "/:id",
+    "path": "/api/v1/app/complaints/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/complaintRoutes.js",
+    "method": "DELETE",
+    "mount": "/app/complaints",
+    "route": "/:id",
+    "path": "/api/v1/app/complaints/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/emergencyNumberRoutes.js",
+    "method": "GET",
+    "mount": "/app/emergency",
+    "route": "/list",
+    "path": "/api/v1/app/emergency/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/emergencyNumberRoutes.js",
+    "method": "GET",
+    "mount": "/app/emergency",
+    "route": "/detail/:emergencyId",
+    "path": "/api/v1/app/emergency/detail/:emergencyId",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/eventRoutes.js",
+    "method": "GET",
+    "mount": "/app/events",
+    "route": "/public-list",
+    "path": "/api/v1/app/events/public-list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/galleryRoutes.js",
+    "method": "GET",
+    "mount": "/app/building-gallery",
+    "route": "/list",
+    "path": "/api/v1/app/building-gallery/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/galleryRoutes.js",
+    "method": "GET",
+    "mount": "/app/building-gallery",
+    "route": "/detail/:galleryId",
+    "path": "/api/v1/app/building-gallery/detail/:galleryId",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/lostAndFoundRoutes.js",
+    "method": "POST",
+    "mount": "/app/lost-found",
+    "route": "/create",
+    "path": "/api/v1/app/lost-found/create",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/lostAndFoundRoutes.js",
+    "method": "GET",
+    "mount": "/app/lost-found",
+    "route": "/list",
+    "path": "/api/v1/app/lost-found/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/lostAndFoundRoutes.js",
+    "method": "GET",
+    "mount": "/app/lost-found",
+    "route": "/get-details/:id",
+    "path": "/api/v1/app/lost-found/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/lostAndFoundRoutes.js",
+    "method": "PUT",
+    "mount": "/app/lost-found",
+    "route": "/update/:id",
+    "path": "/api/v1/app/lost-found/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/lostAndFoundRoutes.js",
+    "method": "DELETE",
+    "mount": "/app/lost-found",
+    "route": "/delete/:id",
+    "path": "/api/v1/app/lost-found/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "GET",
+    "mount": "/app/members",
+    "route": "/committee",
+    "path": "/api/v1/app/members/committee",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "GET",
+    "mount": "/app/members",
+    "route": "/society",
+    "path": "/api/v1/app/members/society",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "GET",
+    "mount": "/app/members",
+    "route": "/settings",
+    "path": "/api/v1/app/members/settings",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "PUT",
+    "mount": "/app/members",
+    "route": "/settings",
+    "path": "/api/v1/app/members/settings",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "GET",
+    "mount": "/app/members",
+    "route": "/family/list",
+    "path": "/api/v1/app/members/family/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "GET",
+    "mount": "/app/members",
+    "route": "/family/get-details/:id",
+    "path": "/api/v1/app/members/family/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "POST",
+    "mount": "/app/members",
+    "route": "/family/create",
+    "path": "/api/v1/app/members/family/create",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "PUT",
+    "mount": "/app/members",
+    "route": "/family/update/:id",
+    "path": "/api/v1/app/members/family/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/memberRoutes.js",
+    "method": "DELETE",
+    "mount": "/app/members",
+    "route": "/family/delete/:id",
+    "path": "/api/v1/app/members/family/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/noticeRoutes.js",
+    "method": "GET",
+    "mount": "/app/notices",
+    "route": "/getAllNotices",
+    "path": "/api/v1/app/notices/getAllNotices",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/noticeRoutes.js",
+    "method": "GET",
+    "mount": "/app/notices",
+    "route": "/get-details/:id",
+    "path": "/api/v1/app/notices/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/notificationRoutes.js",
+    "method": "GET",
+    "mount": "/app/notifications",
+    "route": "/getMyNotifications",
+    "path": "/api/v1/app/notifications/getMyNotifications",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/notificationRoutes.js",
+    "method": "PATCH",
+    "mount": "/app/notifications",
+    "route": "/markAsRead/:id",
+    "path": "/api/v1/app/notifications/markAsRead/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/app/parkings",
+    "route": "/levels",
+    "path": "/api/v1/app/parkings/levels",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/app/parkings",
+    "route": "/all",
+    "path": "/api/v1/app/parkings/all",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/app/parkings",
+    "route": "/my-parkings",
+    "path": "/api/v1/app/parkings/my-parkings",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/app/parkings",
+    "route": "/my-requests",
+    "path": "/api/v1/app/parkings/my-requests",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/parkingRoutes.js",
+    "method": "GET",
+    "mount": "/app/parkings",
+    "route": "/get-allocated-parking",
+    "path": "/api/v1/app/parkings/get-allocated-parking",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/app/parkings",
+    "route": "/:id/request",
+    "path": "/api/v1/app/parkings/:id/request",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/parkingRoutes.js",
+    "method": "POST",
+    "mount": "/app/parkings",
+    "route": "/:id/release",
+    "path": "/api/v1/app/parkings/:id/release",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/penaltyRoutes.js",
+    "method": "GET",
+    "mount": "/app/penalty",
+    "route": "/list",
+    "path": "/api/v1/app/penalty/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/penaltyRoutes.js",
+    "method": "GET",
+    "mount": "/app/penalty",
+    "route": "/download-invoice/:penaltyId",
+    "path": "/api/v1/app/penalty/download-invoice/:penaltyId",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/propertyListingRoutes.js",
+    "method": "POST",
+    "mount": "/app/property-listing",
+    "route": "/create",
+    "path": "/api/v1/app/property-listing/create",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/propertyListingRoutes.js",
+    "method": "GET",
+    "mount": "/app/property-listing",
+    "route": "/list",
+    "path": "/api/v1/app/property-listing/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/propertyListingRoutes.js",
+    "method": "GET",
+    "mount": "/app/property-listing",
+    "route": "/my-list",
+    "path": "/api/v1/app/property-listing/my-list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/propertyListingRoutes.js",
+    "method": "GET",
+    "mount": "/app/property-listing",
+    "route": "/get-details/:id",
+    "path": "/api/v1/app/property-listing/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/propertyListingRoutes.js",
+    "method": "PUT",
+    "mount": "/app/property-listing",
+    "route": "/update/:id",
+    "path": "/api/v1/app/property-listing/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/propertyListingRoutes.js",
+    "method": "DELETE",
+    "mount": "/app/property-listing",
+    "route": "/delete/:id",
+    "path": "/api/v1/app/property-listing/delete/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyDocumentRoutes.js",
+    "method": "GET",
+    "mount": "/app/document",
+    "route": "/type/list",
+    "path": "/api/v1/app/document/type/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyDocumentRoutes.js",
+    "method": "GET",
+    "mount": "/app/document",
+    "route": "/document/list",
+    "path": "/api/v1/app/document/document/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/app/society",
+    "route": "/",
+    "path": "/api/v1/app/society",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/app/society",
+    "route": "/:id/details",
+    "path": "/api/v1/app/society/:id/details",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/app/society",
+    "route": "/user/society-details",
+    "path": "/api/v1/app/society/user/society-details",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/app/society",
+    "route": "/register-resident",
+    "path": "/api/v1/app/society/register-resident",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyRoutes.js",
+    "method": "GET",
+    "mount": "/app/society",
+    "route": "/my-societies",
+    "path": "/api/v1/app/society/my-societies",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyRoutes.js",
+    "method": "POST",
+    "mount": "/app/society",
+    "route": "/society-request",
+    "path": "/api/v1/app/society/society-request",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyUserRoutes/pollRoutes.js",
+    "method": "GET",
+    "mount": "/app/polls",
+    "route": "/list",
+    "path": "/api/v1/app/polls/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyUserRoutes/pollRoutes.js",
+    "method": "GET",
+    "mount": "/app/polls",
+    "route": "/get-details/:id",
+    "path": "/api/v1/app/polls/get-details/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyUserRoutes/pollRoutes.js",
+    "method": "POST",
+    "mount": "/app/polls",
+    "route": "/vote/:id",
+    "path": "/api/v1/app/polls/vote/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/societyUserRoutes/pollRoutes.js",
+    "method": "GET",
+    "mount": "/app/polls",
+    "route": "/results/:id",
+    "path": "/api/v1/app/polls/results/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/userRoutes.js",
+    "method": "POST",
+    "mount": "/app/users",
+    "route": "/register",
+    "path": "/api/v1/app/users/register",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/userRoutes.js",
+    "method": "POST",
+    "mount": "/app/users",
+    "route": "/verify-otp",
+    "path": "/api/v1/app/users/verify-otp",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/userRoutes.js",
+    "method": "POST",
+    "mount": "/app/users",
+    "route": "/resend-otp",
+    "path": "/api/v1/app/users/resend-otp",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/userRoutes.js",
+    "method": "POST",
+    "mount": "/app/users",
+    "route": "/logout",
+    "path": "/api/v1/app/users/logout",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/userRoutes.js",
+    "method": "GET",
+    "mount": "/app/users",
+    "route": "/profile",
+    "path": "/api/v1/app/users/profile",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/userRoutes.js",
+    "method": "PUT",
+    "mount": "/app/users",
+    "route": "/profile",
+    "path": "/api/v1/app/users/profile",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/vehicleRoutes.js",
+    "method": "POST",
+    "mount": "/app/vehicles",
+    "route": "/",
+    "path": "/api/v1/app/vehicles",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/vehicleRoutes.js",
+    "method": "GET",
+    "mount": "/app/vehicles",
+    "route": "/my-vehicles",
+    "path": "/api/v1/app/vehicles/my-vehicles",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/vehicleRoutes.js",
+    "method": "GET",
+    "mount": "/app/vehicles",
+    "route": "/society",
+    "path": "/api/v1/app/vehicles/society",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/vehicleRoutes.js",
+    "method": "GET",
+    "mount": "/app/vehicles",
+    "route": "/:id",
+    "path": "/api/v1/app/vehicles/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/vehicleRoutes.js",
+    "method": "PUT",
+    "mount": "/app/vehicles",
+    "route": "/:id",
+    "path": "/api/v1/app/vehicles/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/vehicleRoutes.js",
+    "method": "DELETE",
+    "mount": "/app/vehicles",
+    "route": "/:id",
+    "path": "/api/v1/app/vehicles/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/app/visitors",
+    "route": "/process-entry",
+    "path": "/api/v1/app/visitors/process-entry",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/visitorRoutes.js",
+    "method": "GET",
+    "mount": "/app/visitors",
+    "route": "/list",
+    "path": "/api/v1/app/visitors/list",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/visitorRoutes.js",
+    "method": "POST",
+    "mount": "/app/visitors",
+    "route": "/create",
+    "path": "/api/v1/app/visitors/create",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/visitorRoutes.js",
+    "method": "PUT",
+    "mount": "/app/visitors",
+    "route": "/update/:id",
+    "path": "/api/v1/app/visitors/update/:id",
+    "reachable": true
+  },
+  {
+    "service": "user",
+    "file": "society-user-services/src/routes/visitorRoutes.js",
+    "method": "DELETE",
+    "mount": "/app/visitors",
+    "route": "/delete/:id",
+    "path": "/api/v1/app/visitors/delete/:id",
+    "reachable": true
+  }
+]

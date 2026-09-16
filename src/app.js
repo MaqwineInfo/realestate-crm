@@ -73,6 +73,39 @@ function createApp() {
   // session, so they are mounted ahead of the CSRF gate (§63, §25.3).
   app.use('/', require('./routes/public'));
 
+  /**
+   * The society API (SOCIETY-PLAN.md §3.3). Bearer-token authenticated with no
+   * session cookie, so it is mounted ahead of the CSRF gate for the same reason
+   * the public routes are — there is no cookie for CSRF to protect, and a
+   * mobile app cannot fetch a token from an EJS form.
+   *
+   * Its own identity layer never sets `req.user`, so nothing here can reach an
+   * internal `/app/*` route.
+   */
+  app.use('/', require('./routes/society-api/auth'));
+  app.use('/', require('./routes/society-api/super-admin'));
+  app.use('/', require('./routes/society-api/society-admin'));
+  app.use('/', require('./routes/society-api/legacy/structure'));
+  app.use('/', require('./routes/society-api/legacy/society-users'));
+  app.use('/', require('./routes/society-api/app-members'));
+  app.use('/', require('./routes/society-api/amenities'));
+  app.use('/', require('./routes/society-api/complaints'));
+  app.use('/', require('./routes/society-api/community'));
+  app.use('/', require('./routes/society-api/billing'));
+  app.use('/', require('./routes/society-api/parking'));
+  app.use('/', require('./routes/society-api/visitors'));
+  app.use('/', require('./routes/society-api/app-resident'));
+
+  /**
+   * Anything left under `/api/v1` is a path that does not exist. Without this it
+   * falls through to the CSRF gate below and a mobile client with a typo in a
+   * URL gets "invalid CSRF token" instead of "no such endpoint".
+   */
+  app.use('/api/v1', (req, res) => {
+    const { toJson } = require('./lib/society/envelope');
+    res.status(404).send(toJson('That endpoint does not exist.'));
+  });
+
   app.use(csrf);
   app.use('/', require('./routes/auth'));
   app.use('/', require('./routes/dashboard'));
@@ -94,6 +127,8 @@ function createApp() {
   app.use('/', require('./routes/reports'));
   app.use('/', require('./routes/setup-communication'));
   app.use('/', require('./routes/setup'));
+  app.use('/', require('./routes/society-admin'));
+  app.use('/', require('./routes/society-docs'));
 
   app.get('/', (req, res) => res.redirect(req.user ? '/app/dashboard' : '/login'));
 

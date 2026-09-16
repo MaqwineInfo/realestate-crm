@@ -1,0 +1,90 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — amenity bookings</h1>
+    <div class="sub">Cancelling frees the slot immediately. Verifying records that the transfer arrived.</div>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="b-amenity">Amenity</label>
+    <select id="b-amenity" name="amenityId">
+      <option value="">All amenities</option>
+      <% amenities.forEach(function (a) { %>
+        <option value="<%= a._id %>" <%= String(filters.amenityId) === String(a._id) ? 'selected' : '' %>><%= a.name %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="b-status">Status</label>
+    <select id="b-status" name="status">
+      <option value="">Any</option>
+      <% ['CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= s %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="b-pay">Payment</label>
+    <select id="b-pay" name="paymentStatus">
+      <option value="">Any</option>
+      <% ['PENDING', 'PAID', 'FAILED', 'REFUNDED'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= filters.paymentStatus === s ? 'selected' : '' %>><%= s %></option>
+      <% }); %>
+    </select>
+  </div>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card">
+  <% if (!bookings.length) { %>
+    <%- include('../../partials/empty', { heading: 'No bookings', message: 'Residents book from the app; you can also book on their behalf.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Amenity</th><th>Date</th><th>Unit</th><th class="num">Amount</th><th>Payment</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% bookings.forEach(function (b) { %>
+          <tr>
+            <td data-label="Amenity"><strong><%= b.amenityId ? b.amenityId.name : '—' %></strong></td>
+            <td data-label="Date"><%= h.date(b.bookingDate) %></td>
+            <td data-label="Unit"><%= b.unitNumber || '—' %></td>
+            <td data-label="Amount" class="num">
+              <%= h.money(b.totalAmountMinor) %>
+              <% if (b.gstAmountMinor) { %><div class="small muted">incl. <%= h.money(b.gstAmountMinor) %> GST</div><% } %>
+            </td>
+            <td data-label="Payment">
+              <span class="badge <%= b.paymentStatus === 'PAID' ? 'b-green' : 'b-amber' %>"><%= b.paymentStatus %></span>
+            </td>
+            <td data-label="Status">
+              <span class="badge <%= b.status === 'CONFIRMED' ? 'b-green' : (b.status === 'CANCELLED' ? 'b-red' : 'b-slate') %>"><%= b.status %></span>
+            </td>
+            <td data-label="">
+              <div class="btn-group">
+                <% if (b.paymentStatus !== 'PAID' && b.status === 'CONFIRMED') { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/bookings/<%= b._id %>/verify" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-primary" type="submit">Mark paid</button>
+                  </form>
+                <% } %>
+                <% if (b.status === 'CONFIRMED') { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/bookings/<%= b._id %>/cancel" style="display:inline"
+                        onsubmit="return confirm('Cancel this booking and free the slot?')">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-ghost" type="submit">Cancel</button>
+                  </form>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+    <%- include('../../partials/pagination', { page: pagination.page, pages: pagination.totalPages, total: pagination.total, query: filters }) %>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

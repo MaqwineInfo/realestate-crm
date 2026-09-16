@@ -1,0 +1,62 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/society-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Society analytics</h1>
+    <div class="sub">Portfolio across every society on the platform.</div>
+  </div>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.totalSocieties %></div><div class="stat-lbl">Societies</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.activeSocieties %></div><div class="stat-lbl">Active</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.totalUnits %></div><div class="stat-lbl">Units</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= portfolio.occupancyRate %>%</div><div class="stat-lbl">Overall occupancy</div>
+  </div></div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Occupancy by society</h2></div>
+  <% if (!rows.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing to report', message: 'Onboard a society to see it here.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr>
+          <th>Society</th><th>City</th>
+          <th class="num">Units</th><th class="num">Occupied</th><th class="num">Vacant</th>
+          <th class="num">Owners</th><th class="num">Tenants</th><th>Occupancy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(function (r) { %>
+          <tr>
+            <td data-label="Society"><a href="/app/society/societies/<%= r.societyId %>"><%= r.societyName %></a></td>
+            <td data-label="City"><%= r.city || '—' %></td>
+            <td data-label="Units" class="num"><%= r.totalUnits %></td>
+            <td data-label="Occupied" class="num"><%= r.occupiedUnits %></td>
+            <td data-label="Vacant" class="num"><%= r.vacantUnits %></td>
+            <td data-label="Owners" class="num"><%= r.owners %></td>
+            <td data-label="Tenants" class="num"><%= r.tenants %></td>
+            <td data-label="Occupancy">
+              <div class="pc-meter" role="img" aria-label="<%= r.occupancyRate %>% occupied">
+                <span class="seg is-booked" style="width:<%= r.occupancyRate %>%"></span>
+              </div>
+              <span class="small muted"><%= r.occupancyRate %>%</span>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

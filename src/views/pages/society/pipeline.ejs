@@ -1,0 +1,85 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/society-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Enquiry pipeline</h1>
+    <div class="sub">Three levels: stage, sub-stage, then child stage. Order is set by the number, not the name.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Add</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/pipeline">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label for="p-level">Level</label>
+          <select id="p-level" name="level" data-pipeline-level>
+            <option value="stage">Stage</option>
+            <option value="sub">Sub-stage</option>
+            <option value="child">Child stage</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="p-parent">Parent</label>
+          <select id="p-parent" name="parentId">
+            <option value="">— none (top level) —</option>
+            <% stages.forEach(function (s) { %>
+              <option value="<%= s._id %>" data-level="sub"><%= s.title %></option>
+              <% (s.subStages || []).forEach(function (ss) { %>
+                <option value="<%= ss._id %>" data-level="child">&nbsp;&nbsp;<%= s.title %> › <%= ss.title %></option>
+              <% }); %>
+            <% }); %>
+          </select>
+          <div class="small muted">Required for a sub-stage or child stage.</div>
+        </div>
+        <div class="field">
+          <label for="p-title">Title *</label>
+          <input id="p-title" name="title" required maxlength="120">
+        </div>
+        <div class="field">
+          <label for="p-order">Order</label>
+          <input id="p-order" name="orderBy" type="number" min="0" value="0">
+        </div>
+        <button class="btn btn-primary" type="submit">Add</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Current pipeline</h2></div>
+    <% if (!stages.length) { %>
+      <%- include('../../partials/empty', { heading: 'No stages yet', message: 'Add the first stage to start tracking enquiries.' }) %>
+    <% } else { %>
+      <div class="card-body">
+        <ol class="pipeline">
+          <% stages.forEach(function (s) { %>
+            <li>
+              <strong><%= s.title %></strong> <span class="muted small">#<%= s.orderBy %></span>
+              <% if ((s.subStages || []).length) { %>
+                <ol>
+                  <% s.subStages.forEach(function (ss) { %>
+                    <li>
+                      <%= ss.title %> <span class="muted small">#<%= ss.orderBy %></span>
+                      <% if ((ss.childStages || []).length) { %>
+                        <ol>
+                          <% ss.childStages.forEach(function (cs) { %>
+                            <li class="small"><%= cs.title %> <span class="muted">#<%= cs.orderBy %></span></li>
+                          <% }); %>
+                        </ol>
+                      <% } %>
+                    </li>
+                  <% }); %>
+                </ol>
+              <% } %>
+            </li>
+          <% }); %>
+        </ol>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

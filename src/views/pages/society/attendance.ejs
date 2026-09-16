@@ -1,0 +1,41 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — staff attendance</h1>
+    <div class="sub">Clocked in and out at the gate. A shift still open contributes no hours until it closes.</div>
+  </div>
+  <form method="get" class="inline">
+    <select name="month" aria-label="Month">
+      <% ['January','February','March','April','May','June','July','August','September','October','November','December'].forEach(function (name, i) { %>
+        <option value="<%= i + 1 %>" <%= report.month === i + 1 ? 'selected' : '' %>><%= name %></option>
+      <% }); %>
+    </select>
+    <input type="number" name="year" value="<%= report.year %>" min="2020" max="2100" aria-label="Year" style="max-width:90px">
+    <button class="btn btn-sm" type="submit">Show</button>
+  </form>
+</div>
+
+<div class="card">
+  <% if (!report.employees.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing recorded', message: 'No staff clocked in during this month.' }) %>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>Staff</th><th>Mobile</th><th>Days present</th><th>Hours</th></tr></thead>
+      <tbody>
+        <% report.employees.forEach(function (e) { %>
+          <tr>
+            <td data-label="Staff"><strong><%= e.employeeName || '—' %></strong></td>
+            <td data-label="Mobile"><%= e.mobileNumber ? h.mobile(e.mobileNumber) : '—' %></td>
+            <td data-label="Days present"><%= e.daysPresent %></td>
+            <td data-label="Hours"><%= e.totalHours %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

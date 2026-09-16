@@ -1,0 +1,18 @@
+<div class="card mb-2">
+  <div class="card-body" style="padding:10px 12px">
+    <div class="inline">
+      <% const links = [
+        ['/app/society/societies', 'Societies', 'society.view'],
+        ['/app/society/analytics', 'Analytics', 'society.report.view'],
+        ['/app/society/enquiries', 'Enquiries', 'society.enquiry.view'],
+        ['/app/society/developers', 'Developers', 'society.developer.manage'],
+        ['/app/society/roles', 'Roles', 'society.role.manage'],
+        ['/app/society/pipeline', 'Enquiry pipeline', 'society.stage.manage'],
+        ['/app/society/api-docs', 'API', 'society.view'],
+      ]; %>
+      <% links.forEach(function (l) { if (!can(l[2])) return; %>
+        <a class="btn btn-sm <%= path === l[0] || path.startsWith(l[0] + '/') ? 'btn-primary' : '' %>" href="<%= l[0] %>"><%= l[1] %></a>
+      <% }); %>
+    </div>
+  </div>
+</div>

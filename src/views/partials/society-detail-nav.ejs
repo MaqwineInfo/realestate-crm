@@ -1,0 +1,30 @@
+<%# Sub-navigation inside one society. Locals: society, path %>
+<div class="card mb-2">
+  <div class="card-body" style="padding:10px 12px">
+    <div class="inline">
+      <% const b = '/app/society/societies/' + society._id;
+         const links = [
+           [b, 'Overview'],
+           [b + '/structure', 'Blocks & floors'],
+           [b + '/units', 'Units'],
+           [b + '/members', 'Members'],
+           [b + '/committee', 'Committee'],
+           [b + '/notices', 'Notices'],
+           [b + '/polls', 'Polls'],
+           [b + '/complaints', 'Complaints'],
+           [b + '/billing', 'Billing'],
+           [b + '/parking', 'Parking'],
+           [b + '/amenities', 'Amenities'],
+           [b + '/listings', 'Property board'],
+           [b + '/bookings', 'Bookings'],
+           [b + '/visitors', 'Gate'],
+           [b + '/employees', 'Staff'],
+           [b + '/attendance', 'Attendance'],
+           [b + '/onboarding', 'Onboarding requests'],
+         ]; %>
+      <% links.forEach(function (l) { %>
+        <a class="btn btn-sm <%= path === l[0] ? 'btn-primary' : '' %>" href="<%= l[0] %>"><%= l[1] %></a>
+      <% }); %>
+    </div>
+  </div>
+</div>

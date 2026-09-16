@@ -1,0 +1,111 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies/' + society._id + '/amenities', label: 'Amenities' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= amenity.name %></h1>
+    <div class="sub">
+      <%= amenity.amenityTypeId ? amenity.amenityTypeId.name : '' %> ·
+      <%= amenity.pricingType %>
+      <% if (amenity.pricingType === 'PAID') { %>· <%= amenity.taxValue %>% GST <%= amenity.gstAmountType.toLowerCase() %><% } %>
+      <span class="badge <%= amenity.status === 'ACTIVE' ? 'b-green' : 'b-slate' %>"><%= amenity.status %></span>
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Bookable slots</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/amenities/<%= amenity._id %>/slots" class="mb-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="grid cols-2">
+          <div class="field">
+            <label for="s-start">Start</label>
+            <input id="s-start" name="startTime" type="time" required value="09:00">
+          </div>
+          <div class="field">
+            <label for="s-end">End</label>
+            <input id="s-end" name="endTime" type="time" required value="12:00">
+          </div>
+        </div>
+        <div class="small muted mb-1">An end time before the start is treated as crossing midnight.</div>
+        <button class="btn" type="submit">Add slot</button>
+      </form>
+
+      <% if (!amenity.slots.length) { %>
+        <p class="muted small mb-0">No slots — this amenity cannot be booked yet.</p>
+      <% } else { %>
+        <table class="responsive">
+          <thead><tr><th>Window</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <% amenity.slots.forEach(function (s) { %>
+              <tr>
+                <td data-label="Window">
+                  <%= s.startTime %> – <%= s.endTime %>
+                  <% if (s.isOvernight) { %> <span class="badge b-slate">overnight</span><% } %>
+                </td>
+                <td data-label="Status"><%= s.status %></td>
+                <td data-label="">
+                  <form method="post" action="/app/society/societies/<%= society._id %>/amenities/<%= amenity._id %>/slots/<%= s._id %>/delete" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Price tiers</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/amenities/<%= amenity._id %>/packages" class="mb-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="grid cols-3">
+          <div class="field">
+            <label for="p-name">Name</label>
+            <input id="p-name" name="name" required maxlength="100" placeholder="Up to 100 guests">
+          </div>
+          <div class="field">
+            <label for="p-cap">Capacity</label>
+            <input id="p-cap" name="capacity" type="number" min="1" required value="50">
+          </div>
+          <div class="field">
+            <label for="p-price">Price (₹)</label>
+            <input id="p-price" name="price" type="number" min="0" step="0.01" required value="0">
+          </div>
+        </div>
+        <button class="btn" type="submit">Add tier</button>
+      </form>
+
+      <% if (!amenity.packages.length) { %>
+        <p class="muted small mb-0">No tiers. A paid amenity with no tier books at zero.</p>
+      <% } else { %>
+        <table class="responsive">
+          <thead><tr><th>Tier</th><th class="num">Capacity</th><th class="num">Price</th><th></th></tr></thead>
+          <tbody>
+            <% amenity.packages.forEach(function (p) { %>
+              <tr>
+                <td data-label="Tier"><%= p.name %></td>
+                <td data-label="Capacity" class="num"><%= p.capacity %></td>
+                <td data-label="Price" class="num"><%= h.money(p.priceMinor) %></td>
+                <td data-label="">
+                  <form method="post" action="/app/society/societies/<%= society._id %>/amenities/<%= amenity._id %>/packages/<%= p._id %>/delete" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

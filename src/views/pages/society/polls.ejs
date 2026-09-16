@@ -1,0 +1,109 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — polls</h1>
+    <div class="sub">One vote per flat. Publishing fixes the electorate, so turnout stays comparable.</div>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">New poll</h2></div>
+  <div class="card-body">
+    <form method="post" action="/app/society/societies/<%= society._id %>/polls">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field">
+        <label for="p-title">Question *</label>
+        <input id="p-title" name="title" required maxlength="200" placeholder="Should we repaint the lobby?">
+      </div>
+      <div class="field">
+        <label for="p-desc">Detail</label>
+        <textarea id="p-desc" name="description" rows="2" maxlength="2000"></textarea>
+      </div>
+      <div class="grid cols-2">
+        <div class="field">
+          <label for="p-o1">Option 1 *</label>
+          <input id="p-o1" name="option" required maxlength="500">
+        </div>
+        <div class="field">
+          <label for="p-o2">Option 2 *</label>
+          <input id="p-o2" name="option" required maxlength="500">
+        </div>
+        <div class="field">
+          <label for="p-o3">Option 3</label>
+          <input id="p-o3" name="option" maxlength="500">
+        </div>
+        <div class="field">
+          <label for="p-o4">Option 4</label>
+          <input id="p-o4" name="option" maxlength="500">
+        </div>
+        <div class="field">
+          <label for="p-type">Type</label>
+          <select id="p-type" name="pollType">
+            <option value="SINGLE_CHOICE">Pick one</option>
+            <option value="MULTIPLE_CHOICE">Pick several</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="p-end">Voting closes</label>
+          <input id="p-end" name="votingEndAt" type="datetime-local">
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">Create as draft</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Polls</h2></div>
+  <% if (!polls.length) { %>
+    <%- include('../../partials/empty', { heading: 'No polls', message: 'Put a question to the residents.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Poll</th><th>Ref</th><th class="num">Votes</th><th>Turnout</th><th>Closes</th><th>State</th><th></th></tr></thead>
+      <tbody>
+        <% polls.forEach(function (p) { %>
+          <tr>
+            <td data-label="Poll">
+              <a href="/app/society/societies/<%= society._id %>/polls/<%= p._id %>"><strong><%= p.title %></strong></a>
+              <div class="small muted"><%= p.options.length %> options · <%= p.pollType.replace('_', ' ').toLowerCase() %></div>
+            </td>
+            <td data-label="Ref"><code><%= p.pollId %></code></td>
+            <td data-label="Votes" class="num"><%= p.totalVoters %></td>
+            <td data-label="Turnout">
+              <% var pct = p.eligibleVotersCount ? Math.round((p.totalVoters / p.eligibleVotersCount) * 100) : 0; %>
+              <div class="pc-meter" role="img" aria-label="<%= pct %>% turnout">
+                <span class="seg is-booked" style="width:<%= pct %>%"></span>
+              </div>
+              <span class="small muted"><%= pct %>% of <%= p.eligibleVotersCount %></span>
+            </td>
+            <td data-label="Closes"><%= p.votingEndAt ? h.dateTime(p.votingEndAt) : '—' %></td>
+            <td data-label="State">
+              <span class="badge <%= p.publishStatus === 'PUBLISHED' ? 'b-green' : (p.publishStatus === 'CLOSED' ? 'b-slate' : 'b-amber') %>"><%= p.publishStatus %></span>
+            </td>
+            <td data-label="">
+              <div class="btn-group">
+                <% if (p.publishStatus === 'DRAFT') { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/polls/<%= p._id %>/publish" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-primary" type="submit">Publish</button>
+                  </form>
+                <% } else if (p.publishStatus === 'PUBLISHED') { %>
+                  <form method="post" action="/app/society/societies/<%= society._id %>/polls/<%= p._id %>/close" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm" type="submit">Close</button>
+                  </form>
+                <% } %>
+                <a class="btn btn-sm" href="/app/society/societies/<%= society._id %>/polls/<%= p._id %>">Results</a>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

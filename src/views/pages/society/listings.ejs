@@ -1,0 +1,62 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — property board</h1>
+    <div class="sub">Residents advertise their own flats. Read-only here: only the owner who posted a listing can change or withdraw it.</div>
+  </div>
+  <form method="get" class="inline">
+    <select name="type" aria-label="Type">
+      <option value="">Rent &amp; sale</option>
+      <% ['RENT', 'SELL'].forEach(function (x) { %>
+        <option value="<%= x %>" <%= filter.type === x ? 'selected' : '' %>><%= x === 'RENT' ? 'For rent' : 'For sale' %></option>
+      <% }); %>
+    </select>
+    <select name="furnishing" aria-label="Furnishing">
+      <option value="">Any furnishing</option>
+      <% ['FULLY_FURNISHED', 'SEMI_FURNISHED', 'UNFURNISHED'].forEach(function (x) { %>
+        <option value="<%= x %>" <%= filter.furnishing === x ? 'selected' : '' %>><%= x.replace(/_/g, ' ').toLowerCase() %></option>
+      <% }); %>
+    </select>
+    <button class="btn btn-sm" type="submit">Filter</button>
+  </form>
+</div>
+
+<div class="card">
+  <% if (!listings.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing listed', message: 'When a resident advertises their flat it appears here.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead>
+        <tr><th>Unit</th><th>Type</th><th>Asking</th><th>Furnishing</th><th>Listed by</th><th>Available</th><th>Posted</th></tr>
+      </thead>
+      <tbody>
+        <% listings.forEach(function (l) { %>
+          <tr>
+            <td data-label="Unit"><strong><%= l.unitId ? l.unitId.unitNumber : '—' %></strong></td>
+            <td data-label="Type">
+              <span class="badge <%= l.type === 'RENT' ? 'b-blue' : 'b-green' %>"><%= l.type === 'RENT' ? 'For rent' : 'For sale' %></span>
+            </td>
+            <td data-label="Asking">
+              <%= l.price === null ? '—' : h.money(Math.round(Number(l.price) * 100)) %>
+              <% if (l.negotiable) { %><span class="muted small">negotiable</span><% } %>
+            </td>
+            <td data-label="Furnishing"><%= (l.furnishing || '').replace(/_/g, ' ').toLowerCase() %></td>
+            <td data-label="Listed by">
+              <% if (l.listedBy) { %>
+                <%= [l.listedBy.firstName, l.listedBy.lastName].filter(Boolean).join(' ') %>
+                <div class="muted small"><%= l.listedBy.mobileNumber ? h.mobile(l.listedBy.mobileNumber) : '' %></div>
+              <% } else { %>—<% } %>
+            </td>
+            <td data-label="Available"><%= l.availableFrom ? h.date(l.availableFrom) : '—' %></td>
+            <td data-label="Posted"><%= h.rel(l.createdAt) %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

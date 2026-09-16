@@ -1,0 +1,92 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — committee</h1>
+    <div class="sub">
+      The roster residents see in the app. A seat is not a login — grant that separately.
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Add a seat</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/committee">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="grid cols-2">
+          <div class="field">
+            <label for="c-first">First name *</label>
+            <input id="c-first" name="firstName" required maxlength="80">
+          </div>
+          <div class="field">
+            <label for="c-last">Last name</label>
+            <input id="c-last" name="lastName" maxlength="80">
+          </div>
+          <div class="field">
+            <label for="c-phone">Mobile *</label>
+            <input id="c-phone" name="phoneNumber" required maxlength="20">
+          </div>
+          <div class="field">
+            <label for="c-email">Email *</label>
+            <input id="c-email" name="email" type="email" required maxlength="150">
+          </div>
+          <div class="field">
+            <label for="c-desig">Designation *</label>
+            <input id="c-desig" name="designation" required maxlength="80" placeholder="Secretary">
+          </div>
+          <div class="field">
+            <label for="c-role">Role</label>
+            <select id="c-role" name="roleId">
+              <option value="">None</option>
+              <% roles.forEach(function (r) { %>
+                <option value="<%= r._id %>"><%= r.displayName %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+        <input type="hidden" name="countryCode" value="+91">
+        <div class="small muted mb-1">A login is created for this number so they can be reached in the app.</div>
+        <button class="btn btn-primary" type="submit">Add seat</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head">
+      <h2 class="grow">Committee</h2>
+      <span class="muted small"><%= pagination.total %> seat<%= pagination.total === 1 ? '' : 's' %></span>
+    </div>
+    <% if (!committeeMembers.length) { %>
+      <%- include('../../partials/empty', { heading: 'No committee yet', message: 'Add the chairman, secretary and treasurer.' }) %>
+    <% } else { %>
+      <div class="table-wrap"><table class="responsive">
+        <thead><tr><th>Member</th><th>Designation</th><th>Role</th><th></th></tr></thead>
+        <tbody>
+          <% committeeMembers.forEach(function (m) { %>
+            <tr>
+              <td data-label="Member">
+                <strong><%= m.firstName %> <%= m.lastName || '' %></strong>
+                <div class="small muted"><%= m.phoneNumber %></div>
+              </td>
+              <td data-label="Designation"><%= m.designation || '—' %></td>
+              <td data-label="Role"><%= m.roleId ? m.roleId.displayName : '—' %></td>
+              <td data-label="">
+                <form method="post" action="/app/society/societies/<%= society._id %>/committee/<%= m._id %>/delete" style="display:inline"
+                      onsubmit="return confirm('Remove <%= m.firstName %> from the committee?')">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-ghost" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../../partials/app-foot') %>

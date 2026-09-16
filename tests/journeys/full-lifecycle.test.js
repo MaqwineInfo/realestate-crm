@@ -489,8 +489,21 @@ test('END-TO-END: a real estate company runs its whole sales operation', async (
     assert.ok(lead.ownerUserId, 'round robin assigned an owner');
     assert.equal(lead.slaTargetSeconds, 180, 'the project SLA override applied (3 min)');
     assert.equal(lead.slaStatus, 'PENDING');
-    assert.ok(await MessageLog.findOne({ tenantId, leadId: lead._id, purpose: 'ACKNOWLEDGEMENT' }), 'acknowledged');
-    assert.ok(await Notification.findOne({ tenantId, userId: lead.ownerUserId, type: 'LEAD_ASSIGNED' }));
+    /**
+     * Both of these are written by event listeners, which `lib/events.js`
+     * dispatches through `setImmediate` without awaiting (§61). They are not
+     * there the moment the response returns, so the test waits for them rather
+     * than racing them — asserting instantly passes on an idle machine and
+     * fails when the runner is busy.
+     */
+    assert.ok(await h.eventually(
+      () => MessageLog.findOne({ tenantId, leadId: lead._id, purpose: 'ACKNOWLEDGEMENT' }),
+      { what: 'the acknowledgement message' },
+    ), 'acknowledged');
+    assert.ok(await h.eventually(
+      () => Notification.findOne({ tenantId, userId: lead.ownerUserId, type: 'LEAD_ASSIGNED' }),
+      { what: 'the lead-assigned notification' },
+    ));
   });
 
   await t.test('3.2 a walk-in checks in at the site QR (§25)', async () => {

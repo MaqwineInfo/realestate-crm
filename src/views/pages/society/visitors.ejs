@@ -1,0 +1,124 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — gate</h1>
+    <div class="sub">Approval is per unit: a visitor for three flats needs an answer from each. Anyone saying yes lets them in.</div>
+  </div>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="num"><%= stats.currentlyInside %></div><div class="lbl">Inside now</div></div>
+  <div class="tile"><div class="num"><%= stats.entriesToday %></div><div class="lbl">Entries today</div></div>
+  <div class="tile warn"><div class="num"><%= stats.awaitingApproval %></div><div class="lbl">Awaiting a resident</div></div>
+  <div class="tile"><div class="num"><%= stats.total %></div><div class="lbl">Visits on record</div></div>
+</div>
+
+<% function who(v) { return v.visitorId ? [v.visitorId.firstName, v.visitorId.lastName].filter(Boolean).join(' ') : '—'; } %>
+<% function units(v) { return (v.unitApprovals || []).length; } %>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Inside now</h2></div>
+  <% if (!insideNow.length) { %>
+    <div class="card-body"><p class="muted small mb-0">Nobody is inside.</p></div>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>Visitor</th><th>Type</th><th>Mobile</th><th>In</th><th></th></tr></thead>
+      <tbody>
+        <% insideNow.forEach(function (v) { %>
+          <tr>
+            <td data-label="Visitor"><strong><%= who(v) %></strong></td>
+            <td data-label="Type"><%= (v.visitorType || '').replace(/_/g, ' ') %></td>
+            <td data-label="Mobile"><%= v.visitorId ? h.mobile(v.visitorId.mobileNumber) : '—' %></td>
+            <td data-label="In"><%= h.time(v.inTime) %> <span class="muted small"><%= h.rel(v.inTime) %></span></td>
+            <td data-label="">
+              <form method="post" action="/app/society/societies/<%= society._id %>/visitors/<%= v._id %>/exit" style="display:inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm btn-ghost" type="submit">Mark out</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head">
+    <h2 class="grow">Expected today</h2>
+    <span class="muted small">Pre-approved by a resident, or still waiting on one</span>
+  </div>
+  <% if (!expectedToday.length) { %>
+    <div class="card-body"><p class="muted small mb-0">Nobody expected today.</p></div>
+  <% } else { %>
+    <div class="table-wrap"><table class="responsive">
+      <thead><tr><th>Visitor</th><th>Type</th><th>Units</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% expectedToday.forEach(function (v) { %>
+          <tr>
+            <td data-label="Visitor"><strong><%= who(v) %></strong></td>
+            <td data-label="Type"><%= (v.visitorType || '').replace(/_/g, ' ') %></td>
+            <td data-label="Units"><%= units(v) %></td>
+            <td data-label="Status">
+              <span class="badge <%= v.approvalStatus === 'APPROVED' ? 'b-green' : (v.approvalStatus === 'REJECTED' ? 'b-red' : 'b-amber') %>"><%= (v.approvalStatus || v.status).replace(/_/g, ' ') %></span>
+            </td>
+            <td data-label="">
+              <div class="btn-group">
+                <form method="post" action="/app/society/societies/<%= society._id %>/visitors/<%= v._id %>/allow" style="display:inline">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-primary" type="submit">Let in</button>
+                </form>
+                <form method="post" action="/app/society/societies/<%= society._id %>/visitors/<%= v._id %>/pass" style="display:inline">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="validHours" value="24">
+                  <button class="btn btn-sm btn-ghost" type="submit">Issue pass</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2 class="grow">Gate log</h2>
+    <form method="get" class="inline">
+      <select name="status" aria-label="Status" onchange="this.form.submit()">
+        <option value="">All</option>
+        <% ['PENDING_APPROVAL', 'ENTERED', 'EXITED', 'REJECTED'].forEach(function (s) { %>
+          <option value="<%= s %>" <%= filter.status === s ? 'selected' : '' %>><%= s.replace(/_/g, ' ') %></option>
+        <% }); %>
+      </select>
+      <noscript><button class="btn btn-sm" type="submit">Filter</button></noscript>
+    </form>
+  </div>
+  <% if (!recent.length) { %>
+    <%- include('../../partials/empty', { heading: 'No visits yet', message: 'Arrivals recorded at the gate appear here.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Visitor</th><th>Type</th><th>Units</th><th>Status</th><th>In</th><th>Out</th></tr></thead>
+      <tbody>
+        <% recent.forEach(function (v) { %>
+          <tr>
+            <td data-label="Visitor"><strong><%= who(v) %></strong><% if (v.visitorId && v.visitorId.mobileNumber) { %><div class="muted small"><%= h.mobile(v.visitorId.mobileNumber) %></div><% } %></td>
+            <td data-label="Type"><%= (v.visitorType || '').replace(/_/g, ' ') %></td>
+            <td data-label="Units"><%= units(v) %></td>
+            <td data-label="Status">
+              <span class="badge <%= v.status === 'ENTERED' ? 'b-green' : (v.status === 'REJECTED' ? 'b-red' : (v.status === 'EXITED' ? 'b-slate' : 'b-amber')) %>"><%= (v.status || '').replace(/_/g, ' ') %></span>
+            </td>
+            <td data-label="In"><%= v.inTime ? h.dateTime(v.inTime) : '—' %></td>
+            <td data-label="Out"><%= v.outTime ? h.dateTime(v.outTime) : '—' %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

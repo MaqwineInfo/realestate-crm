@@ -3,7 +3,10 @@ const path = require('node:path');
 process.env.NODE_ENV = 'test';
 // The test runner executes files in parallel, so each file gets its own
 // database — otherwise one suite's reset wipes another's fixtures mid-run.
-const suite = path.basename(process.argv[1] || 'suite', '.test.js').replace(/\W/g, '_');
+const suiteFile = process.argv[1] || 'suite.test.js';
+const suite = path.basename(suiteFile, '.test.js').replace(/\W/g, '_');
+/** The directory decides which models a suite gets — see `modelSetsFor`. */
+const suiteDir = path.basename(path.dirname(suiteFile));
 process.env.MONGO_URI = process.env.TEST_MONGO_URI || `mongodb://127.0.0.1:27017/crm_test_${suite}`;
 process.env.SESSION_SECRET = 'test-secret';
 
@@ -15,6 +18,21 @@ let server;
 let baseUrl;
 let app;
 
+/**
+ * A suite only builds the indexes it needs — see `db.ensureIndexes`. Society
+ * suites opt in so a CRM-only suite does not create 60 collections' worth of
+ * index files it will never read.
+ *
+ * Decided by DIRECTORY, not by filename. Matching on the filename meant
+ * `tests/society/journey.test.js` and `screens.test.js` quietly got the CRM
+ * indexes only — so every uniqueness rule in the society module was absent
+ * while their tests ran, and a double-booking assertion passed by not being
+ * tested. A directory cannot be misspelled into silence the way a prefix can.
+ */
+function modelSetsFor(dir) {
+  return dir === 'society' ? ['crm', 'society'] : ['crm'];
+}
+
 async function startServer() {
   if (server) return baseUrl;
   await db.connect();
@@ -23,7 +41,12 @@ async function startServer() {
   await db.dropDatabase();
   require('../src/services/listeners').register();
   app = createApp();
-  await db.ensureIndexes();
+  /**
+   * Tests build only the indexes that enforce a rule — see `db.ensureIndexes`.
+   * A performance index cannot change an assertion's outcome, and building all
+   * of them in every suite database is what exhausted mongod's file handles.
+   */
+  await db.ensureIndexes({ include: modelSetsFor(suiteDir), uniqueOnly: true });
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   baseUrl = `http://127.0.0.1:${server.address().port}`;
   return baseUrl;
@@ -33,6 +56,21 @@ async function stopServer() {
   if (server) await new Promise((resolve) => server.close(resolve));
   // The session store holds its own Mongo client; leaving it open hangs the run.
   if (app?.locals?.sessionStore?.close) await app.locals.sessionStore.close();
+  /**
+   * Drop the suite's database on the way out.
+   *
+   * WiredTiger writes one file per collection AND one per index. Two dozen
+   * suites, each with a database holding every model in the app, is tens of
+   * thousands of files — and because each run only dropped its database on
+   * START, every run left its own set behind. The mongod data directory grew
+   * past 38,000 files and mongod began aborting on startup because its
+   * diagnostics subsystem could no longer create a temp file there.
+   *
+   * Dropping here bounds it to one run's worth.
+   */
+  try {
+    if (db.mongoose.connection.readyState === 1) await db.dropDatabase();
+  } catch { /* a suite that never connected has nothing to drop */ }
   server = null;
   baseUrl = null;
   app = null;
@@ -134,6 +172,30 @@ function client() {
 }
 
 /**
+ * Waits for a condition that an event listener will satisfy.
+ *
+ * `lib/events.js` emits through `setImmediate` and does not await handlers
+ * (§61: notifications must never block the sale), so anything a listener writes
+ * is not there the instant the HTTP response returns. Asserting immediately
+ * passes on an idle machine and fails under load — polling makes the test wait
+ * for the behaviour instead of racing it.
+ *
+ * Returns the first truthy value the probe produces, or throws after `timeout`.
+ */
+async function eventually(probe, { timeout = 3000, interval = 25, what = 'condition' } = {}) {
+  const deadline = Date.now() + timeout;
+  let last;
+  for (;;) {
+    // eslint-disable-next-line no-await-in-loop
+    last = await probe();
+    if (last) return last;
+    if (Date.now() >= deadline) throw new Error(`Timed out after ${timeout}ms waiting for ${what}`);
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => { setTimeout(r, interval); });
+  }
+}
+
+/**
  * The dashboard work-queue table only. Asserting against the whole page is
  * unreliable — a customer's name also appears in the notifications panel.
  */
@@ -194,4 +256,5 @@ async function addUser({ tenant, roles, name, email, roleName, managerId }) {
 
 module.exports = {
   startServer, stopServer, resetDb, client, seedTwoOrgs, addUser, db, queueSection, tileCounts,
+  eventually,
 };

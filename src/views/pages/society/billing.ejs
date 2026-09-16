@@ -1,0 +1,174 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies', label: 'Societies' }) %>
+<%- include('../../partials/society-detail-nav') %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= society.societyName %> — billing</h1>
+    <div class="sub">Publishing a charge is what creates the debt. Re-publishing bills nobody twice.</div>
+  </div>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.money(stats.billedMinor) %></div><div class="stat-lbl">Billed</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.money(stats.collectedMinor) %></div><div class="stat-lbl">Collected</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.money(stats.outstandingMinor) %></div><div class="stat-lbl">Outstanding</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= stats.unpaidCount %></div><div class="stat-lbl">Unpaid line items</div>
+  </div></div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Ledger accounts</h2></div>
+    <div class="card-body">
+      <form method="post" action="/app/society/societies/<%= society._id %>/ledger" class="mb-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="grid cols-3">
+          <div class="field">
+            <label for="l-name">Name *</label>
+            <input id="l-name" name="name" required maxlength="100">
+          </div>
+          <div class="field">
+            <label for="l-code">Code</label>
+            <input id="l-code" name="accountCode" maxlength="20">
+          </div>
+          <div class="field">
+            <label for="l-type">Type</label>
+            <select id="l-type" name="type">
+              <% ['INCOME', 'EXPENSE', 'ASSET', 'LIABILITY'].forEach(function (x) { %>
+                <option value="<%= x %>"><%= x %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+        <button class="btn" type="submit">Add account</button>
+      </form>
+      <% if (!ledgers.length) { %>
+        <p class="muted small mb-0">None yet — a charge has to post somewhere.</p>
+      <% } else { %>
+        <table class="responsive">
+          <thead><tr><th>Account</th><th>Code</th><th>Type</th></tr></thead>
+          <tbody>
+            <% ledgers.forEach(function (l) { %>
+              <tr>
+                <td data-label="Account"><%= l.name %></td>
+                <td data-label="Code"><code><%= l.accountCode || '—' %></code></td>
+                <td data-label="Type"><span class="badge b-slate"><%= l.type %></span></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-head"><h2 class="grow">Raise a charge</h2></div>
+    <div class="card-body">
+      <% if (!ledgers.length || !categories.length) { %>
+        <p class="muted small mb-0">Add a ledger account and a bill category first.</p>
+      <% } else { %>
+        <form method="post" action="/app/society/societies/<%= society._id %>/bills">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="grid cols-2">
+            <div class="field">
+              <label for="b-name">Name *</label>
+              <input id="b-name" name="name" required maxlength="200" placeholder="Water — March">
+            </div>
+            <div class="field">
+              <label for="b-cat">Category *</label>
+              <select id="b-cat" name="billCategoryId" required>
+                <% categories.forEach(function (x) { %><option value="<%= x._id %>"><%= x.name %></option><% }); %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="b-ledger">Posts to *</label>
+              <select id="b-ledger" name="balanceSheetId" required>
+                <% ledgers.forEach(function (l) { %><option value="<%= l._id %>"><%= l.name %></option><% }); %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="b-due">Due date *</label>
+              <input id="b-due" name="dueDate" type="date" required>
+            </div>
+            <div class="field">
+              <label for="b-owner">Owner pays (₹)</label>
+              <input id="b-owner" name="priceOwner" type="number" min="0" step="0.01" value="0">
+            </div>
+            <div class="field">
+              <label for="b-tenant">Tenant pays (₹)</label>
+              <input id="b-tenant" name="priceTenant" type="number" min="0" step="0.01" value="0">
+            </div>
+            <div class="field">
+              <label for="b-vacant">Vacant unit pays (₹)</label>
+              <input id="b-vacant" name="priceCloseUnit" type="number" min="0" step="0.01" value="0">
+            </div>
+            <div class="field">
+              <label for="b-publish">Publish</label>
+              <select id="b-publish" name="publishStatus">
+                <option value="PUBLISHED">Now — creates the debt</option>
+                <option value="DRAFT">Save as draft</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">Raise</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2 class="grow">Bill categories</h2></div>
+  <div class="card-body">
+    <form method="post" action="/app/society/societies/<%= society._id %>/bill-categories" class="mb-2">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field">
+        <label for="bc-name">Category name *</label>
+        <input id="bc-name" name="name" required maxlength="100" placeholder="Water charges">
+      </div>
+      <button class="btn" type="submit">Add category</button>
+    </form>
+    <div class="inline">
+      <% categories.forEach(function (x) { %><span class="badge b-slate"><%= x.name %></span><% }); %>
+      <% if (!categories.length) { %><span class="muted small">None yet.</span><% } %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Charges</h2></div>
+  <% if (!bills.length) { %>
+    <%- include('../../partials/empty', { heading: 'Nothing raised', message: 'Raise a bill or set up a recurring maintenance charge.' }) %>
+  <% } else { %>
+    <div class="table-wrap wide"><table class="responsive">
+      <thead><tr><th>Charge</th><th>Category</th><th>Due</th><th class="num">Owner</th><th class="num">Tenant</th><th>State</th><th></th></tr></thead>
+      <tbody>
+        <% bills.forEach(function (b) { %>
+          <tr>
+            <td data-label="Charge"><strong><%= b.name %></strong></td>
+            <td data-label="Category"><%= b.billCategoryId ? b.billCategoryId.name : '—' %></td>
+            <td data-label="Due"><%= h.date(b.dueDate) %></td>
+            <td data-label="Owner" class="num"><%= b.priceOwner %></td>
+            <td data-label="Tenant" class="num"><%= b.priceTenant %></td>
+            <td data-label="State">
+              <span class="badge <%= b.publishStatus === 'PUBLISHED' ? 'b-green' : 'b-slate' %>"><%= b.publishStatus %></span>
+            </td>
+            <td data-label="">
+              <a class="btn btn-sm" href="/app/society/societies/<%= society._id %>/bills/<%= b._id %>">Who owes</a>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<%- include('../../partials/app-foot') %>

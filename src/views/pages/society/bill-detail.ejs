@@ -1,0 +1,65 @@
+<%- include('../../partials/app-head') %>
+<%- include('../../partials/back-link', { href: '/app/society/societies/' + society._id + '/billing', label: 'Billing' }) %>
+
+<div class="page-head">
+  <div class="grow">
+    <h1><%= bill.name %></h1>
+    <div class="sub">Due <%= h.date(bill.dueDate) %> · <%= summary.count %> unit<%= summary.count === 1 ? '' : 's' %> billed</div>
+  </div>
+</div>
+
+<div class="grid cols-4 mb-2">
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.money(summary.billedMinor) %></div><div class="stat-lbl">Billed</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.money(summary.collectedMinor) %></div><div class="stat-lbl">Collected</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= h.money(summary.outstandingMinor) %></div><div class="stat-lbl">Outstanding</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="stat-num"><%= summary.paidUnits %>/<%= summary.count %></div><div class="stat-lbl">Settled</div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2 class="grow">Who owes what</h2></div>
+  <div class="table-wrap wide"><table class="responsive">
+    <thead><tr><th>Unit</th><th class="num">Charged</th><th class="num">Paid</th><th class="num">Outstanding</th><th>Status</th><th>Record a payment</th></tr></thead>
+    <tbody>
+      <% units.forEach(function (u) { %>
+        <tr>
+          <td data-label="Unit"><strong><%= u.unitId ? u.unitId.unitNumber : '—' %></strong></td>
+          <td data-label="Charged" class="num"><%= h.money(u.amountMinor) %></td>
+          <td data-label="Paid" class="num"><%= h.money(u.paidMinor) %></td>
+          <td data-label="Outstanding" class="num"><%= h.money(u.outstandingMinor) %></td>
+          <td data-label="Status">
+            <span class="badge <%= u.outstandingMinor === 0 ? 'b-green' : 'b-amber' %>"><%= u.outstandingMinor === 0 ? 'PAID' : 'UNPAID' %></span>
+          </td>
+          <td data-label="Record a payment">
+            <% if (u.outstandingMinor > 0) { %>
+              <form method="post" action="/app/society/societies/<%= society._id %>/unit-bills/<%= u._id %>/pay" class="inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="number" name="amount" step="0.01" min="0.01"
+                       max="<%= (u.outstandingMinor / 100).toFixed(2) %>"
+                       value="<%= (u.outstandingMinor / 100).toFixed(2) %>"
+                       aria-label="Amount" style="max-width:120px">
+                <select name="paymentMethod" aria-label="Method" style="max-width:130px">
+                  <% ['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Card'].forEach(function (m) { %>
+                    <option value="<%= m %>"><%= m %></option>
+                  <% }); %>
+                </select>
+                <button class="btn btn-sm btn-primary" type="submit">Record</button>
+              </form>
+            <% } else { %>
+              <span class="muted small">Settled</span>
+            <% } %>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table></div>
+</div>
+
+<%- include('../../partials/app-foot') %>
